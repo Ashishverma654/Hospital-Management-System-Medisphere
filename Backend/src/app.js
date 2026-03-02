@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import authRoutes from "./routes/authRoutes.js";
+import testRoutes from "./routes/testRoutes.js";
 
 const app = express();
 
@@ -14,5 +15,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/test", testRoutes);
+
 
 export default app;
