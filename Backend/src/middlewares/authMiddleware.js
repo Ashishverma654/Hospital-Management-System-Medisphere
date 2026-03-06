@@ -4,13 +4,17 @@ import jwt from "jsonwebtoken";
 // ----- 1. Verify Access Token -----
 export const verifyAccessToken = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
 
-    if (!authHeader) {
-      return res.status(401).json({ message: "Access token missing. " });
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Access token missing or invalid format." });
     }
 
     const token = authHeader.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "Token not found in authorization header." });
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
@@ -18,7 +22,17 @@ export const verifyAccessToken = (req, res, next) => {
 
     next();
   } catch (error) {
-    return res.status(500).json({ message: "Invalid or Expired Token." });
+    console.error("JWT Verification Error:", error.message);
+    
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token has expired. Please login again." });
+    }
+    
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid Token. Authentication failed." });
+    }
+
+    return res.status(401).json({ message: "Authentication failed." });
   }
 };
 

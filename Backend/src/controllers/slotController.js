@@ -1,5 +1,6 @@
 import DoctorAvailability from "../models/DoctorAvailability.js";
 import Doctor from "../models/Doctor.js";
+import Appointment from "../models/Appointment.js";
 import { generateSlots } from "../utils/generateSlots.js";
 
 export const getDoctorSlots = async (req, res) => {
@@ -56,13 +57,26 @@ export const getDoctorSlots = async (req, res) => {
         });
     }
 
-    const slots = generateSlots(
+    // Generate all potential slots
+    const allSlots = generateSlots(
       availability.startTime,
       availability.endTime,
       availability.slotDuration,
     );
 
-    res.json(slots);
+    // Get already booked appointments for this doctor on this date
+    const bookedAppointments = await Appointment.find({
+      doctorId: actualDoctorId,
+      date,
+      status: "booked"
+    });
+
+    const bookedSlots = bookedAppointments.map(app => app.slot);
+
+    // Filter out booked slots
+    const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
+
+    res.json(availableSlots);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

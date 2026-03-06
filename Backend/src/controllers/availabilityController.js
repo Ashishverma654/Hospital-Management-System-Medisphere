@@ -15,8 +15,28 @@ export const createAvailability = async (req, res) => {
       return res.status(404).json({ message: "Doctor record not found." });
     }
 
-    const availability = await DoctorAvailability.create({
-      doctorId: doctor._id,
+    const actualDoctorId = doctor._id;
+
+    // Check if availability already exists for this day
+    let availability = await DoctorAvailability.findOne({
+      doctorId: actualDoctorId,
+      dayOfWeek,
+    });
+
+    if (availability) {
+      availability.startTime = startTime;
+      availability.endTime = endTime;
+      availability.slotDuration = slotDuration;
+      await availability.save();
+
+      return res.status(200).json({
+        message: "Availability Updated.",
+        availability,
+      });
+    }
+
+    availability = await DoctorAvailability.create({
+      doctorId: actualDoctorId,
       dayOfWeek,
       startTime,
       endTime,

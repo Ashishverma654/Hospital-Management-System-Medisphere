@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 
@@ -7,6 +9,7 @@ import departmentRoutes from "./routes/departmentRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
 import slotRoutes from "./routes/slotRoutes.js";
+import appointmentRoutes from "./routes/appointmentRoutes.js";
 
 const app = express();
 
@@ -22,5 +25,7 @@ app.use("/api/test", testRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/availability", availabilityRoutes);
+app.use("/api/slots", slotRoutes);
+app.use("/api/appointments", appointmentRoutes);
 
 export default app;
