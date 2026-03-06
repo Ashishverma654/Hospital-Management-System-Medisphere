@@ -6,6 +6,7 @@ import testRoutes from "./routes/testRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
 import availabilityRoutes from "./routes/availabilityRoutes.js";
+import slotRoutes from "./routes/slotRoutes.js";
 
 const app = express();
 

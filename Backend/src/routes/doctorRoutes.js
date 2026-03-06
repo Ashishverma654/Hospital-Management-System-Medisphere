@@ -6,6 +6,8 @@ import {
   getDoctorById
 } from "../controllers/doctorController.js";
 
+import { getDoctorSlots } from "../controllers/slotController.js";
+
 import {
   verifyAccessToken,
   authorizeRoles,
@@ -19,6 +21,7 @@ router.get("/", (req, res) => {
   getDoctors(req, res);
 });
 
+router.get("/:doctorId/slots", getDoctorSlots);
 router.get("/:id", getDoctorById);
 
 export default router;
