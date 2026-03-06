@@ -18,7 +18,7 @@ const departmentSchema = mongoose.Schema({
 },
 
 {
-    timeStamps: true
+    timestamps: true
 }
 );
 

@@ -1,16 +1,15 @@
 import mongoose from "mongoose";
-import mongooose from "mongoose";
 
 const doctorSchema = mongoose.Schema(
   {
     userId: {
-      type: mongooose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
 
     departmentId: {
-      type: mongooose.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
       required: true,
     },

@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
+import availabilityRoutes from "./routes/availabilityRoutes.js";
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/doctors", doctorRoutes);
+app.use("/api/availability", availabilityRoutes);
 
 export default app;

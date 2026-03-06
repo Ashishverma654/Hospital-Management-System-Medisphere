@@ -88,6 +88,6 @@ export const getDoctorById = async (req, res) => {
 
     res.json(doctor);
   } catch (error) {
-    res.status(500).message({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
