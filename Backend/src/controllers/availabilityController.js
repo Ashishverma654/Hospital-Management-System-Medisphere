@@ -6,6 +6,13 @@ export const createAvailability = async (req, res) => {
   try {
     const { doctorId, dayOfWeek, startTime, endTime, slotDuration } = req.body;
 
+    const [startH, startM] = startTime.split(":").map(Number);
+    const [endH, endM] = endTime.split(":").map(Number);
+
+    if ((startH > endH) || (startH === endH && startM >= endM)) {
+        return res.status(400).json({ message: "startTime must be earlier than endTime." });
+    }
+
     let doctor = await Doctor.findById(doctorId);
     if (!doctor) {
       doctor = await Doctor.findOne({ userId: doctorId });

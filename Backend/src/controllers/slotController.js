@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import DoctorAvailability from "../models/DoctorAvailability.js";
 import Doctor from "../models/Doctor.js";
 import Appointment from "../models/Appointment.js";
@@ -9,7 +10,15 @@ export const getDoctorSlots = async (req, res) => {
     const { date } = req.query;
 
     if (!date) {
-      return res.status(400).json({ message: "Date query parameter is required." });
+      return res
+        .status(400)
+        .json({ message: "Date query parameter is required." });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(doctorId)) {
+      return res.status(400).json({
+        message: "Invalid doctorId format",
+      });
     }
 
     // Search by _id or userId to be more flexible
@@ -27,8 +36,11 @@ export const getDoctorSlots = async (req, res) => {
 
     // Use a UTC date to be timezone-agnostic
     const dateObj = new Date(`${date}T00:00:00Z`);
+
     if (isNaN(dateObj.getTime())) {
-      return res.status(400).json({ message: "Invalid date format. Please use YYYY-MM-DD." });
+      return res
+        .status(400)
+        .json({ message: "Invalid date format. Please use YYYY-MM-DD." });
     }
 
     const days = [
@@ -38,7 +50,7 @@ export const getDoctorSlots = async (req, res) => {
       "Wednesday",
       "Thursday",
       "Friday",
-      "Saturday"
+      "Saturday",
     ];
 
     const day = days[dateObj.getUTCDay()];
@@ -49,12 +61,10 @@ export const getDoctorSlots = async (req, res) => {
     });
 
     if (!availability) {
-      return res
-        .status(404)
-        .json({ 
-          message: `Doctor not available on ${day} (${date}).`,
-          details: { doctorId, day, date }
-        });
+      return res.status(404).json({
+        message: `Doctor not available on ${day} `,
+        date,
+      });
     }
 
     // Generate all potential slots
@@ -65,18 +75,23 @@ export const getDoctorSlots = async (req, res) => {
     );
 
     // Get already booked appointments for this doctor on this date
-    const bookedAppointments = await Appointment.find({
-      doctorId: actualDoctorId,
-      date,
-      status: "booked"
-    });
+    const bookedAppointments = await Appointment.find(
+      {
+        doctorId: actualDoctorId,
+        date,
+        status: { $in: ["booked", "completed"] },
+      },
+      "slot",
+    );
 
-    const bookedSlots = bookedAppointments.map(app => app.slot);
+    const bookedSlots = bookedAppointments.map((app) => app.slot);
 
     // Filter out booked slots
-    const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
+    const availableSlots = allSlots.filter(
+      (slot) => !bookedSlots.includes(slot),
+    );
 
-    res.json(availableSlots);
+    res.json({ doctorId: actualDoctorId, date, availableSlots });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

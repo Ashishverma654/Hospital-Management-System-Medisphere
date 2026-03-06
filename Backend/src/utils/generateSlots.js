@@ -1,4 +1,5 @@
 export const generateSlots = ( startTime, endTime, slotDuration ) => {
+    if (slotDuration <= 0) return [];
     const slots = [];
 
     const [startHour, startMinute] = startTime.split(":").map(Number);
