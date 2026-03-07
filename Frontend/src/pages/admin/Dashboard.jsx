@@ -1,157 +1,173 @@
-import { useState, useEffect } from 'react';
-import { getDashboardStats } from '../../services/adminService';
-import { FiUsers, FiCalendar, FiCheckCircle, FiXCircle, FiActivity, FiClock } from 'react-icons/fi';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import toast from 'react-hot-toast';
-import './AdminPages.css';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Users, Activity, Calendar, DollarSign, ArrowUpRight, ArrowDownRight, BedDouble } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from 'recharts';
 
-const Dashboard = () => {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+const patientData = [
+  { name: 'Mon', patients: 120 },
+  { name: 'Tue', patients: 150 },
+  { name: 'Wed', patients: 180 },
+  { name: 'Thu', patients: 140 },
+  { name: 'Fri', patients: 200 },
+  { name: 'Sat', patients: 170 },
+  { name: 'Sun', patients: 100 },
+];
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const data = await getDashboardStats();
-        setStats(data);
-      } catch (err) {
-        toast.error('Failed to load dashboard stats');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
+const revenueData = [
+  { name: 'Week 1', revenue: 4000 },
+  { name: 'Week 2', revenue: 3000 },
+  { name: 'Week 3', revenue: 2000 },
+  { name: 'Week 4', revenue: 5000 },
+];
 
-  if (loading) {
-    return <div className="page-loader"><div className="spinner"></div></div>;
-  }
-
-  const pieData = [
-    { name: 'Completed', value: stats?.completedAppointments || 0 },
-    { name: 'Cancelled', value: stats?.cancelledAppointments || 0 },
-    { name: 'Booked', value: (stats?.totalAppointments || 0) - (stats?.completedAppointments || 0) - (stats?.cancelledAppointments || 0) },
-  ];
-
-  const COLORS = ['#00D4AA', '#FF6B6B', '#6C63FF'];
-
+export default function AdminDashboard() {
   return (
-    <div className="admin-dashboard">
-      <div className="page-header">
-        <h1>Admin Dashboard</h1>
-        <p>Overview of hospital management statistics</p>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
+        <p className="text-muted-foreground">Welcome back. Here's a summary of today's hospital metrics.</p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(108, 99, 255, 0.15)', color: '#6C63FF' }}>
-            <FiUsers />
-          </div>
-          <div className="stat-info">
-            <h3>{stats?.totalDoctors || 0}</h3>
-            <p>Total Doctors</p>
-          </div>
-        </div>
+      {/* KPI Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="hover:shadow-md transition-shadow border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Patients</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">1,234</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1 text-green-500">
+              <ArrowUpRight className="h-3 w-3 mr-1" />
+              +12% from last month
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-shadow border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Appointments Today</CardTitle>
+            <Calendar className="h-4 w-4 text-secondary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">48</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1 text-green-500">
+              <ArrowUpRight className="h-3 w-3 mr-1" />
+              +5% from yesterday
+            </p>
+          </CardContent>
+        </Card>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(0, 212, 170, 0.15)', color: '#00D4AA' }}>
-            <FiActivity />
-          </div>
-          <div className="stat-info">
-            <h3>{stats?.totalPatients || 0}</h3>
-            <p>Total Patients</p>
-          </div>
-        </div>
+        <Card className="hover:shadow-md transition-shadow border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Available Beds</CardTitle>
+            <BedDouble className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12 / 150</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1 text-red-500">
+              <ArrowDownRight className="h-3 w-3 mr-1" />
+              -2% capacity
+            </p>
+          </CardContent>
+        </Card>
 
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(84, 160, 255, 0.15)', color: '#54A0FF' }}>
-            <FiCalendar />
-          </div>
-          <div className="stat-info">
-            <h3>{stats?.totalAppointments || 0}</h3>
-            <p>Total Appointments</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'rgba(255, 179, 71, 0.15)', color: '#FFB347' }}>
-            <FiClock />
-          </div>
-          <div className="stat-info">
-            <h3>{stats?.todayAppointments || 0}</h3>
-            <p>Today's Appointments</p>
-          </div>
-        </div>
+        <Card className="hover:shadow-md transition-shadow border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Daily Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-accent" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$12,450</div>
+            <p className="text-xs text-muted-foreground flex items-center mt-1 text-green-500">
+              <ArrowUpRight className="h-3 w-3 mr-1" />
+              +8% from yesterday
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="dashboard-charts">
-        <div className="chart-card card">
-          <h3>Appointment Status Distribution</h3>
-          <div className="chart-container">
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="chart-legend">
-              {pieData.map((item, idx) => (
-                <div key={item.name} className="legend-item">
-                  <span className="legend-dot" style={{ background: COLORS[idx] }}></span>
-                  <span className="legend-label">{item.name}</span>
-                  <span className="legend-value">{item.value}</span>
+      {/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <Card className="col-span-4 border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Patient Influx (Weekly)</CardTitle>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={patientData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
+                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                  <Tooltip 
+                    cursor={{fill: 'transparent'}}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #88888833', backgroundColor: 'var(--background)' }} 
+                  />
+                  <Bar dataKey="patients" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="col-span-3 border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Revenue Trend (Monthly)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888833" />
+                  <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value/1000}k`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #88888833', backgroundColor: 'var(--background)' }} 
+                  />
+                  <Line type="monotone" dataKey="revenue" stroke="var(--color-secondary)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Activity Table (Placeholder snippet) */}
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Recent Administrative Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                     <Activity className="h-5 w-5 text-muted-foreground" />
+                   </div>
+                   <div>
+                     <p className="text-sm font-medium">New Doctor Registered</p>
+                     <p className="text-xs text-muted-foreground">Dr. Sarah Connor joined Cardiology</p>
+                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="text-xs text-muted-foreground">
+                  {i * 2} hours ago
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-
-        <div className="quick-stats-card card">
-          <h3>Quick Stats</h3>
-          <div className="quick-stat">
-            <div className="quick-stat-label">
-              <FiCheckCircle color="#00D4AA" />
-              <span>Completed</span>
-            </div>
-            <span className="quick-stat-value">{stats?.completedAppointments || 0}</span>
-          </div>
-          <div className="quick-stat">
-            <div className="quick-stat-label">
-              <FiXCircle color="#FF6B6B" />
-              <span>Cancelled</span>
-            </div>
-            <span className="quick-stat-value">{stats?.cancelledAppointments || 0}</span>
-          </div>
-          <div className="quick-stat">
-            <div className="quick-stat-label">
-              <FiCalendar color="#54A0FF" />
-              <span>Today</span>
-            </div>
-            <span className="quick-stat-value">{stats?.todayAppointments || 0}</span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default Dashboard;
+}

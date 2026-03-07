@@ -1,141 +1,93 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import PublicLayout from './components/layout/PublicLayout';
 import DashboardLayout from './components/Layout/DashboardLayout';
-
-// Auth Pages
-import Login from './pages/Login';
-import Register from './pages/Register';
-
-// Admin Pages
+import PlaceholderPage from './components/PlaceholderPage';
+import Home from './pages/public/Home';
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
 import AdminDashboard from './pages/admin/Dashboard';
-import Departments from './pages/admin/Departments';
-import AdminDoctors from './pages/admin/Doctors';
-import DoctorAvailability from './pages/admin/DoctorAvailability';
-import AdminAppointments from './pages/admin/Appointments';
-
-// Doctor Pages
 import DoctorDashboard from './pages/doctor/Dashboard';
-import DoctorAllAppointments from './pages/doctor/AllAppointments';
-import CreatePrescription from './pages/doctor/CreatePrescription';
-import UploadReport from './pages/doctor/UploadReport';
-
-// Patient Pages
 import PatientDashboard from './pages/patient/Dashboard';
-import BrowseDoctors from './pages/patient/Doctors';
-import DoctorDetail from './pages/patient/DoctorDetail';
-import PatientAppointments from './pages/patient/Appointments';
-import Prescriptions from './pages/patient/Prescriptions';
-import Reports from './pages/patient/Reports';
-
-// Receptionist Pages
 import ReceptionistDashboard from './pages/receptionist/Dashboard';
-import BookAppointment from './pages/receptionist/BookAppointment';
+import PatientProfile from './modules/patient/Profile';
+import AppointmentBooking from './modules/appointments/AppointmentBooking';
+import LabReports from './modules/patient/LabReports';
+import Prescriptions from './modules/patient/Prescriptions';
+import PatientAppointments from './modules/patient/Appointments';
+import Analytics from './modules/analytics/Analytics';
+import Pharmacy from './modules/pharmacy/Pharmacy';
+import Billing from './modules/billing/Billing';
+import { Toaster } from 'sonner';
 
-// Smart redirect based on role
-const HomeRedirect = () => {
-  const { user, isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  const paths = {
-    admin: '/admin',
-    doctor: '/doctor',
-    patient: '/patient',
-    receptionist: '/receptionist',
-  };
-  return <Navigate to={paths[user?.role] || '/login'} replace />;
-};
+const Unauthorized = () => <div className="p-8 text-2xl font-bold text-destructive">Unauthorized Access</div>;
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#1E2A4A',
-              color: '#E8E8F0',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: '10px',
-              fontSize: '0.88rem',
-            },
-            success: { iconTheme: { primary: '#00D4AA', secondary: '#1E2A4A' } },
-            error: { iconTheme: { primary: '#FF6B6B', secondary: '#1E2A4A' } },
-          }}
-        />
-        <Routes>
-          {/* Public Routes */}
+    <Router>
+      <Toaster position="top-right" richColors />
+      <Routes>
+        {/* Public Routes */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/" element={<HomeRedirect />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+        </Route>
 
-          {/* Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="departments" element={<Departments />} />
-            <Route path="doctors" element={<AdminDoctors />} />
-            <Route path="availability" element={<DoctorAvailability />} />
-            <Route path="appointments" element={<AdminAppointments />} />
-          </Route>
+        {/* Admin Routes */}
+        <Route element={<DashboardLayout allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/analytics" element={<Analytics />} />
+          <Route path="/admin/pharmacy" element={<Pharmacy />} />
+          <Route path="/admin/billing" element={<Billing />} />
+          <Route path="/admin/users" element={<PlaceholderPage title="User Management" description="Manage system users and roles." />} />
+          <Route path="/admin/doctors" element={<PlaceholderPage title="Doctors" description="Manage doctors and their profiles." />} />
+          <Route path="/admin/departments" element={<PlaceholderPage title="Departments" description="Manage hospital departments." />} />
+          <Route path="/admin/patients" element={<PlaceholderPage title="Patients" description="View and manage patient records." />} />
+          <Route path="/admin/appointments" element={<PlaceholderPage title="Appointments" description="View and manage all appointments." />} />
+          <Route path="/admin/beds" element={<PlaceholderPage title="Bed Management" description="Track ward and bed availability." />} />
+          <Route path="/admin/inventory" element={<PlaceholderPage title="Inventory" description="Manage hospital inventory and supplies." />} />
+          <Route path="/admin/profile" element={<PlaceholderPage title="Profile" description="Manage your admin profile." />} />
+        </Route>
 
-          {/* Doctor Routes */}
-          <Route
-            path="/doctor"
-            element={
-              <ProtectedRoute allowedRoles={['doctor']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DoctorDashboard />} />
-            <Route path="appointments" element={<DoctorAllAppointments />} />
-            <Route path="prescriptions" element={<CreatePrescription />} />
-            <Route path="reports" element={<UploadReport />} />
-          </Route>
+        {/* Doctor Routes */}
+        <Route element={<DashboardLayout allowedRoles={['doctor']} />}>
+          <Route path="/doctor" element={<DoctorDashboard />} />
+          <Route path="/doctor/appointments" element={<PlaceholderPage title="My Appointments" description="View and manage your appointment schedule." />} />
+          <Route path="/doctor/patients" element={<PlaceholderPage title="Patients" description="View your patient list and history." />} />
+          <Route path="/doctor/prescriptions" element={<PlaceholderPage title="Prescriptions" description="Create and manage prescriptions." />} />
+          <Route path="/doctor/reports" element={<PlaceholderPage title="Lab Reports" description="View and upload patient lab reports." />} />
+          <Route path="/doctor/availability" element={<PlaceholderPage title="Availability" description="Set your availability and schedule." />} />
+          <Route path="/doctor/profile" element={<PlaceholderPage title="Profile" description="Manage your doctor profile." />} />
+        </Route>
 
-          {/* Patient Routes */}
-          <Route
-            path="/patient"
-            element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<PatientDashboard />} />
-            <Route path="doctors" element={<BrowseDoctors />} />
-            <Route path="doctors/:id" element={<DoctorDetail />} />
-            <Route path="appointments" element={<PatientAppointments />} />
-            <Route path="prescriptions" element={<Prescriptions />} />
-            <Route path="reports" element={<Reports />} />
-          </Route>
+        {/* Patient Routes */}
+        <Route element={<DashboardLayout allowedRoles={['patient']} />}>
+          <Route path="/patient" element={<PatientDashboard />} />
+          <Route path="/patient/profile" element={<PatientProfile />} />
+          <Route path="/patient/book" element={<AppointmentBooking />} />
+          <Route path="/patient/reports" element={<LabReports />} />
+          <Route path="/patient/prescriptions" element={<Prescriptions />} />
+          <Route path="/patient/appointments" element={<PatientAppointments />} />
+          <Route path="/patient/billing" element={<PlaceholderPage title="Billing" description="View and pay your bills." />} />
+          <Route path="/patient/telemedicine" element={<PlaceholderPage title="Telemedicine" description="Join video consultations with your doctor." />} />
+        </Route>
 
-          {/* Receptionist Routes */}
-          <Route
-            path="/receptionist"
-            element={
-              <ProtectedRoute allowedRoles={['receptionist']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<ReceptionistDashboard />} />
-            <Route path="book" element={<BookAppointment />} />
-          </Route>
+        {/* Receptionist Routes */}
+        <Route element={<DashboardLayout allowedRoles={['receptionist']} />}>
+          <Route path="/receptionist" element={<ReceptionistDashboard />} />
+          <Route path="/receptionist/billing" element={<Billing />} />
+          <Route path="/receptionist/appointments" element={<PlaceholderPage title="Appointments Queue" description="Manage today's appointments and check-in." />} />
+          <Route path="/receptionist/register" element={<PlaceholderPage title="Register Patient" description="Register new patients at the front desk." />} />
+          <Route path="/receptionist/reports" element={<PlaceholderPage title="Reports" description="Generate and view front desk reports." />} />
+          <Route path="/receptionist/patients" element={<PlaceholderPage title="Patient Database" description="Search and view patient records." />} />
+          <Route path="/receptionist/profile" element={<PlaceholderPage title="Profile" description="Manage your profile." />} />
+        </Route>
 
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
