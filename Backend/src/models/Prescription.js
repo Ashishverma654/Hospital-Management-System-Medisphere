@@ -1,4 +1,28 @@
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
+
+const medicineSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+
+  dosage: {
+    type: String
+  },
+
+  frequency: {
+    type: String
+  },
+
+  duration: {
+    type: String
+  },
+
+  instructions: {
+    type: String
+  },
+});
+
 
 const prescriptionSchema = new mongoose.Schema(
   {
@@ -6,6 +30,7 @@ const prescriptionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Appointment",
       required: true,
+      unique: true
     },
 
     doctorId: {
@@ -16,7 +41,7 @@ const prescriptionSchema = new mongoose.Schema(
 
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Patient",
       required: true,
     },
 
@@ -24,13 +49,7 @@ const prescriptionSchema = new mongoose.Schema(
       type: String,
     },
 
-    medicines: [
-      {
-        name: String,
-        dosage: String,
-        duration: String,
-      },
-    ],
+    medicines: [medicineSchema],
 
     notes: {
       type: String,

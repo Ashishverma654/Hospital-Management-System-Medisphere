@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { FileText, Download, Pill, Clock, Stethoscope, Activity, Filter, Calendar } from 'lucide-react';
+import { FileText, Download, Pill, Clock, Stethoscope, Activity, Filter, Calendar, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -11,38 +12,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-
-// Mock data - will be replaced with API
-const prescriptionsData = [
-  { id: 'RX-7482', date: '2025-03-15', doctor: 'Dr. Sarah Smith', department: 'Cardiology', diagnosis: 'Mild Hypertension', status: 'Active', medications: [
-    { name: 'Lisinopril 10mg', duration: '30 days', dosage: '1 pill daily (morning)' },
-    { name: 'Amlodipine 5mg', duration: '30 days', dosage: '1 pill daily (evening)' }
-  ]},
-  { id: 'RX-7390', date: '2025-02-14', doctor: 'Dr. Emily Chen', department: 'Dermatology', diagnosis: 'Contact Dermatitis', status: 'Completed', medications: [
-    { name: 'Hydrocortisone 1% Cream', duration: '7 days', dosage: 'Apply to affected area 2x daily' },
-    { name: 'Loratadine 10mg', duration: '14 days', dosage: '1 pill daily as needed for itching' }
-  ]},
-  { id: 'RX-7123', date: '2025-01-20', doctor: 'Dr. John Doe', department: 'General Medicine', diagnosis: 'Upper Respiratory Infection', status: 'Completed', medications: [
-    { name: 'Amoxicillin 500mg', duration: '7 days', dosage: '1 pill 3x daily' }
-  ]},
-];
+import { prescriptionApi } from '../../services/apiServices';
+import { toast } from 'sonner';
 
 const departments = ['All', 'Cardiology', 'Dermatology', 'General Medicine', 'Neurology', 'Pediatrics'];
 
 export default function Prescriptions() {
+  const [prescriptionsData, setPrescriptionsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
 
+  useEffect(() => {
+    prescriptionApi
+      .getMy()
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? (res.data?.prescriptions ? res.data.prescriptions : []);
+        setPrescriptionsData(Array.isArray(data) ? data : []);
+      })
+      .catch(() => toast.error('Failed to load prescriptions'))
+      .finally(() => setLoading(false));
+  }, []);
+
   const filteredPrescriptions = useMemo(() => {
     return prescriptionsData.filter((rx) => {
-      const rxDate = new Date(rx.date);
+      const rxDate = new Date(rx.createdAt || rx.date);
       const fromOk = !dateFrom || rxDate >= new Date(dateFrom);
       const toOk = !dateTo || rxDate <= new Date(dateTo);
-      const deptOk = departmentFilter === 'All' || rx.department === departmentFilter;
+      const dept = rx.doctorId?.departmentId?.name || rx.department;
+      const deptOk = departmentFilter === 'All' || dept === departmentFilter;
       return fromOk && toOk && deptOk;
     });
-  }, [dateFrom, dateTo, departmentFilter]);
+  }, [prescriptionsData, dateFrom, dateTo, departmentFilter]);
+
+  const handleDownloadPdf = (id) => {
+    prescriptionApi
+      .downloadPdf(id)
+      .then((res) => {
+        const url = URL.createObjectURL(res.data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `prescription-${id}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Download started');
+      })
+      .catch(() => toast.error('Download failed'));
+  };
 
   const clearFilters = () => {
     setDateFrom('');
@@ -95,58 +112,77 @@ export default function Prescriptions() {
         </CardContent>
       </Card>
 
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        </div>
+      ) : (
       <div className="grid gap-6 md:grid-cols-2">
-        {filteredPrescriptions.map((rx) => (
-          <Card key={rx.id} className="border-2 border-emerald-100 bg-white shadow-lg shadow-emerald-500/5 hover:shadow-xl transition-shadow flex flex-col h-full">
-            <CardHeader className="border-b border-emerald-100 pb-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2 text-emerald-800">
-                    <FileText className="h-5 w-5" /> {rx.id}
-                  </CardTitle>
-                  <CardDescription className="mt-1">Prescribed on {new Date(rx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</CardDescription>
-                  <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">{rx.department}</span>
-                </div>
-                <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${
-                  rx.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {rx.status}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 flex-grow space-y-4">
-              <div className="flex items-center gap-2 text-sm">
-                <Stethoscope className="h-4 w-4 text-emerald-600" />
-                <span className="font-medium text-muted-foreground">Doctor:</span>
-                <span>{rx.doctor}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm mb-4">
-                <Activity className="h-4 w-4 text-emerald-600" />
-                <span className="font-medium text-muted-foreground">Diagnosis:</span>
-                <span>{rx.diagnosis}</span>
-              </div>
-              <div className="space-y-3 mt-4">
-                <h4 className="text-sm font-semibold flex items-center gap-2 text-emerald-800">
-                  <Pill className="h-4 w-4" /> Medications
-                </h4>
-                {rx.medications.map((med, i) => (
-                  <div key={i} className="bg-emerald-50/80 p-3 rounded-lg border border-emerald-100">
-                    <div className="font-medium text-sm text-emerald-900 mb-1">{med.name}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> {med.dosage} • For {med.duration}
-                    </div>
+        {filteredPrescriptions.map((rx, idx) => (
+          <motion.div
+            key={rx._id}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+          >
+            <Card className="border-2 border-emerald-100 bg-white shadow-lg shadow-emerald-500/5 hover:shadow-xl transition-shadow flex flex-col h-full">
+              <CardHeader className="border-b border-emerald-100 pb-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2 text-emerald-800">
+                      <FileText className="h-5 w-5" /> {rx._id?.slice(-8) || rx.id}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Prescribed on {new Date(rx.createdAt || rx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </CardDescription>
+                    <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+                      {rx.doctorId?.departmentId?.name || rx.department || '—'}
+                    </span>
                   </div>
-                ))}
+                  <span className="px-2.5 py-1 text-xs rounded-full font-medium bg-emerald-100 text-emerald-700">
+                    Active
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 flex-grow space-y-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Stethoscope className="h-4 w-4 text-emerald-600" />
+                  <span className="font-medium text-muted-foreground">Doctor:</span>
+                  <span>{rx.doctorId?.userId?.name || rx.doctor || '—'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm mb-4">
+                  <Activity className="h-4 w-4 text-emerald-600" />
+                  <span className="font-medium text-muted-foreground">Diagnosis:</span>
+                  <span>{rx.diagnosis || '—'}</span>
+                </div>
+                <div className="space-y-3 mt-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 text-emerald-800">
+                    <Pill className="h-4 w-4" /> Medications
+                  </h4>
+                  {(rx.medicines || rx.medications || []).map((med, i) => (
+                    <div key={i} className="bg-emerald-50/80 p-3 rounded-lg border border-emerald-100">
+                      <div className="font-medium text-sm text-emerald-900 mb-1">{med.name || med.medicineName}</div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {med.dosage || med.dose} • For {med.duration || '—'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+              <div className="p-4 border-t border-emerald-100 bg-emerald-50/50">
+                <Button
+                  variant="outline"
+                  className="w-full border-emerald-200 hover:bg-emerald-100 text-emerald-800"
+                  onClick={() => handleDownloadPdf(rx._id)}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download PDF
+                </Button>
               </div>
-            </CardContent>
-            <div className="p-4 border-t border-emerald-100 bg-emerald-50/50">
-              <Button variant="outline" className="w-full border-emerald-200 hover:bg-emerald-100 text-emerald-800">
-                <Download className="mr-2 h-4 w-4" /> Download PDF
-              </Button>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
         ))}
       </div>
+      )}
 
       {filteredPrescriptions.length === 0 && (
         <Card className="border-2 border-dashed border-emerald-200 bg-emerald-50/30 p-12 text-center">

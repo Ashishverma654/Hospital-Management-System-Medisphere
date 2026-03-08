@@ -1,186 +1,338 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
-import { Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { departmentApi, doctorApi } from '../../services/apiServices';
+import api from '../../lib/api';
 
-// Sample data
-const departments = ['Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'General Medicine'];
-const doctorsByDept = {
-  Cardiology: ['Dr. Sarah Smith', 'Dr. John Heart'],
-  Neurology: ['Dr. Mark Brain', 'Dr. Lisa Nerve'],
-  Orthopedics: ['Dr. James Bone', 'Dr. Anna Joint'],
-  Pediatrics: ['Dr. Emily Child', 'Dr. Robert Baby'],
-  'General Medicine': ['Dr. William General', 'Dr. Nancy Care']
+const slotToDisplay = (s) => {
+  if (!s) return '';
+  const [h, m] = s.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
 };
-const dates = ['Oct 24, 2023', 'Oct 25, 2023', 'Oct 26, 2023', 'Oct 27, 2023'];
-const timeSlots = [
-  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
-  '11:00 AM', '11:30 AM', '02:00 PM', '02:30 PM',
-  '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM'
-];
+
+const dateToInput = (d) => {
+  if (!d) return '';
+  const x = new Date(d);
+  return x.toISOString().slice(0, 10);
+};
 
 export default function AppointmentBooking() {
   const navigate = useNavigate();
+  const [departments, setDepartments] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [department, setDepartment] = useState('');
-  const [doctor, setDoctor] = useState('');
+  const [doctor, setDoctor] = useState(null);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [availableDates, setAvailableDates] = useState([]);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadingDepts, setLoadingDepts] = useState(true);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  useEffect(() => {
+    departmentApi.getAll()
+      .then((res) => setDepartments(res.data?.data || res.data || []))
+      .catch(() => toast.error('Failed to load departments'))
+      .finally(() => setLoadingDepts(false));
+  }, []);
+
+  useEffect(() => {
+    if (!department) {
+      setDoctors([]);
+      setDoctor(null);
+      return;
+    }
+    setLoadingDoctors(true);
+    doctorApi.getAll()
+      .then((res) => {
+        const list = res.data?.data || res.data || [];
+        const filtered = list.filter(
+          (d) => d.departmentId?._id === department || d.departmentId?.name === department
+        );
+        setDoctors(filtered.length ? filtered : list);
+      })
+      .catch(() => toast.error('Failed to load doctors'))
+      .finally(() => setLoadingDoctors(false));
+  }, [department]);
+
+  useEffect(() => {
+    if (!doctor?._id || !date) {
+      setAvailableSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    api.get(`/doctors/${doctor._id}/slots`, { params: { date } })
+      .then((res) => setAvailableSlots(res.data?.availableSlots || []))
+      .catch(() => setAvailableSlots([]))
+      .finally(() => setLoadingSlots(false));
+  }, [doctor?._id, date]);
+
+  useEffect(() => {
+    const next14 = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      next14.push(dateToInput(d));
+    }
+    setAvailableDates(next14);
+  }, []);
 
   const handleBook = () => {
+    if (!doctor?._id || !date || !time) return;
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setStep(3);
-      toast.success('Appointment booked successfully!');
-    }, 1500);
+    api.post('/appointments', { doctorId: doctor._id, date, slot: time })
+      .then(() => {
+        setStep(3);
+        toast.success('Appointment booked successfully!');
+      })
+      .catch((err) => toast.error(err.response?.data?.message || 'Booking failed'))
+      .finally(() => setIsSubmitting(false));
   };
 
+  const doctorName = doctor?.userId?.name || doctor?.name || 'Doctor';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-4xl mx-auto space-y-6"
+    >
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Book Appointment</h2>
         <p className="text-muted-foreground">Schedule a visit with our specialists.</p>
       </div>
 
       <div className="flex justify-between mb-8 relative">
-        <div className="absolute top-1/2 -z-10 h-1 w-full bg-border -translate-y-1/2"></div>
-        <div className="absolute top-1/2 -z-10 h-1 bg-primary -translate-y-1/2 transition-all duration-500" style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}></div>
-        
-        {[1, 2, 3].map(s => (
-          <div key={s} className="flex flex-col items-center">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${s <= step ? 'bg-primary text-primary-foreground' : 'bg-background border-2 border-primary text-muted-foreground'} transition-colors duration-300`}>
+        <div className="absolute top-1/2 -z-10 h-1 w-full bg-border -translate-y-1/2" />
+        <div
+          className="absolute top-1/2 -z-10 h-1 bg-primary -translate-y-1/2 transition-all duration-500"
+          style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
+        />
+        {[1, 2, 3].map((s) => (
+          <motion.div
+            key={s}
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            className="flex flex-col items-center"
+          >
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-300 ${
+                s <= step ? 'bg-primary text-primary-foreground' : 'bg-background border-2 border-primary text-muted-foreground'
+              }`}
+            >
               {s < step ? <CheckCircle2 className="w-5 h-5" /> : s}
             </div>
             <span className="text-xs font-medium mt-2 bg-background px-1 whitespace-nowrap">
               {s === 1 ? 'Specialist' : s === 2 ? 'Schedule' : 'Confirm'}
             </span>
-          </div>
+          </motion.div>
         ))}
       </div>
 
-      <Card className="border-border/50 bg-background/50 backdrop-blur-sm shadow-md">
-        {step === 1 && (
-          <>
-            <CardHeader>
-              <CardTitle>Select Department & Doctor</CardTitle>
-              <CardDescription>Choose the specialty and preferred doctor.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Department</Label>
-                <Select value={department} onValueChange={(v) => { setDepartment(v); setDoctor(''); }}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map(dept => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {department && (
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm shadow-md overflow-hidden">
+        <AnimatePresence mode="wait">
+          {step === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <CardHeader>
+                <CardTitle>Select Department & Doctor</CardTitle>
+                <CardDescription>Choose the specialty and preferred doctor.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Doctor</Label>
-                  <Select value={doctor} onValueChange={setDoctor}>
+                  <Label>Department</Label>
+                  <Select
+                    value={department}
+                    onValueChange={(v) => {
+                      setDepartment(v);
+                      setDoctor(null);
+                    }}
+                    disabled={loadingDepts}
+                  >
                     <SelectTrigger className="bg-background/50">
-                      <SelectValue placeholder="Select doctor" />
+                      <SelectValue placeholder={loadingDepts ? 'Loading...' : 'Select department'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {doctorsByDept[department].map(doc => (
-                        <SelectItem key={doc} value={doc}>{doc}</SelectItem>
+                      {departments.map((d) => (
+                        <SelectItem key={d._id} value={d._id}>
+                          {d.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button onClick={() => setStep(2)} disabled={!department || !doctor}>Next Step</Button>
-            </CardFooter>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <CardHeader>
-              <CardTitle>Select Date & Time</CardTitle>
-              <CardDescription>Choose an available slot for {doctor}.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> Available Dates</Label>
-                <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                  {dates.map(d => (
-                    <button 
-                      key={d}
-                      onClick={() => setDate(d)}
-                      className={`px-4 py-2 rounded-md border whitespace-nowrap transition-colors outline-none focus:ring-2 focus:ring-primary/20 ${date === d ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-muted border-border'}`}
+                {department && (
+                  <div className="space-y-2">
+                    <Label>Doctor</Label>
+                    <Select
+                      value={doctor?._id || ''}
+                      onValueChange={(id) => setDoctor(doctors.find((d) => d._id === id) || null)}
+                      disabled={loadingDoctors}
                     >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                      <SelectTrigger className="bg-background/50">
+                        <SelectValue placeholder={loadingDoctors ? 'Loading...' : 'Select doctor'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {doctors.map((d) => (
+                          <SelectItem key={d._id} value={d._id}>
+                            {d.userId?.name || d.name} – {d.specialization}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-end">
+                <Button onClick={() => setStep(2)} disabled={!department || !doctor}>
+                  Next Step
+                </Button>
+              </CardFooter>
+            </motion.div>
+          )}
 
-              {date && (
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <CardHeader>
+                <CardTitle>Select Date & Time</CardTitle>
+                <CardDescription>Choose an available slot for {doctorName}.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div className="space-y-3">
-                  <Label className="flex items-center gap-2"><Clock className="w-4 h-4" /> Available Times</Label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                    {timeSlots.map(t => {
-                      const isBooked = t === '10:00 AM' || t === '02:00 PM';
-                      return (
-                        <button 
-                          key={t}
-                          disabled={isBooked}
-                          onClick={() => setTime(t)}
-                          className={`py-2 text-sm rounded-md border transition-colors outline-none focus:ring-2 focus:ring-primary/20 ${
-                            isBooked ? 'opacity-50 cursor-not-allowed bg-muted border-border text-muted-foreground' : 
-                            time === t ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 
-                            'bg-background hover:border-primary/50 hover:bg-primary/5 border-border'
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      );
-                    })}
+                  <Label className="flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" /> Date
+                  </Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {availableDates.map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setDate(d)}
+                        className={`px-4 py-2 rounded-md border whitespace-nowrap transition-colors outline-none focus:ring-2 focus:ring-primary/20 ${
+                          date === d
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background hover:bg-muted border-border'
+                        }`}
+                      >
+                        {new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between border-t border-border/50 pt-6">
-              <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              <Button onClick={handleBook} disabled={!date || !time || isSubmitting}>
-                {isSubmitting ? <span className="animate-spin mr-2 border-b-2 border-white w-4 h-4 rounded-full"></span> : null}
-                Confirm Booking
-              </Button>
-            </CardFooter>
-          </>
-        )}
+                {date && (
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {loadingSlots ? 'Loading slots...' : 'Available Times'}
+                    </Label>
+                    {loadingSlots ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                        {availableSlots.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setTime(t)}
+                            className={`py-2 text-sm rounded-md border transition-colors outline-none focus:ring-2 focus:ring-primary/20 ${
+                              time === t
+                                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                : 'bg-background hover:border-primary/50 hover:bg-primary/5 border-border'
+                            }`}
+                          >
+                            {slotToDisplay(t)}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!loadingSlots && availableSlots.length === 0 && date && (
+                      <p className="text-sm text-muted-foreground">No slots available this day.</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-between border-t border-border/50 pt-6">
+                <Button variant="outline" onClick={() => setStep(1)}>
+                  Back
+                </Button>
+                <Button onClick={handleBook} disabled={!date || !time || isSubmitting}>
+                  {isSubmitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Confirm Booking
+                </Button>
+              </CardFooter>
+            </motion.div>
+          )}
 
-        {step === 3 && (
-          <CardContent className="py-12 flex flex-col items-center text-center space-y-4">
-            <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-            <h3 className="text-2xl font-bold text-foreground">Booking Confirmed!</h3>
-            <p className="text-muted-foreground max-w-md">
-              Your appointment with <span className="font-semibold text-foreground">{doctor}</span> has been scheduled for <span className="font-semibold text-foreground">{date} at {time}</span>.
-            </p>
-            <div className="pt-6 flex gap-4">
-              <Button variant="outline" onClick={() => {setStep(1); setDepartment(''); setDoctor(''); setDate(''); setTime('');}}>Book Another</Button>
-              <Button onClick={() => navigate('/patient')}>Go to Dashboard</Button>
-            </div>
-          </CardContent>
-        )}
+          {step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="py-12 flex flex-col items-center text-center space-y-4"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200 }}
+                className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4"
+              >
+                <CheckCircle2 className="w-8 h-8" />
+              </motion.div>
+              <h3 className="text-2xl font-bold text-foreground">Booking Confirmed!</h3>
+              <p className="text-muted-foreground max-w-md">
+                Your appointment with <span className="font-semibold text-foreground">{doctorName}</span> has been
+                scheduled for{' '}
+                <span className="font-semibold text-foreground">
+                  {date && new Date(date).toLocaleDateString('en-US')} at {slotToDisplay(time)}
+                </span>
+                .
+              </p>
+              <div className="pt-6 flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep(1);
+                    setDepartment('');
+                    setDoctor(null);
+                    setDate('');
+                    setTime('');
+                  }}
+                >
+                  Book Another
+                </Button>
+                <Button onClick={() => navigate('/patient')}>Go to Dashboard</Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
-    </div>
+    </motion.div>
   );
 }

@@ -28,8 +28,10 @@ export const register = async (req, res) => {
       role: "patient",
     });
 
+    const accessToken = generateAccessToken(user);
     res.status(201).json({
       message: "User registered successfully",
+      accessToken,
       user: {
         id: user._id,
         name: user.name,
@@ -74,6 +76,7 @@ export const login = async (req, res) => {
       user: {
         id: user._id,
         name: user.name,
+        email: user.email,
         role: user.role,
       },
     });

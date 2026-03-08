@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import PublicLayout from './components/layout/PublicLayout';
+import PublicLayout from './components/Layout/PublicLayout';
 import DashboardLayout from './components/Layout/DashboardLayout';
 import PlaceholderPage from './components/PlaceholderPage';
 import Home from './pages/public/Home';
@@ -17,6 +17,7 @@ import PatientAppointments from './modules/patient/Appointments';
 import Analytics from './modules/analytics/Analytics';
 import Pharmacy from './modules/pharmacy/Pharmacy';
 import Billing from './modules/billing/Billing';
+import Beds from './modules/beds/Beds';
 import { Toaster } from 'sonner';
 
 const Unauthorized = () => <div className="p-8 text-2xl font-bold text-destructive">Unauthorized Access</div>;
@@ -45,7 +46,7 @@ function App() {
           <Route path="/admin/departments" element={<PlaceholderPage title="Departments" description="Manage hospital departments." />} />
           <Route path="/admin/patients" element={<PlaceholderPage title="Patients" description="View and manage patient records." />} />
           <Route path="/admin/appointments" element={<PlaceholderPage title="Appointments" description="View and manage all appointments." />} />
-          <Route path="/admin/beds" element={<PlaceholderPage title="Bed Management" description="Track ward and bed availability." />} />
+          <Route path="/admin/beds" element={<Beds />} />
           <Route path="/admin/inventory" element={<PlaceholderPage title="Inventory" description="Manage hospital inventory and supplies." />} />
           <Route path="/admin/profile" element={<PlaceholderPage title="Profile" description="Manage your admin profile." />} />
         </Route>

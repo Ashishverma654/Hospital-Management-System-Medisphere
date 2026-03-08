@@ -2,13 +2,15 @@ import mongoose from "mongoose";
 import Prescription from "../models/Prescription.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
+import Patient from "../models/Patient.js";
+import { generatePrescriptionPDF } from "../utils/generatePrescriptionPDF.js";
 
 export const createPrescription = async (req, res) => {
   try {
     const { appointmentId, diagnosis, medicines, notes } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
-        return res.status(400).json({ message: "Invalid appointment ID format" });
+      return res.status(400).json({ message: "Invalid appointment ID format" });
     }
 
     const appointment = await Appointment.findById(appointmentId);
@@ -20,11 +22,11 @@ export const createPrescription = async (req, res) => {
     // Security: Check if the logged-in doctor is the one assigned to this appointment
     const doctor = await Doctor.findOne({ userId: req.user.id });
     if (!doctor || appointment.doctorId.toString() !== doctor._id.toString()) {
-        return res.status(403).json({ message: "Access Forbidden: You are not the assigned doctor for this appointment." });
+      return res.status(403).json({ message: "Access Forbidden: You are not the assigned doctor for this appointment." });
     }
 
     if (appointment.status === "cancelled") {
-        return res.status(400).json({ message: "Cannot create prescription for a cancelled appointment." });
+      return res.status(400).json({ message: "Cannot create prescription for a cancelled appointment." });
     }
 
     const prescription = await Prescription.create({
@@ -48,14 +50,72 @@ export const createPrescription = async (req, res) => {
 
 export const getPatientPrescriptions = async (req, res) => {
   try {
-    const patientId = req.user.id;
+    const patient = await Patient.findOne({ userId: req.user.id });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: "Patient profile not found."
+      });
+    }
 
     const prescriptions = await Prescription.find({
-      patientId,
-    }).populate("doctorId");
+      patientId: patient._id
+    }).populate({ path: "doctorId", populate: { path: "userId", select: "name" } }).populate("appointmentId");
 
-    res.json(prescriptions);
+    res.status(200).json({
+      success: true,
+      data: prescriptions
+    });
+
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+export const getPrescriptionByAppointment = async (req, res) => {
+  try {
+    const prescription = await Prescription.findOne({
+      appointmentId: req.params.appointmentId
+    }).populate("doctorId").populate("patientId");
+
+    res.status(200).json({
+      success: true,
+      data: prescription
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+export const downloadPrescriptionPDF = async (req, res) => {
+  try {
+
+    const prescription = await Prescription.findById(req.params.id);
+
+    if (!prescription) {
+      return res.status(404).json({
+        message: "Prescription not found"
+      });
+    }
+
+    generatePrescriptionPDF(res, prescription);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
 };

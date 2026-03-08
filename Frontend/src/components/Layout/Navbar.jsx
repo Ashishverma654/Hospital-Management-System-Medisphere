@@ -19,6 +19,7 @@ export default function Navbar({ toggleSidebar }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    localStorage.removeItem('mediflow_auth');
     dispatch(logout());
     navigate('/login');
   };

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Sidebar from './Sidebar';
-import Navbar from '../layout/Navbar';
+import Navbar from './Navbar';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DashboardLayout({ allowedRoles }) {

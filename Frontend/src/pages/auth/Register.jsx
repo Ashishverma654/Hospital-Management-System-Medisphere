@@ -32,7 +32,7 @@ export default function Register() {
     try {
       const { user, token } = await registerUser(formData);
       dispatch(loginSuccess({ user, token }));
-      
+      localStorage.setItem('mediflow_auth', JSON.stringify({ user, token }));
       toast.success(`Account created! Welcome, ${user.name}.`);
       
       const rolePaths = {

@@ -86,19 +86,22 @@ export default function Home() {
               { icon: Video, title: "Telemedicine", desc: "Consult with specialists remotely via integrated video calls." },
               { icon: ShieldCheck, title: "Insurance Integration", desc: "Seamless billing and insurance claim processing." },
               { icon: Building2, title: "Ward Management", desc: "Real-time bed tracking and availability monitoring." }
-            ].map((feature, i) => (
-              <motion.div key={i} variants={fadeIn}>
-                <Card className="bg-background/60 backdrop-blur-md border border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md h-full">
-                  <CardContent className="p-6">
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                      <feature.icon className="h-6 w-6" />
-                    </div>
-                    <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.desc}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+            ].map((feature, i) => {
+              const FeatureIcon = feature.icon;
+              return (
+                <motion.div key={i} variants={fadeIn}>
+                  <Card className="bg-background/60 backdrop-blur-md border border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md h-full">
+                    <CardContent className="p-6">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
+                        <FeatureIcon className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-muted-foreground">{feature.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </div>
       </section>
@@ -123,11 +126,13 @@ export default function Home() {
               { icon: Building2, name: "Orthopedics", count: "15 Doctors" },
               { icon: Baby, name: "Pediatrics", count: "20 Doctors" },
               { icon: Smile, name: "Dermatology", count: "6 Doctors" }
-            ].map((dept, i) => (
+            ].map((dept, i) => {
+              const DeptIcon = dept.icon;
+              return (
               <Card key={i} className="group hover:bg-gradient-to-br hover:from-primary hover:to-secondary hover:text-primary-foreground transition-all duration-300 cursor-pointer border-2 border-primary/10 hover:border-primary/30 shadow-lg hover:shadow-primary/20">
                 <CardContent className="p-6 flex flex-col items-center text-center gap-3">
                   <div className="p-3 rounded-full bg-muted group-hover:bg-primary-foreground/20 transition-colors">
-                    <dept.icon className="h-8 w-8" />
+                    <DeptIcon className="h-8 w-8" />
                   </div>
                   <div>
                     <h3 className="font-semibold">{dept.name}</h3>
@@ -135,7 +140,8 @@ export default function Home() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>

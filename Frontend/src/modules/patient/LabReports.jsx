@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Eye, Download, UploadCloud, Filter, X, FileText } from 'lucide-react';
+import { Eye, Download, UploadCloud, Filter, FileText, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -20,21 +21,13 @@ import {
   TableRow,
 } from '../../components/ui/table';
 import { toast } from 'sonner';
-
-// Mock data - will be replaced with API
-const reportsData = [
-  { id: 'LR-1001', date: '2025-03-10', name: 'Complete Blood Count (CBC)', dept: 'Pathology', status: 'Available' },
-  { id: 'LR-1002', date: '2025-02-28', name: 'Lipid Panel', dept: 'Pathology', status: 'Available' },
-  { id: 'LR-1003', date: '2025-02-15', name: 'Chest X-Ray', dept: 'Radiology', status: 'Available' },
-  { id: 'LR-1004', date: '2025-03-12', name: 'Thyroid Function Test', dept: 'Pathology', status: 'Pending' },
-  { id: 'LR-1005', date: '2025-01-20', name: 'Urinalysis', dept: 'Pathology', status: 'Available' },
-  { id: 'LR-1006', date: '2025-01-05', name: 'ECG', dept: 'Cardiology', status: 'Available' },
-];
+import { labReportApi } from '../../services/apiServices';
 
 const departments = ['All', 'Pathology', 'Radiology', 'Cardiology', 'Neurology'];
-const testNames = ['All', 'Complete Blood Count (CBC)', 'Lipid Panel', 'Chest X-Ray', 'Thyroid Function Test', 'Urinalysis', 'ECG'];
 
 export default function LabReports() {
+  const [reportsData, setReportsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -43,16 +36,27 @@ export default function LabReports() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
+  useEffect(() => {
+    labReportApi
+      .getMy()
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? [];
+        setReportsData(Array.isArray(data) ? data : []);
+      })
+      .catch(() => toast.error('Failed to load reports'))
+      .finally(() => setLoading(false));
+  }, []);
+
   const filteredReports = useMemo(() => {
     return reportsData.filter((r) => {
-      const rDate = new Date(r.date);
+      const rDate = new Date(r.createdAt || r.date);
       const fromOk = !dateFrom || rDate >= new Date(dateFrom);
       const toOk = !dateTo || rDate <= new Date(dateTo);
-      const deptOk = departmentFilter === 'All' || r.dept === departmentFilter;
-      const testOk = testFilter === 'All' || r.name === testFilter;
+      const deptOk = departmentFilter === 'All' || (r.reportType || r.dept) === departmentFilter;
+      const testOk = testFilter === 'All' || (r.reportName || r.name) === testFilter;
       return fromOk && toOk && deptOk && testOk;
     });
-  }, [dateFrom, dateTo, departmentFilter, testFilter]);
+  }, [reportsData, dateFrom, dateTo, departmentFilter, testFilter]);
 
   const clearFilters = () => {
     setDateFrom('');
@@ -64,11 +68,22 @@ export default function LabReports() {
   const handleFileSelect = (files) => {
     if (!files?.length) return;
     setIsUploading(true);
-    // Simulate upload - replace with actual API call later
-    setTimeout(() => {
-      setIsUploading(false);
-      toast.success(`Uploaded ${files.length} file(s). Backend integration pending.`);
-    }, 1500);
+    const formData = new FormData();
+    formData.append('reportFile', files[0]);
+    formData.append('reportName', files[0].name);
+    formData.append('reportType', 'Lab');
+    labReportApi
+      .upload(formData)
+      .then(() => {
+        toast.success('Report uploaded successfully.');
+        return labReportApi.getMy();
+      })
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? [];
+        setReportsData(Array.isArray(data) ? data : []);
+      })
+      .catch(() => toast.error('Upload failed'))
+      .finally(() => setIsUploading(false));
   };
 
   const handleDrop = (e) => {
@@ -136,10 +151,11 @@ export default function LabReports() {
               <Label className="text-xs">Test Name</Label>
               <Select value={testFilter} onValueChange={setTestFilter}>
                 <SelectTrigger className="w-56 border-amber-200 bg-white">
-                  <SelectValue />
+                  <SelectValue placeholder="Test name" />
                 </SelectTrigger>
                 <SelectContent>
-                  {testNames.map((t) => (
+                  <SelectItem value="All">All</SelectItem>
+                  {[...new Set(reportsData.map((r) => r.reportName || r.name).filter(Boolean))].map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
                 </SelectContent>
@@ -167,23 +183,21 @@ export default function LabReports() {
             </TableHeader>
             <TableBody>
               {filteredReports.map((report) => (
-                <TableRow key={report.id} className="border-amber-50">
-                  <TableCell className="font-semibold text-amber-700">{report.id}</TableCell>
-                  <TableCell>{report.name}</TableCell>
-                  <TableCell><span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">{report.dept}</span></TableCell>
-                  <TableCell>{report.date}</TableCell>
+                <TableRow key={report._id} className="border-amber-50">
+                  <TableCell className="font-semibold text-amber-700">{report._id?.slice(-8) || report.id}</TableCell>
+                  <TableCell>{report.reportName || report.name}</TableCell>
+                  <TableCell><span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">{report.reportType || report.dept || '—'}</span></TableCell>
+                  <TableCell>{report.createdAt ? new Date(report.createdAt).toLocaleDateString() : report.date}</TableCell>
                   <TableCell>
-                    <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${
-                      report.status === 'Available' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                    }`}>
-                      {report.status}
+                    <span className="px-2.5 py-1 text-xs rounded-full font-medium bg-emerald-100 text-emerald-700">
+                      Available
                     </span>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon" disabled={report.status === 'Pending'} title="View">
+                    <Button variant="ghost" size="icon" title="View">
                       <Eye className="h-4 w-4 text-amber-600" />
                     </Button>
-                    <Button variant="ghost" size="icon" disabled={report.status === 'Pending'} title="Download">
+                    <Button variant="ghost" size="icon" title="Download" onClick={() => report.reportFile && window.open(report.reportFile, '_blank')}>
                       <Download className="h-4 w-4 text-amber-600" />
                     </Button>
                   </TableCell>

@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
+import User from "../models/User.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
 import DoctorAvailability from "../models/DoctorAvailability.js";
 import { generateSlots } from "../utils/generateSlots.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 export const bookAppointment = async (req, res) => {
   try {
@@ -11,7 +13,7 @@ export const bookAppointment = async (req, res) => {
     // If user is admin/receptionist, they can provide patientId. Else use current user.
     const patientId =
       (req.user.role === "admin" || req.user.role === "receptionist") &&
-      providedPatientId
+        providedPatientId
         ? providedPatientId
         : req.user.id;
 
@@ -78,6 +80,7 @@ export const bookAppointment = async (req, res) => {
       availability.endTime,
       availability.slotDuration,
     );
+
     if (!allSlots.includes(slot)) {
       return res
         .status(400)
@@ -106,6 +109,15 @@ export const bookAppointment = async (req, res) => {
       message: "Appointment booked successfully.",
       appointment,
     });
+
+    const patient = await User.findById(req.user.id);
+
+    await sendEmail(
+      patient.email,
+      "Appointment Confirmed",
+      `Your appointment has been booked successfully for ${appointment.date}.`
+    );
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

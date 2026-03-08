@@ -26,7 +26,7 @@ export default function Login() {
     try {
       const { user, token } = await loginUser(email, password);
       dispatch(loginSuccess({ user, token }));
-      
+      localStorage.setItem('mediflow_auth', JSON.stringify({ user, token }));
       toast.success(`Welcome back, ${user.name}!`);
       
       // Route based on role

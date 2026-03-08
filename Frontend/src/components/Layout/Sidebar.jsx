@@ -83,10 +83,12 @@ export default function Sidebar({ isOpen }) {
 
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-3">
-          {links.map((link) => (
+          {links.map((link) => {
+             const LinkIcon = link.icon;
+             return (
              <li key={link.name}>
              <NavLink
-               end={link.path.split('/').length === 2} // Exact match for root layout endpoints
+               end={link.path.split('/').length === 2}
                to={link.path}
                className={({ isActive }) =>
                  `flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${
@@ -96,11 +98,12 @@ export default function Sidebar({ isOpen }) {
                  }`
                }
              >
-               <link.icon className={`h-5 w-5 flex-shrink-0`} />
+               <LinkIcon className="h-5 w-5 flex-shrink-0" />
                {isOpen && <span>{link.name}</span>}
              </NavLink>
            </li>
-          ))}
+          );
+          })}
         </ul>
       </nav>
       
