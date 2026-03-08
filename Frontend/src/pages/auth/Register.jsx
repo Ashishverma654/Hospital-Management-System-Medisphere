@@ -9,18 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Button } from '../../components/ui/button';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../components/ui/select";
 import { Activity, UserPlus, Mail, Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Register() {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'patient' });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -35,14 +28,7 @@ export default function Register() {
       localStorage.setItem('mediflow_auth', JSON.stringify({ user, token }));
       toast.success(`Account created! Welcome, ${user.name}.`);
       
-      const rolePaths = {
-        admin: '/admin',
-        doctor: '/doctor',
-        patient: '/patient',
-        receptionist: '/receptionist'
-      };
-      
-      navigate(rolePaths[user.role] || '/');
+      navigate('/patient');
     // eslint-disable-next-line no-unused-vars
     } catch (error) {
       toast.error('Registration failed.');
@@ -137,22 +123,9 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="space-y-2 pb-2">
-                <Label>Account Type</Label>
-                <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
-                  <SelectTrigger className="bg-background/50">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="patient">Patient</SelectItem>
-                    <SelectItem value="doctor">Doctor</SelectItem>
-                    <SelectItem value="receptionist">Receptionist</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1 text-right">
-                  * Admin accounts are created manually
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground text-right">
+                Staff accounts (admin/doctor/receptionist) are created by the Super Admin.
+              </p>
 
               <Button type="submit" className="w-full h-11 text-md shadow-lg shadow-primary/20" disabled={isLoading}>
                 {isLoading ? (

@@ -12,10 +12,11 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
+import { requireSuperAdmin } from "../middlewares/requireSuperAdmin.js";
 
 const router = express.Router();
 
-router.post("/", verifyAccessToken, authorizeRoles("admin"), createDoctor);
+router.post("/", verifyAccessToken, authorizeRoles("admin"), requireSuperAdmin, createDoctor);
 router.get("/", (req, res) => {
   console.log("GET DOCTORS ROUTE HIT");
   getDoctors(req, res);
