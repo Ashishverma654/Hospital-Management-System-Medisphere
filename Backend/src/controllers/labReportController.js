@@ -5,8 +5,13 @@ import { sendEmail } from "../utils/sendEmail.js";
 
 export const uploadLabReport = async (req, res) => {
     try {
+        let targetPatientId = req.body.patientId;
+        if (req.user.role === "patient") {
+            targetPatientId = req.user.id;
+        }
+
         const report = new LabReport({
-            patientId: req.body.patientId,
+            patientId: targetPatientId,
             doctorId: req.body.doctorId,
             appointmentId: req.body.appointmentId,
             reportName: req.body.reportName,
@@ -22,13 +27,17 @@ export const uploadLabReport = async (req, res) => {
             data: report
         });
 
-        const patient = await Patient.findById(report.patientId).populate("userId");
-
-        await sendEmail(
-            patient.userId.email,
-            "Lab Report Ready",
-            "Your lab report has been uploaded. Please login to view it."
-        );
+        // Only send email if the uploader is not the patient themselves
+        if (req.user.role !== "patient" && report.patientId) {
+            const uploadedTarget = await User.findById(report.patientId);
+            if (uploadedTarget && uploadedTarget.email) {
+                await sendEmail(
+                    uploadedTarget.email,
+                    "Lab Report Ready",
+                    "Your lab report has been uploaded. Please login to view it."
+                );
+            }
+        }
 
     } catch (error) {
 
@@ -44,10 +53,8 @@ export const uploadLabReport = async (req, res) => {
 
 export const getPatientReports = async (req, res) => {
     try {
-        const patient = await Patient.findOne({ userId: req.user.id });
-
         const reports = await LabReport.find({
-            patientId: patient._id
+            patientId: req.user.id
         }).populate("doctorId").populate("appointmentId");
 
         res.status(200).json({

@@ -19,7 +19,14 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // If backend wrapped it in { success: true, data: [...] }
+    if (res.data && res.data.data !== undefined && res.data.success !== undefined) {
+      return res.data.data;
+    }
+    // Otherwise return raw data array/object natively
+    return res.data !== undefined ? res.data : res;
+  },
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('mediflow_auth');

@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/", verifyAccessToken, bookAppointment);
 
-router.get("/", verifyAccessToken, authorizeRoles("receptionist", "admin"), getAllAppointments);
+router.get("/", verifyAccessToken, authorizeRoles("patient", "receptionist", "admin"), getAllAppointments);
 
 router.put("/:id/cancel", verifyAccessToken, authorizeRoles("patient", "receptionist", "admin"), cancelAppointment);
 

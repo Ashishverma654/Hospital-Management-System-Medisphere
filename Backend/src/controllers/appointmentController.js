@@ -125,7 +125,8 @@ export const bookAppointment = async (req, res) => {
 
 export const getAllAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find()
+    const filter = req.user.role === "patient" ? { patientId: req.user.id } : {};
+    const appointments = await Appointment.find(filter)
       .sort({ createdAt: -1 })
       .populate({
         path: "doctorId",

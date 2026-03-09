@@ -5,7 +5,7 @@ import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware
 const router = express.Router();
 
 router.post("/create",verifyAccessToken, authorizeRoles("admin"), createDepartment );
-router.get("/",verifyAccessToken, authorizeRoles("admin"), getAllDepartment);
+router.get("/",verifyAccessToken, authorizeRoles("patient", "doctor", "receptionist", "admin"), getAllDepartment);
 router.patch("/update/:id",verifyAccessToken, authorizeRoles("admin"), updateDepartment);
 router.delete("/delete/:id",verifyAccessToken, authorizeRoles("admin"),  deleteDepartment);
 

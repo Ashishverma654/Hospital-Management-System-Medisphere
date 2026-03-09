@@ -1,7 +1,7 @@
 import { api } from '../lib/api.js';
 
 export const loginUser = async (email, password) => {
-  const { data } = await api.post('/auth/login', { email, password });
+  const data = await api.post('/auth/login', { email, password });
   const user = {
     id: data.user.id,
     name: data.user.name,
@@ -13,7 +13,7 @@ export const loginUser = async (email, password) => {
 };
 
 export const registerUser = async (userData) => {
-  const { data } = await api.post('/auth/register', {
+  const data = await api.post('/auth/register', {
     name: userData.name,
     email: userData.email,
     password: userData.password,

@@ -18,6 +18,8 @@ import labReportRoutes from "./routes/labReportRoutes.js";
 import billingRoutes from "./routes/billingRoutes.js";
 import pharmacyRoutes from "./routes/pharmacyRoutes.js";
 import bedRoutes from "./routes/bedRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import receptionistRoutes from "./routes/receptionistRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import limiter from "./middlewares/rateLimiter.js";
 
@@ -46,6 +48,8 @@ app.use("/api/lab-reports", labReportRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/medicines", pharmacyRoutes);
 app.use("/api/beds", bedRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/receptionists", receptionistRoutes);
 app.use(errorHandler);
 
 export default app;

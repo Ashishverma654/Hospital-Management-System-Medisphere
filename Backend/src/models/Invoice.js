@@ -9,9 +9,23 @@ const invoiceSchema = new mongoose.Schema({
 
     appointmentId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Appointment",
-        required: true
+        ref: "Appointment"
     },
+
+    daysConsulted: {
+        type: Number,
+        default: 1
+    },
+
+    medicinesBreakdown: [{
+        name: String,
+        price: Number
+    }],
+
+    labReportsBreakdown: [{
+        reportName: String,
+        price: Number
+    }],
 
     doctorFee: {
         type: Number,

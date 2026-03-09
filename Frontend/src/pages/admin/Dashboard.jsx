@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { adminApi } from '../../services/apiServices';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Users, Activity, Calendar, DollarSign, ArrowUpRight, ArrowDownRight, BedDouble } from 'lucide-react';
 import { 
@@ -30,6 +32,36 @@ const revenueData = [
 ];
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    todayAppointments: 0,
+    availableBeds: 0,
+    totalBeds: 150,
+    totalRevenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const data = await adminApi.getDashboardStats();
+      setStats({
+        totalPatients: data.totalPatients || 0,
+        todayAppointments: data.todayAppointments || 0,
+        availableBeds: data.availableBeds || 0,
+        totalBeds: (data.availableBeds || 0) + (data.occupiedBeds || 0),
+        totalRevenue: data.totalRevenue || 0,
+      });
+    } catch (err) {
+      console.error("Failed to load dashboard stats", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -45,7 +77,7 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
+            <div className="text-2xl font-bold">{loading ? "..." : stats.totalPatients}</div>
             <p className="text-xs text-muted-foreground flex items-center mt-1 text-green-500">
               <ArrowUpRight className="h-3 w-3 mr-1" />
               +12% from last month
@@ -59,7 +91,7 @@ export default function AdminDashboard() {
             <Calendar className="h-4 w-4 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">48</div>
+            <div className="text-2xl font-bold">{loading ? "..." : stats.todayAppointments}</div>
             <p className="text-xs text-muted-foreground flex items-center mt-1 text-green-500">
               <ArrowUpRight className="h-3 w-3 mr-1" />
               +5% from yesterday
@@ -73,7 +105,7 @@ export default function AdminDashboard() {
             <BedDouble className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12 / 150</div>
+            <div className="text-2xl font-bold">{loading ? "..." : `${stats.availableBeds} / ${stats.totalBeds || 150}`}</div>
             <p className="text-xs text-muted-foreground flex items-center mt-1 text-red-500">
               <ArrowDownRight className="h-3 w-3 mr-1" />
               -2% capacity
@@ -87,7 +119,7 @@ export default function AdminDashboard() {
             <DollarSign className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$12,450</div>
+            <div className="text-2xl font-bold">{loading ? "..." : `$${stats.totalRevenue}`}</div>
             <p className="text-xs text-muted-foreground flex items-center mt-1 text-green-500">
               <ArrowUpRight className="h-3 w-3 mr-1" />
               +8% from yesterday

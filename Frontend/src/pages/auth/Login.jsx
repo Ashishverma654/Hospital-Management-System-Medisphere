@@ -45,6 +45,21 @@ export default function Login() {
     }
   };
 
+  const loadDemoCredentials = (role) => {
+    const creds = {
+      superadmin: { email: 'admin@hospital.com', password: 'AdminPassword123!' },
+      admin: { email: 'admin2@hospital.com', password: 'password123' },
+      superreceptionist: { email: 'super.receptionist@hospital.com', password: 'SuperRecPassword123!' },
+      receptionist: { email: 'receptionist@hospital.com', password: 'password123' },
+      patient: { email: 'patient@hospital.com', password: 'password123' }
+    };
+    if (creds[role]) {
+      setEmail(creds[role].email);
+      setPassword(creds[role].password);
+      toast.info(`Loaded ${role} credentials!`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-primary/10 flex items-center justify-center p-4">
       {/* Decorative floating elements */}
@@ -140,14 +155,15 @@ export default function Login() {
           </CardFooter>
         </Card>
         
-        <div className="text-center mt-8 text-xs text-muted-foreground">
-          <p>Demo Credentials:</p>
-          <p className="mt-1">
-            <span className="font-semibold text-foreground">admin@hospital.com</span> | 
-            <span className="font-semibold text-foreground ml-1">doctor@hospital.com</span> <br/>
-            <span className="font-semibold text-foreground">patient@hospital.com</span> | 
-            <span className="font-semibold text-foreground ml-1">reception@hospital.com</span>
-          </p>
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Quick Login</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => loadDemoCredentials('superadmin')} className="text-xs h-8 border-primary/30 hover:bg-primary/10">Super Admin</Button>
+            <Button variant="outline" size="sm" onClick={() => loadDemoCredentials('admin')} className="text-xs h-8 border-primary/30 hover:bg-primary/10">Admin</Button>
+            <Button variant="outline" size="sm" onClick={() => loadDemoCredentials('superreceptionist')} className="text-xs h-8 border-secondary/30 hover:bg-secondary/10">Super Receptionist</Button>
+            <Button variant="outline" size="sm" onClick={() => loadDemoCredentials('receptionist')} className="text-xs h-8 border-secondary/30 hover:bg-secondary/10">Receptionist</Button>
+            <Button variant="outline" size="sm" onClick={() => loadDemoCredentials('patient')} className="text-xs h-8 border-teal-500/30 hover:bg-teal-500/10 text-teal-700">Patient</Button>
+          </div>
         </div>
       </motion.div>
     </div>

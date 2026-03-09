@@ -25,7 +25,7 @@ export const register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: "patient",
+      role: role || "patient",
     });
 
     const accessToken = generateAccessToken(user);

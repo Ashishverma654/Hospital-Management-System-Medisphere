@@ -50,24 +50,14 @@ export const createPrescription = async (req, res) => {
 
 export const getPatientPrescriptions = async (req, res) => {
   try {
-    const patient = await Patient.findOne({ userId: req.user.id });
-
-    if (!patient) {
-      return res.status(404).json({
-        success: false,
-        message: "Patient profile not found."
-      });
-    }
-
     const prescriptions = await Prescription.find({
-      patientId: patient._id
+      patientId: req.user.id
     }).populate({ path: "doctorId", populate: { path: "userId", select: "name" } }).populate("appointmentId");
 
     res.status(200).json({
       success: true,
       data: prescriptions
     });
-
 
   } catch (error) {
     res.status(500).json({
@@ -97,6 +87,23 @@ export const getPrescriptionByAppointment = async (req, res) => {
   }
 };
 
+export const getPrescriptionByPatient = async (req, res) => {
+  try {
+    const prescriptions = await Prescription.find({
+      patientId: req.params.patientId
+    }).populate("doctorId").populate("appointmentId");
+
+    res.status(200).json({
+      success: true,
+      data: prescriptions
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
 export const downloadPrescriptionPDF = async (req, res) => {
   try {

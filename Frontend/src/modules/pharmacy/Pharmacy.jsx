@@ -13,21 +13,61 @@ import {
 } from '../../components/ui/table';
 import { pharmacyApi } from '../../services/apiServices';
 import { toast } from 'sonner';
+import { FormDialog } from '../../components/FormDialog';
 
 export default function Pharmacy() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
+  const fetchInventory = () => {
+    setLoading(true);
     pharmacyApi
       .getAll()
       .then((res) => {
-        const data = res.data?.data ?? res.data ?? [];
-        setInventory(Array.isArray(data) ? data : []);
+        setInventory(Array.isArray(res) ? res : []);
       })
       .catch(() => toast.error('Failed to load medicines'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchInventory();
   }, []);
+
+  const handleExport = () => {
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + ["Item ID,Name,Category,Stock Level"].join(",") + "\n"
+      + inventory.map(item => `${item._id},${item.name || ''},${item.category || ''},${item.stock || 0}`).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "pharmacy_inventory.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Inventory exported securely.");
+  };
+
+  const handleSubmit = async (formData) => {
+    try {
+      await pharmacyApi.add({
+        ...formData,
+        stock: parseInt(formData.stock)
+      });
+      toast.success('Medicine added successfully!');
+      setShowForm(false);
+      fetchInventory();
+    } catch (err) {
+      toast.error('Failed to add medicine');
+    }
+  };
+
+  const fields = [
+    { name: 'name', label: 'Medication Name', required: true, placeholder: 'e.g., Paracetamol' },
+    { name: 'category', label: 'Category', required: true, placeholder: 'e.g., Painkiller' },
+    { name: 'stock', label: 'Initial Stock', required: true, type: 'number' },
+  ];
 
   const total = inventory.length;
   const lowStock = inventory.filter((i) => (i.stock ?? 0) > 0 && (i.stock ?? 0) < 50).length;
@@ -54,10 +94,10 @@ export default function Pharmacy() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="bg-background/50 backdrop-blur-sm">
+          <Button variant="outline" className="bg-background/50 backdrop-blur-sm" onClick={handleExport}>
             <Archive className="mr-2 h-4 w-4" /> Export Report
           </Button>
-          <Button className="shadow-md shadow-primary/20">
+          <Button className="shadow-md shadow-primary/20" onClick={() => setShowForm(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Item
           </Button>
         </div>
@@ -173,6 +213,14 @@ export default function Pharmacy() {
           )}
         </div>
       </Card>
+      
+      <FormDialog
+        isOpen={showForm}
+        title="Add Medication"
+        fields={fields}
+        onSubmit={handleSubmit}
+        onClose={() => setShowForm(false)}
+      />
     </motion.div>
   );
 }

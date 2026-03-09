@@ -3,7 +3,8 @@ import {
   createPrescription,
   downloadPrescriptionPDF,
   getPatientPrescriptions,
-  getPrescriptionByAppointment
+  getPrescriptionByAppointment,
+  getPrescriptionByPatient
 } from "../controllers/prescriptionController.js";
 import {
   verifyAccessToken,
@@ -27,6 +28,8 @@ router.get(
 );
 
 router.get("/appointment/:appointmentId", verifyAccessToken, authorizeRoles("doctor", "admin"), getPrescriptionByAppointment);
+
+router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("doctor", "admin", "receptionist"), getPrescriptionByPatient);
 
 router.get("/pdf/:id", verifyAccessToken, authorizeRoles("doctor", "patient", "admin"), downloadPrescriptionPDF);
 

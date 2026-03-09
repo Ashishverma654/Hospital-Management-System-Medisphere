@@ -41,6 +41,7 @@ export const patientApi = {
 };
 
 export const billingApi = {
+  getAll: () => api.get('/billing'),
   create: (body) => api.post('/billing', body),
   getMy: () => api.get('/billing/my'),
   getByPatient: (patientId) => api.get(`/billing/patient/${patientId}`),
@@ -63,6 +64,7 @@ export const labReportApi = {
 
 export const prescriptionApi = {
   getMy: () => api.get('/prescriptions/my'),
+  getByPatient: (patientId) => api.get(`/prescriptions/patient/${patientId}`),
   getByAppointment: (appointmentId) => api.get(`/prescriptions/appointment/${appointmentId}`),
   downloadPdf: (id) => api.get(`/prescriptions/pdf/${id}`, { responseType: 'blob' }),
   create: (body) => api.post('/prescriptions', body),
@@ -75,6 +77,21 @@ export const bedApi = {
   discharge: (id) => api.put(`/beds/discharge/${id}`),
 };
 
+export const reportApi = {
+  create: (formData) => 
+    api.post('/reports', formData, { 
+      headers: { 'Content-Type': 'multipart/form-data' } 
+    }),
+  getMy: () => api.get('/reports/my'),
+};
+
 export const adminApi = {
   getDashboardStats: () => api.get('/admin/dashboard'),
+  createUser: (body) => api.post('/admin/users', body),
+};
+
+export const userApi = {
+  uploadProfileImage: (formData) => api.put('/users/profile-image', formData, { 
+    headers: { 'Content-Type': 'multipart/form-data' } 
+  }),
 };

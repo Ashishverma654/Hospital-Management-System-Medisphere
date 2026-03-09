@@ -77,8 +77,8 @@ export const createStaffUser = async (req, res) => {
       return res.status(400).json({ message: "name, email, password, role are required." });
     }
 
-    if (!["admin", "receptionist"].includes(role)) {
-      return res.status(400).json({ message: "role must be admin or receptionist. Use /api/doctors to create doctors." });
+    if (!["superadmin", "admin", "superreceptionist", "receptionist"].includes(role)) {
+      return res.status(400).json({ message: "role must be superadmin, admin, superreceptionist, or receptionist. Use /api/doctors to create doctors." });
     }
 
     const exists = await User.findOne({ email });
