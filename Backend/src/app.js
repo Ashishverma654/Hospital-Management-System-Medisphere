@@ -30,7 +30,14 @@ import limiter from "./middlewares/rateLimiter.js";
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://hospital-management-system-beryl-two.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
+  credentials: true
+}));
 app.use(limiter);
 
 app.get("/", (req, res) => {
