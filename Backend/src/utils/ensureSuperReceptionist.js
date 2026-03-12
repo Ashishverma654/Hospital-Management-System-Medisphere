@@ -14,10 +14,10 @@ export async function ensureSuperReceptionist() {
 
   const existing = await User.findOne({ email });
   if (existing) {
-    if (existing.role !== "receptionist") {
-      existing.role = "receptionist";
+    if (existing.role !== "superreceptionist") {
+      existing.role = "superreceptionist";
       await existing.save();
-      logger.warn("Existing SUPER_RECEPTIONIST_EMAIL user role updated to receptionist");
+      logger.warn("Existing SUPER_RECEPTIONIST_EMAIL user role updated to superreceptionist");
     }
     return existing;
   }
@@ -27,7 +27,7 @@ export async function ensureSuperReceptionist() {
     name,
     email,
     password: hashed,
-    role: "receptionist",
+    role: "superreceptionist",
   });
 
   logger.info("Super receptionist user seeded", { email });

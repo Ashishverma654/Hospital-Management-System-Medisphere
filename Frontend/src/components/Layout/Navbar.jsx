@@ -11,7 +11,8 @@ import {
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
-import { FiMenu, FiBell, FiLogOut, FiUser } from 'react-icons/fi';
+import { FiMenu, FiBell, FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
+import logoImg from '../../assets/logo.png';
 
 export default function Navbar({ toggleSidebar }) {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -33,15 +34,12 @@ export default function Navbar({ toggleSidebar }) {
           </Button>
         )}
         
-        {/* Mobile Logo if needed, otherwise hidden on md */}
-        <div className="flex md:hidden items-center gap-2">
-           <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-            M
-          </div>
-          <span className="font-bold text-lg bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            MediFlow
-          </span>
-        </div>
+        <NavLink to="/" className="flex items-center gap-2">
+           <img src={logoImg} alt="logo" className="h-8 w-auto md:h-10" />
+           <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+             MediFlow
+           </span>
+        </NavLink>
       </div>
 
       <div className="flex items-center gap-4">
@@ -98,6 +96,14 @@ export default function Navbar({ toggleSidebar }) {
                      <span>Profile</span>
                    </NavLink>
                 </DropdownMenuItem>
+                {user?.role !== 'patient' && (
+                  <DropdownMenuItem className="cursor-pointer p-0">
+                    <NavLink to="/forgot-password" className="w-full flex items-center px-2 py-1.5 outline-none text-amber-600">
+                      <FiSettings className="mr-2 h-4 w-4" />
+                      <span>Reset Password</span>
+                    </NavLink>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={handleLogout}>
                   <FiLogOut className="mr-2 h-4 w-4" />
@@ -107,14 +113,17 @@ export default function Navbar({ toggleSidebar }) {
             </DropdownMenu>
           </>
         ) : (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild className="hidden sm:inline-flex">
-              <NavLink to="/login">Sign In</NavLink>
-            </Button>
-            <Button asChild>
-              <NavLink to="/register">Register</NavLink>
-            </Button>
-          </div>
+          <>
+            <nav className="hidden md:flex items-center gap-8 font-medium text-gray-600 text-[15px]">
+              <NavLink to="/" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Home</NavLink>
+              <NavLink to="/patient/appointments" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Appointments</NavLink>
+              <NavLink to="/patient/reports" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Records</NavLink>
+              <NavLink to="/login" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Login</NavLink>
+            </nav>
+            <div className="flex md:hidden items-center gap-4">
+              <NavLink to="/login" className="text-[#ee4c35] font-medium">Login</NavLink>
+            </div>
+          </>
         )}
       </div>
     </header>

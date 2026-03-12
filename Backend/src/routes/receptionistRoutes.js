@@ -4,15 +4,14 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
-import { requireSuperReceptionist } from "../middlewares/requireSuperReceptionist.js";
 
 const router = express.Router();
 
+// Only superreceptionist can create receptionists (hierarchy enforced here)
 router.post(
   "/create",
   verifyAccessToken,
-  authorizeRoles("receptionist"),
-  requireSuperReceptionist,
+  authorizeRoles("superreceptionist", "superadmin", "admin"),
   createReceptionistStaff
 );
 

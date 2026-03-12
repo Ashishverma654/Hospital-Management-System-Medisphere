@@ -40,6 +40,11 @@ export const verifyAccessToken = (req, res, next) => {
 // ----- 2 . Authorize Role -----
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    // SuperAdmin has universal access
+    if (req.user && req.user.role === "superadmin") {
+      return next();
+    }
+
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ message: "Access Forbidden." });
     }

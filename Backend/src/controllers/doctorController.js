@@ -10,10 +10,15 @@ export const createDoctor = async (req, res) => {
       email,
       password,
       departmentId,
-      specialization,
-      experience,
+      title,
+      qualifications,
+      experienceYears,
       consultationFee,
       about,
+      expertise,
+      articles,
+      media,
+      specialization
     } = req.body;
 
     const exists = await User.findOne({ email });
@@ -44,10 +49,15 @@ export const createDoctor = async (req, res) => {
     const doctor = await Doctor.create({
       userId: user._id,
       departmentId,
-      specialization,
-      experience,
-      consultationFee,
-      about,
+      title: title || "Consultant",
+      qualifications: qualifications || [],
+      experienceYears: experienceYears || 5,
+      consultationFee: consultationFee || 500,
+      about: about || "",
+      expertise: expertise || [],
+      articles: articles || [],
+      media: media || [],
+      specialization: specialization || ""
     });
 
     res.status(201).json({
@@ -64,8 +74,6 @@ export const getDoctors = async (req, res) => {
     const doctors = await Doctor.find()
       .populate("userId", "name email")
       .populate("departmentId", "name");
-
-    console.log("Doctors : ", doctors);
 
     res.status(200).json(doctors);
   } catch (error) {

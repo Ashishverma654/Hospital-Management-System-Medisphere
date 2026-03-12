@@ -1,186 +1,227 @@
-// eslint-disable-next-line no-unused-vars
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent } from '../../components/ui/card';
 import { 
-  Building2, 
-  Calendar, 
-  FileText, 
+  Search, 
+  Phone, 
+  Stethoscope, 
   Activity, 
-  Video, 
-  ShieldCheck,
-  Stethoscope,
-  Heart,
-  Brain,
-  Baby,
-  Smile
+  HeartPulse, 
+  Pill, 
+  Ambulance, 
+  FlaskConical, 
+  HeartHandshake,
+  Loader2
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import BookingOverlay from './BookingOverlay';
+import LocationSelectionModal from '../../components/ui/LocationSelectionModal';
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-};
-
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.2 }
-  }
-};
+import { 
+  getServices,
+  getDepartments
+} from '../../services/apiServices';
 
 export default function Home() {
-  return (
-    <div className="w-full relative min-h-screen">
-      <div className="absolute top-0 w-full h-[600px] bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/15 -z-10 blur-3xl" />
+  const navigate = useNavigate();
+  const user = useSelector((state) => state.auth.user);
+
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState('');
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  
+  const [diagnosticServices, setDiagnosticServices] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    setIsLoading(true);
+    try {
+      const services = await getServices();
+      setDiagnosticServices(Array.isArray(services) ? services : services?.data || []);
       
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 pt-20 pb-32 flex flex-col items-center text-center">
-        <motion.div initial="hidden" animate="visible" variants={fadeIn} className="max-w-3xl">
-          <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary mb-6">
-            <Activity className="h-4 w-4 mr-2" />
-            Leading Healthcare Platform
-          </div>
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground mb-6">
-            Smart Hospital <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-              Management System
-            </span>
-          </h1>
-          <p className="text-xl text-muted-foreground mb-10 leading-relaxed">
-            Experience seamless healthcare operations, advanced patient care, and administrative excellence all in one unified platform.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="rounded-full shadow-lg shadow-primary/30 bg-gradient-to-r from-primary to-secondary hover:opacity-95 h-12 px-8 text-md" asChild>
-              <Link to="/login">Book Appointment</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full h-12 px-8 text-md border-2 border-primary/30 hover:bg-primary/10 hover:border-primary/50" asChild>
-              <Link to="#doctors">Find Doctors</Link>
-            </Button>
-          </div>
-        </motion.div>
-      </section>
+      const depts = await getDepartments();
+      setDepartments(Array.isArray(depts) ? depts : depts?.data || []);
+    } catch (err) {
+      toast.error("Unable to load latest services. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      {/* Features Section */}
-      <section className="bg-gradient-to-b from-primary/5 via-background to-secondary/5 py-24 border-y border-primary/10">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">Comprehensive Care Solutions</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Everything you need for modern healthcare management, wrapped in an intuitive interface.
-            </p>
+  const handleDiagnosticClick = (title) => {
+    setSelectedService(title);
+    setIsLocationModalOpen(true);
+  };
+
+  const handleAuthGatedClick = (actionName) => {
+    if (!user) {
+      navigate('/login');
+    } else {
+      console.log(`Proceeding with ${actionName} for user ${user.patientId || user._id}`);
+      alert(`Proceeding to ${actionName}`);
+    }
+  };
+
+  return (
+    <div className="w-full min-h-screen bg-gray-50/50 font-sans pb-20">
+      {/* Custom Hero Header matching the Patient Landing design */}
+      <div className="bg-[#ee4c35] text-white relative h-[250px] md:h-[280px] overflow-hidden">
+        {/* Wavy background mockup using CSS */}
+        <div 
+          className="absolute inset-0 opacity-20 pointer-events-none" 
+          style={{ 
+            backgroundImage: `repeating-radial-gradient(ellipse at center, transparent 0, transparent 2px, white 3px, white 4px)`,
+            backgroundSize: '100px 50px',
+            backgroundPosition: '0 0, 50px 25px'
+          }}
+        ></div>
+
+        <div className="container mx-auto px-4 md:px-8 h-full pt-10 flex justify-between items-start relative z-10">
+          <div className="flex flex-col gap-1">
+            <div className="text-xl md:text-2xl font-bold mt-2 tracking-wide">
+              Hello, <span className="underline underline-offset-4 decoration-2">{user ? user.name : "Guest"}</span>
+            </div>
+            {user && (
+              <button 
+                onClick={() => navigate(`/${user.role}`)}
+                className="text-white/80 hover:text-white text-xs font-bold tracking-widest uppercase flex items-center gap-1 transition-all group mt-1"
+              >
+                Go to Dashboard <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </button>
+            )}
           </div>
-          
-          <motion.div 
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            {[
-              { icon: Calendar, title: "Online Appointment Booking", desc: "Schedule visits easily with real-time doctor availability." },
-              { icon: FileText, title: "Digital Prescriptions", desc: "Access and download electronic prescriptions instantly." },
-              { icon: Activity, title: "Lab Reports Access", desc: "View diagnostic results securely from your device." },
-              { icon: Video, title: "Telemedicine", desc: "Consult with specialists remotely via integrated video calls." },
-              { icon: ShieldCheck, title: "Insurance Integration", desc: "Seamless billing and insurance claim processing." },
-              { icon: Building2, title: "Ward Management", desc: "Real-time bed tracking and availability monitoring." }
-            ].map((feature, i) => {
-              const FeatureIcon = feature.icon;
-              return (
-                <motion.div key={i} variants={fadeIn}>
-                  <Card className="bg-background/60 backdrop-blur-md border border-border/50 hover:border-primary/50 transition-colors shadow-sm hover:shadow-md h-full">
-                    <CardContent className="p-6">
-                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-4">
-                        <FeatureIcon className="h-6 w-6" />
-                      </div>
-                      <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                      <p className="text-muted-foreground">{feature.desc}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          <div className="flex gap-4 items-center">
+            <Button 
+              onClick={() => handleAuthGatedClick("Emergency")}
+              variant="outline" 
+              className="text-white border-white hover:bg-white hover:text-[#ee4c35] rounded-full px-5 py-2 h-auto flex items-center gap-2 bg-transparent font-semibold shadow-sm transition-all"
+            >
+              Emergency <Ambulance className="h-5 w-5 ml-1" />
+            </Button>
+            <Button 
+              onClick={() => handleAuthGatedClick("Call")}
+              variant="outline" 
+              size="icon" 
+              className="text-white border-white hover:bg-white hover:text-[#ee4c35] rounded-full h-11 w-11 bg-transparent shadow-sm flex items-center justify-center transition-all"
+            >
+              <Phone className="h-5 w-5 fill-current" />
+            </Button>
+          </div>
         </div>
-      </section>
+      </div>
 
-      {/* Departments Section */}
-      <section id="doctors" className="py-24 relative overflow-hidden">
-        <div className="absolute top-1/2 left-0 w-full h-[400px] bg-gradient-to-t from-secondary/5 to-transparent -z-10 skew-y-3" />
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+      {/* Floating Search Card */}
+      <div className="container mx-auto px-4 md:px-8 -mt-24 md:-mt-32 relative z-20">
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-6 md:p-8 max-w-4xl mx-auto border border-gray-100">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight mb-4">Centers of Excellence</h2>
-              <p className="text-muted-foreground max-w-2xl">
-                Specialized departments equipped with state-of-the-art technology and leading experts.
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 tracking-tight">Book Doctor Appointment</h2>
+              <p className="text-gray-500 text-sm md:text-base mt-2 flex items-center gap-2">
+                In-hospital or Video Consultation
               </p>
             </div>
+            <div className="bg-gray-100 p-4 rounded-full flex items-center justify-center ring-4 ring-gray-50">
+               <Stethoscope className="h-7 w-7 text-gray-700" />
+            </div>
           </div>
+          
+          <div className="relative group" onClick={() => setIsBookingOpen(true)}>
+            <input 
+              type="text" 
+              placeholder="Search For Doctors or Speciality" 
+              className="w-full bg-[#f4f5f7] border-none rounded-xl py-5 px-6 pr-12 text-gray-700 text-lg outline-none focus:ring-2 focus:ring-[#ee4c35]/30 transition-shadow placeholder:text-gray-500 font-medium cursor-pointer"
+              readOnly
+            />
+            <button className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-800 p-2 rounded-full hover:bg-gray-200 transition-colors">
+              <Search className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {[
-              { icon: Heart, name: "Cardiology", count: "12 Doctors" },
-              { icon: Brain, name: "Neurology", count: "8 Doctors" },
-              { icon: Building2, name: "Orthopedics", count: "15 Doctors" },
-              { icon: Baby, name: "Pediatrics", count: "20 Doctors" },
-              { icon: Smile, name: "Dermatology", count: "6 Doctors" }
-            ].map((dept, i) => {
-              const DeptIcon = dept.icon;
-              return (
-              <Card key={i} className="group hover:bg-gradient-to-br hover:from-primary hover:to-secondary hover:text-primary-foreground transition-all duration-300 cursor-pointer border-2 border-primary/10 hover:border-primary/30 shadow-lg hover:shadow-primary/20">
-                <CardContent className="p-6 flex flex-col items-center text-center gap-3">
-                  <div className="p-3 rounded-full bg-muted group-hover:bg-primary-foreground/20 transition-colors">
-                    <DeptIcon className="h-8 w-8" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{dept.name}</h3>
-                    <p className="text-sm text-muted-foreground group-hover:text-primary-foreground/70">{dept.count}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-            })}
+      {/* Main Content Sections */}
+      <div className="container mx-auto px-4 md:px-8 py-16 max-w-5xl">
+        
+        {/* Diagnostic Services */}
+        <div className="mb-14">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-800 pl-2">Book Diagnostic Services</h3>
+            {isLoading && <Loader2 className="h-5 w-5 animate-spin text-[#ee4c35]" />}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {(diagnosticServices.length > 0 ? diagnosticServices : [
+              { name: "X-Ray, MRI, CT, ECHO", type: "X-Ray" },
+              { name: "Health Check Packages", type: "Other" },
+              { name: "Lab Tests", type: "Lab Test" }
+            ]).map((service, idx) => (
+              <ServiceCard 
+                key={service._id || idx}
+                icon={service.type === "Lab Test" ? <FlaskConical className="h-10 w-10 text-[#ee4c35]" /> : 
+                      service.type === "X-Ray" ? <Activity className="h-10 w-10 text-[#ee4c35]" /> :
+                      <HeartPulse className="h-10 w-10 text-[#ee4c35]" />} 
+                title={service.name} 
+                onClick={() => handleDiagnosticClick(service.name)}
+              />
+            ))}
           </div>
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2">
-            <span className="font-bold text-2xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4 inline-block">
-              MediFlow
-            </span>
-            <p className="text-muted-foreground max-w-md mb-6">
-              Empowering healthcare institutions with next-generation management software for better patient outcomes and streamlined operations.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-muted-foreground">
-              <li><Link to="/login" className="hover:text-primary transition-colors">Patient Portal</Link></li>
-              <li><Link to="/login" className="hover:text-primary transition-colors">Doctor Portal</Link></li>
-              <li><Link to="/patient/book" className="hover:text-primary transition-colors">Book Appointment</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Emergency</h4>
-            <ul className="space-y-2 text-muted-foreground">
-              <li className="flex items-center gap-2 text-destructive font-medium">
-                <ShieldCheck className="h-4 w-4" />
-                Ambulance: 911
-              </li>
-              <li>Main Campus: 1-800-MEDIFLOW</li>
-              <li>123 Health Avenue, Medical City</li>
-            </ul>
+        {/* Other Services */}
+        <div>
+          <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 pl-2">Other Services</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <ServiceCard 
+              icon={<Stethoscope className="h-10 w-10 text-[#ee4c35]" />} 
+              title="Second Opinion" 
+              onClick={() => handleAuthGatedClick("Second Opinion")}
+            />
+            <ServiceCard 
+              icon={<Pill className="h-10 w-10 text-[#ee4c35]" />} 
+              title="Medicine Delivery" 
+              onClick={() => handleAuthGatedClick("Medicine Delivery")}
+            />
+            <ServiceCard 
+              icon={<HeartHandshake className="h-10 w-10 text-[#ee4c35]" />} 
+              title="Homecare Services" 
+              onClick={() => handleAuthGatedClick("Homecare Services")}
+            />
           </div>
         </div>
-        <div className="container mx-auto px-4 border-t border-border mt-12 pt-8 text-center text-muted-foreground text-sm">
-          © {new Date().getFullYear()} MediFlow Healthcare Solutions. All rights reserved.
-        </div>
-      </footer>
+
+      </div>
+
+      {/* The Booking Search Overlay */}
+      <BookingOverlay 
+        isOpen={isBookingOpen} 
+        onClose={() => setIsBookingOpen(false)} 
+      />
+
+      {/* Reusable Location Selection Modal */}
+      <LocationSelectionModal 
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        title={`Select Location for ${selectedService}`}
+        onSelect={(location) => {
+           console.log(`Selected ${location} for ${selectedService}`);
+           alert(`Proceeding to ${location} for ${selectedService}`);
+        }}
+      />
+    </div>
+  );
+}
+
+function ServiceCard({ icon, title, onClick }) {
+  return (
+    <div onClick={onClick} className="bg-white rounded-2xl border border-gray-100 p-8 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer group">
+      <div className="mb-5 p-4 rounded-full bg-gray-50 text-[#ee4c35] transform group-hover:-translate-y-1 transition-transform duration-300 ring-1 ring-gray-100/50 group-hover:ring-[#ee4c35]/20">
+        {icon}
+      </div>
+      <p className="text-gray-700 font-medium">{title}</p>
     </div>
   );
 }

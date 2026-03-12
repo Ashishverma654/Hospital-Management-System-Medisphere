@@ -14,10 +14,10 @@ export async function ensureSuperAdmin() {
 
   const existing = await User.findOne({ email });
   if (existing) {
-    if (existing.role !== "admin") {
-      existing.role = "admin";
+    if (existing.role !== "superadmin") {
+      existing.role = "superadmin";
       await existing.save();
-      logger.warn("Existing SUPER_ADMIN_EMAIL user role updated to admin");
+      logger.warn("Existing SUPER_ADMIN_EMAIL user role updated to superadmin");
     }
     return existing;
   }
@@ -27,7 +27,7 @@ export async function ensureSuperAdmin() {
     name,
     email,
     password: hashed,
-    role: "admin",
+    role: "superadmin",
   });
 
   logger.info("Super admin user seeded", { email });

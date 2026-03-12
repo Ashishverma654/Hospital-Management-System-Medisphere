@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Label } from '../../components/ui/label';
-import { Calendar as CalendarIcon, Clock, CheckCircle2, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle2, Loader2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { departmentApi, doctorApi } from '../../services/apiServices';
 import api from '../../lib/api';
@@ -197,6 +197,18 @@ export default function AppointmentBooking() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+                {doctor && (
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      className="text-primary font-bold flex items-center gap-1"
+                      onClick={() => window.open(`/doctor-profile/${doctor.userId?._id || doctor._id}`, '_blank')}
+                    >
+                      <Eye className="w-4 h-4" /> View Doctor Profile
+                    </Button>
                   </div>
                 )}
               </CardContent>

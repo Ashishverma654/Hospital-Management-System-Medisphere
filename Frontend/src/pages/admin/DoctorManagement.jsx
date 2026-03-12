@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/button';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { DataTable, ConfirmDialog, ErrorState, LoadingSkeleton } from '../../components';
 import { doctorApi, departmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
@@ -8,6 +9,7 @@ import { FormDialog } from '../../components/FormDialog';
 import { formatCurrency } from '../../utils/formatters';
 
 export default function DoctorManagement() {
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -96,6 +98,14 @@ export default function DoctorManagement() {
       label: 'Actions',
       render: (_, row) => (
         <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/doctor-profile/${row.userId?._id || row._id}`)}
+            title="View Profile"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
           <Button
             size="sm"
             variant="outline"

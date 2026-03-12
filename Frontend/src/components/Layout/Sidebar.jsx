@@ -12,7 +12,8 @@ import {
   FiBriefcase,
   FiActivity,
   FiVideo,
-  FiServer
+  FiServer,
+  FiUserPlus
 } from 'react-icons/fi';
 import { FaPills, FaBed } from 'react-icons/fa';
 
@@ -58,7 +59,42 @@ export default function Sidebar({ isOpen }) {
       { name: 'Billing', path: '/receptionist/billing', icon: FiCreditCard },
       { name: 'Reports', path: '/receptionist/reports', icon: FiFileText },
       { name: 'Patient DB', path: '/receptionist/patients', icon: FiUsers },
-    ]
+    ],
+    superreceptionist: [
+      { name: 'Dashboard', path: '/superreceptionist', icon: FiGrid },
+      { name: 'Register Patient', path: '/superreceptionist/register', icon: FiUsers },
+      { name: 'Appointments', path: '/superreceptionist/appointments', icon: FiCalendar },
+      { name: 'Billing', path: '/superreceptionist/billing', icon: FiCreditCard },
+      { name: 'Reports', path: '/superreceptionist/reports', icon: FiFileText },
+      { name: 'Patient DB', path: '/superreceptionist/patients', icon: FiUsers },
+    ],
+    superadmin: [
+      { name: 'Dashboard', path: '/superadmin', icon: FiGrid },
+      { name: 'Users', path: '/superadmin/users', icon: FiUsers },
+      { name: 'Doctors', path: '/superadmin/doctors', icon: FiBriefcase },
+      { name: 'Departments', path: '/superadmin/departments', icon: FiServer },
+      { name: 'Patients', path: '/superadmin/patients', icon: FiUsers },
+      { name: 'Appointments', path: '/superadmin/appointments', icon: FiCalendar },
+      { name: 'Beds', path: '/superadmin/beds', icon: FiActivity },
+      { name: 'Billing', path: '/superadmin/billing', icon: FiCreditCard },
+      { name: 'Pharmacy', path: '/superadmin/pharmacy', icon: FiActivity },
+      { name: 'Analytics', path: '/superadmin/analytics', icon: FiActivity },
+    ],
+    nurse: [
+      { name: 'Dashboard', path: '/nurse', icon: FiGrid },
+      { name: 'Profile', path: '/nurse/profile', icon: FiSettings },
+      { name: 'Notifications', path: '/nurse/notifications', icon: FiActivity },
+    ],
+    pharmacist: [
+      { name: 'Dashboard', path: '/pharmacist', icon: FiGrid },
+      { name: 'Profile', path: '/pharmacist/profile', icon: FiSettings },
+      { name: 'Notifications', path: '/pharmacist/notifications', icon: FiActivity },
+    ],
+    labTechnician: [
+      { name: 'Dashboard', path: '/labTechnician', icon: FiGrid },
+      { name: 'Profile', path: '/labTechnician/profile', icon: FiSettings },
+      { name: 'Notifications', path: '/labTechnician/notifications', icon: FiActivity },
+    ],
   };
 
   const links = navLinks[role] || [];
@@ -107,6 +143,25 @@ export default function Sidebar({ isOpen }) {
         </ul>
       </nav>
       
+      {/* Create User Quick Action in Sidebar */}
+      {(role === 'superadmin' || role === 'admin' || role === 'superreceptionist') && (
+        <div className="px-3 py-4 border-t border-border">
+          <NavLink
+            to={role === 'superreceptionist' ? '/superreceptionist/users?create=true' : `/${role}/users?create=true`}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-3 rounded-xl transition-all shadow-sm ${
+                isActive 
+                 ? 'bg-primary text-white font-bold' 
+                 : 'bg-primary/10 text-primary hover:bg-primary hover:text-white font-bold'
+              }`
+            }
+          >
+            <FiUserPlus className="h-5 w-5 flex-shrink-0" />
+            {isOpen && <span>Create User</span>}
+          </NavLink>
+        </div>
+      )}
+
       {isOpen && (
         <div className="p-4 border-t border-border text-xs text-center text-muted-foreground">
           MediFlow v2.0

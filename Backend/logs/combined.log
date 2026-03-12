@@ -91,3 +91,5 @@
 {"level":"warn","message":"SUPER_RECEPTIONIST_EMAIL/SUPER_RECEPTIONIST_PASSWORD not set; skipping super receptionist seed","service":"hospital-api","timestamp":"2026-03-09T05:20:19.034Z"}
 {"email":"admin@hospital.com","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-09T05:27:04.950Z"}
 {"email":"super.receptionist@hospital.com","level":"info","message":"Super receptionist user seeded","service":"hospital-api","timestamp":"2026-03-09T05:27:05.288Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-12T07:44:43.865Z"}
+{"level":"warn","message":"Existing SUPER_RECEPTIONIST_EMAIL user role updated to superreceptionist","service":"hospital-api","timestamp":"2026-03-12T07:45:08.432Z"}

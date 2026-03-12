@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminApi } from '../../services/apiServices';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Users, Activity, Calendar, DollarSign, ArrowUpRight, ArrowDownRight, BedDouble } from 'lucide-react';
+import { Users, Activity, Calendar, DollarSign, ArrowUpRight, ArrowDownRight, BedDouble, UserPlus } from 'lucide-react';
+import { Button } from '../../components/ui/button';
 import { 
   BarChart, 
   Bar, 
@@ -32,6 +34,7 @@ const revenueData = [
 ];
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalPatients: 0,
     todayAppointments: 0,
@@ -64,9 +67,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
-        <p className="text-muted-foreground">Welcome back. Here's a summary of today's hospital metrics.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
+          <p className="text-muted-foreground">Welcome back. Here's a summary of today's hospital metrics.</p>
+        </div>
       </div>
 
       {/* KPI Cards */}

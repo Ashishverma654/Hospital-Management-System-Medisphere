@@ -1,0 +1,305 @@
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----            3/6/2026  9:45 PM                config
+d----           3/12/2026 12:33 PM                contro
+                                                  llers
+d----            3/9/2026 10:56 AM                middle
+                                                  wares
+d----           3/12/2026 12:31 PM                models
+d----           3/12/2026 12:33 PM                routes
+d----            3/9/2026  1:28 AM                utils
+d----            3/8/2026 10:31 PM                valida
+                                                  tions
+-a---           3/12/2026 12:33 PM           2534 app.js
+-a---           3/12/2026  3:38 PM            818 server
+                                                  .js
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\config
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---            3/7/2026 12:17 AM            288 cloudi
+                                                  nary.j
+                                                  s
+-a---            3/1/2026  6:12 PM            309 databa
+                                                  se.js
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\controllers
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---           3/12/2026  3:37 PM           9075 adminC
+                                                  ontrol
+                                                  ler.js
+-a---            3/9/2026 10:20 AM           7577 appoin
+                                                  tmentC
+                                                  ontrol
+                                                  ler.js
+-a---           3/12/2026  3:31 PM          10294 authCo
+                                                  ntroll
+                                                  er.js
+-a---            3/6/2026  9:43 PM           2437 availa
+                                                  bility
+                                                  Contro
+                                                  ller.j
+                                                  s
+-a---            3/8/2026  8:57 PM           2550 bedCon
+                                                  trolle
+                                                  r.js
+-a---            3/9/2026 11:56 AM           3146 billin
+                                                  gContr
+                                                  oller.
+                                                  js
+-a---            3/2/2026  7:01 PM           1443 depart
+                                                  mentCo
+                                                  ntroll
+                                                  er.js
+-a---           3/12/2026  3:31 PM           2706 doctor
+                                                  Contro
+                                                  ller.j
+                                                  s
+-a---            3/9/2026 10:49 AM           2559 labRep
+                                                  ortCon
+                                                  trolle
+                                                  r.js
+-a---           3/12/2026 12:33 PM           2106 labTec
+                                                  hContr
+                                                  oller.
+                                                  js
+-a---           3/12/2026 12:33 PM           1667 nurseC
+                                                  ontrol
+                                                  ler.js
+-a---            3/9/2026 12:05 AM           1988 patien
+                                                  tContr
+                                                  oller.
+                                                  js
+-a---           3/12/2026 12:33 PM           1754 pharma
+                                                  cistCo
+                                                  ntroll
+                                                  er.js
+-a---            3/9/2026 12:05 AM           2252 pharma
+                                                  cyCont
+                                                  roller
+                                                  .js
+-a---            3/9/2026 11:55 AM           3587 prescr
+                                                  iption
+                                                  Contro
+                                                  ller.j
+                                                  s
+-a---            3/9/2026 10:56 AM            988 recept
+                                                  ionist
+                                                  Contro
+                                                  ller.j
+                                                  s
+-a---            3/7/2026 12:55 AM           1090 report
+                                                  Contro
+                                                  ller.j
+                                                  s
+-a---            3/6/2026  6:57 PM           2632 slotCo
+                                                  ntroll
+                                                  er.js
+-a---            3/9/2026 10:42 AM            775 userCo
+                                                  ntroll
+                                                  er.js
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\middlewares
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---           3/12/2026  1:30 PM           1514 authMi
+                                                  ddlewa
+                                                  re.js
+-a---            3/9/2026 12:05 AM            645 errorH
+                                                  andler
+                                                  .js
+-a---            3/8/2026 10:35 PM            342 rateLi
+                                                  miter.
+                                                  js
+-a---            3/9/2026  1:12 AM            715 requir
+                                                  eSuper
+                                                  Admin.
+                                                  js
+-a---            3/9/2026 10:56 AM            755 requir
+                                                  eSuper
+                                                  Recept
+                                                  ionist
+                                                  .js
+-a---            3/7/2026 12:17 AM            368 upload
+                                                  Middle
+                                                  ware.j
+                                                  s
+-a---            3/9/2026 12:05 AM            747 valida
+                                                  te.js
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\models
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---            3/6/2026  4:32 PM            680 Appoin
+                                                  tment.
+                                                  js
+-a---            3/9/2026 12:11 AM            800 Bed.js
+-a---           3/12/2026 12:31 PM            890 Creati
+                                                  onLog.
+                                                  js
+-a---            3/6/2026  2:36 PM            400 Depart
+                                                  ment.j
+                                                  s
+-a---           3/12/2026 11:10 AM            634 Diagno
+                                                  sticSe
+                                                  rvice.
+                                                  js
+-a---           3/12/2026  3:02 PM           1600 Doctor
+                                                  .js
+-a---            3/6/2026  2:15 PM            782 Doctor
+                                                  Availa
+                                                  bility
+                                                  .js
+-a---           3/12/2026 11:10 AM            689 Health
+                                                  Packag
+                                                  e.js
+-a---           3/12/2026 11:09 AM            718 Hospit
+                                                  alLoca
+                                                  tion.j
+                                                  s
+-a---            3/9/2026 11:54 AM           1258 Invoic
+                                                  e.js
+-a---            3/8/2026  5:00 PM            822 LabRep
+                                                  ort.js
+-a---           3/12/2026 12:31 PM            638 LabTec
+                                                  hnicia
+                                                  n.js
+-a---            3/8/2026  6:28 PM            639 Medici
+                                                  ne.js
+-a---           3/12/2026 12:31 PM            776 Nurse.
+                                                  js
+-a---            3/8/2026  3:54 PM            924 Patien
+                                                  t.js
+-a---           3/12/2026 12:31 PM            581 Pharma
+                                                  cist.j
+                                                  s
+-a---            3/9/2026 12:10 AM            986 Prescr
+                                                  iption
+                                                  .js
+-a---            3/6/2026 10:31 PM            597 Report
+                                                  .js
+-a---           3/12/2026 12:31 PM           1523 User.j
+                                                  s
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\routes
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---           3/12/2026  1:00 PM           1079 adminR
+                                                  outes.
+                                                  js
+-a---            3/9/2026 10:19 AM           1074 appoin
+                                                  tmentR
+                                                  outes.
+                                                  js
+-a---           3/11/2026  6:13 PM            684 authRo
+                                                  utes.j
+                                                  s
+-a---            3/6/2026  2:33 PM            461 availa
+                                                  bility
+                                                  Routes
+                                                  .js
+-a---            3/8/2026  8:58 PM            862 bedRou
+                                                  tes.js
+-a---            3/9/2026 11:23 AM            808 billin
+                                                  gRoute
+                                                  s.js
+-a---            3/9/2026 10:19 AM            702 depart
+                                                  mentRo
+                                                  utes.j
+                                                  s
+-a---           3/12/2026  3:38 PM            695 doctor
+                                                  Routes
+                                                  .js
+-a---           3/12/2026 11:11 AM           2011 dynami
+                                                  cDataR
+                                                  outes.
+                                                  js
+-a---            3/9/2026 10:49 AM            713 labRep
+                                                  ortRou
+                                                  tes.js
+-a---           3/12/2026 12:33 PM            551 labTec
+                                                  hRoute
+                                                  s.js
+-a---           3/12/2026 12:33 PM            471 nurseR
+                                                  outes.
+                                                  js
+-a---            3/9/2026 12:05 AM            863 patien
+                                                  tRoute
+                                                  s.js
+-a---           3/12/2026 12:33 PM            481 pharma
+                                                  cistRo
+                                                  utes.j
+                                                  s
+-a---            3/9/2026 12:05 AM            802 pharma
+                                                  cyRout
+                                                  es.js
+-a---            3/9/2026 11:54 AM            985 prescr
+                                                  iption
+                                                  Routes
+                                                  .js
+-a---           3/12/2026 12:43 PM            480 recept
+                                                  ionist
+                                                  Routes
+                                                  .js
+-a---            3/6/2026 10:56 PM            565 report
+                                                  Routes
+                                                  .js
+-a---            3/6/2026  3:45 PM            211 slotRo
+                                                  utes.j
+                                                  s
+-a---            3/2/2026 11:22 AM            329 testRo
+                                                  utes.j
+                                                  s
+-a---            3/9/2026 10:42 AM            451 userRo
+                                                  utes.j
+                                                  s
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\utils
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---            3/8/2026 10:30 PM            176 AppErr
+                                                  or.js
+-a---           3/12/2026  1:14 PM           1009 ensure
+                                                  SuperA
+                                                  dmin.j
+                                                  s
+-a---           3/12/2026  1:14 PM           1107 ensure
+                                                  SuperR
+                                                  ecepti
+                                                  onist.
+                                                  js
+-a---            3/8/2026 10:05 PM            898 genera
+                                                  tePres
+                                                  cripti
+                                                  onPDF.
+                                                  js
+-a---            3/6/2026  9:43 PM            746 genera
+                                                  teSlot
+                                                  s.js
+-a---            3/1/2026  6:11 PM            405 genera
+                                                  teToke
+                                                  ns.js
+-a---            3/9/2026 12:05 AM           1028 logger
+                                                  .js
+-a---            3/8/2026 10:44 PM            532 sendEm
+                                                  ail.js
+
+    Directory: C:\Users\akuma\hospital-management-system\Backend\src\validations
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+-a---            3/8/2026 10:44 PM            436 patien
+                                                  tValid
+                                                  ation.
+                                                  js
+

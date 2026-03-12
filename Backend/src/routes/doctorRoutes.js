@@ -17,8 +17,7 @@ import { requireSuperAdmin } from "../middlewares/requireSuperAdmin.js";
 const router = express.Router();
 
 router.post("/", verifyAccessToken, authorizeRoles("admin"), requireSuperAdmin, createDoctor);
-router.get("/", (req, res) => {
-  console.log("GET DOCTORS ROUTE HIT");
+router.get("/", function(req, res) {
   getDoctors(req, res);
 });
 

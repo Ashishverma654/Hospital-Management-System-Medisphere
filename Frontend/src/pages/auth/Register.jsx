@@ -20,6 +20,11 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (!formData.password && !formData.pin) {
+      toast.error('Please set either a Password or a 4-Digit PIN (or both) to secure your account.');
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -76,18 +81,34 @@ export default function Register() {
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-4">
               
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                  <Input 
-                    id="name" 
-                    placeholder="John Doe" 
-                    className="pl-10 bg-background/50 focus:bg-background transition-colors"
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    required
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                      id="name" 
+                      placeholder="John Doe" 
+                      className="pl-10 bg-background/50 focus:bg-background transition-colors"
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dob">Date of Birth</Label>
+                  <div className="relative">
+                    <Input 
+                      id="dob" 
+                      type="date"
+                      className="bg-background/50 focus:bg-background transition-colors"
+                      value={formData.dob}
+                      onChange={(e) => setFormData({...formData, dob: e.target.value})}
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -106,9 +127,44 @@ export default function Register() {
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <div className="relative">
+                    <Input 
+                      id="phone" 
+                      type="tel"
+                      placeholder="Enter 10 digit number"
+                      className="bg-background/50 focus:bg-background transition-colors"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                      required
+                      maxLength={10}
+                      pattern="[0-9]{10}"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pin">Set 4-Digit PIN (Optional)</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                      id="pin" 
+                      type="password"
+                      placeholder="••••"
+                      className="pl-10 bg-background/50 focus:bg-background transition-colors"
+                      value={formData.pin}
+                      onChange={(e) => setFormData({...formData, pin: e.target.value})}
+                      maxLength={4}
+                      pattern="[0-9]{4}"
+                    />
+                  </div>
+                </div>
+              </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password (Optional)</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input 
@@ -118,7 +174,6 @@ export default function Register() {
                     className="pl-10 bg-background/50 focus:bg-background transition-colors"
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    required
                   />
                 </div>
               </div>

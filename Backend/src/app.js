@@ -4,6 +4,7 @@ import express from "express";
 import cors from "cors";
 
 import authRoutes from "./routes/authRoutes.js";
+import dynamicDataRoutes from "./routes/dynamicDataRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
@@ -20,6 +21,9 @@ import pharmacyRoutes from "./routes/pharmacyRoutes.js";
 import bedRoutes from "./routes/bedRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import receptionistRoutes from "./routes/receptionistRoutes.js";
+import nurseRoutes from "./routes/nurseRoutes.js";
+import labTechRoutes from "./routes/labTechRoutes.js";
+import pharmacistRoutes from "./routes/pharmacistRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import limiter from "./middlewares/rateLimiter.js";
 
@@ -34,6 +38,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/dynamic", dynamicDataRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/doctors", doctorRoutes);
@@ -50,6 +55,9 @@ app.use("/api/medicines", pharmacyRoutes);
 app.use("/api/beds", bedRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/receptionists", receptionistRoutes);
+app.use("/api/nurses", nurseRoutes);
+app.use("/api/lab-techs", labTechRoutes);
+app.use("/api/pharmacists", pharmacistRoutes);
 app.use(errorHandler);
 
 export default app;

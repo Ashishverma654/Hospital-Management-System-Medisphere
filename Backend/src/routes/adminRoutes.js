@@ -1,26 +1,27 @@
 import express from "express";
-import { createStaffUser, getDashboardStats } from "../controllers/adminController.js";
 import {
-  verifyAccessToken,
-  authorizeRoles,
-} from "../middlewares/authMiddleware.js";
-import { requireSuperAdmin } from "../middlewares/requireSuperAdmin.js";
+  getDashboardStats,
+  createStaffUser,
+  getAllUsers,
+  getCreationHistory,
+  deactivateUser,
+  getCreatableRoles,
+} from "../controllers/adminController.js";
+import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.get(
-  "/dashboard",
-  verifyAccessToken,
-  authorizeRoles("admin"),
-  getDashboardStats,
-);
+router.use(verifyAccessToken);
 
-router.post(
-  "/users",
-  verifyAccessToken,
-  authorizeRoles("admin"),
-  requireSuperAdmin,
-  createStaffUser,
-);
+// Routes accessible by superadmin & admin only
+router.get("/dashboard", authorizeRoles("superadmin", "admin"), getDashboardStats);
+router.get("/users", authorizeRoles("superadmin", "admin"), getAllUsers);
+router.put("/users/:id/toggle-active", authorizeRoles("superadmin", "admin"), deactivateUser);
+
+// Routes that superreceptionist can also use (to create/track receptionists)
+router.post("/create-user", authorizeRoles("superadmin", "admin", "superreceptionist"), createStaffUser);
+router.get("/history", authorizeRoles("superadmin", "admin", "superreceptionist"), getCreationHistory);
+router.get("/creatable-roles", authorizeRoles("superadmin", "admin", "superreceptionist"), getCreatableRoles);
 
 export default router;
+

@@ -15,12 +15,12 @@ const userSchema = new mongoose.Schema(
 
     password: {
       type: String,
-      required: true,
+      required: false,
     },
 
     role: {
       type: String,
-      enum: ["superadmin", "admin", "doctor", "patient", "superreceptionist", "receptionist"],
+      enum: ["superadmin", "admin", "doctor", "patient", "superreceptionist", "receptionist", "nurse", "pharmacist", "labTechnician"],
       required: true,
     },
 
@@ -28,6 +28,40 @@ const userSchema = new mongoose.Schema(
     gender: String,
     address: String,
     profileImage: String,
+    
+    // Additional fields for Login/Recovery flows
+    patientId: {
+      type: String,
+      unique: true,
+      sparse: true // Allows nulls/undefined for non-patient users
+    },
+    
+    employeeId: {
+      type: String,
+      unique: true,
+      sparse: true // Allows nulls/undefined for patient users
+    },
+
+    pin: {
+      type: String, // Hashed 4-digit PIN for phone login
+    },
+    dob: {
+      type: Date, // Date of birth for account recovery
+    },
+    loginOtp: {
+      code: String,
+      expiresAt: Date,
+    },
+    resetPasswordOtp: {
+      code: String,
+      expiresAt: Date,
+    },
+
+    // Hierarchy tracking
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
 
     isActive: {
       type: Boolean,
@@ -38,3 +72,4 @@ const userSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("User", userSchema);
+

@@ -1,5 +1,11 @@
 import api from '../lib/api.js';
 
+// Authentication
+export const loginUser = async (email, password) => {
+  const { data } = await api.post('/auth/login', { email, password });
+  return data;
+};
+
 export const departmentApi = {
   getAll: () => api.get('/department'),
   create: (body) => api.post('/department/create', body),
@@ -77,6 +83,18 @@ export const bedApi = {
   discharge: (id) => api.put(`/beds/discharge/${id}`),
 };
 
+export const resetPassword = async (email, otp, newPassword, newPin) => {
+  const { data } = await api.post('/auth/reset-password', { email, otp, newPassword, newPin });
+  return data;
+};
+
+// Dynamic Data
+export const getLocations = () => api.get('/dynamic/locations');
+export const getDepartments = () => api.get('/dynamic/departments');
+export const getDoctors = (params) => api.get('/dynamic/doctors', { params });
+export const getServices = () => api.get('/dynamic/services');
+export const getPackages = () => api.get('/dynamic/packages');
+
 export const reportApi = {
   create: (formData) => 
     api.post('/reports', formData, { 
@@ -87,7 +105,11 @@ export const reportApi = {
 
 export const adminApi = {
   getDashboardStats: () => api.get('/admin/dashboard'),
-  createUser: (body) => api.post('/admin/users', body),
+  createUser: (body) => api.post('/admin/create-user', body),
+  getAllUsers: (params) => api.get('/admin/users', { params }),
+  getHistory: () => api.get('/admin/history'),
+  getCreatableRoles: () => api.get('/admin/creatable-roles'),
+  toggleActiveUser: (id) => api.put(`/admin/users/${id}/toggle-active`),
 };
 
 export const userApi = {
