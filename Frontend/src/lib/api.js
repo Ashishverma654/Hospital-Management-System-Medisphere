@@ -1,6 +1,22 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3500/api';
+const normalizeApiBase = (rawBase) => {
+  const fallback = 'http://localhost:3500/api';
+
+  if (!rawBase) {
+    return fallback;
+  }
+
+  const trimmedBase = rawBase.replace(/\/+$/, '');
+
+  if (trimmedBase.endsWith('/api')) {
+    return trimmedBase;
+  }
+
+  return `${trimmedBase}/api`;
+};
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -29,9 +45,20 @@ api.interceptors.response.use(
   },
   (err) => {
     if (err.response?.status === 401) {
+      const auth = localStorage.getItem('mediflow_auth');
+      let sessionType = null;
+      try {
+        sessionType = auth ? JSON.parse(auth).sessionType : null;
+      } catch (_) {}
+
       localStorage.removeItem('mediflow_auth');
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
+      const isEmployeePath = window.location.pathname.startsWith('/employee');
+      const nextLocation = isEmployeePath || sessionType === 'employee'
+        ? '/employee/login'
+        : '/patient/login';
+
+      if (window.location.pathname !== nextLocation) {
+        window.location.href = nextLocation;
       }
     }
     return Promise.reject(err);

@@ -1,25 +1,34 @@
 import { api } from '../lib/api.js';
+import { getSessionTypeForRole } from '../auth/constants.js';
 
-const persistAuth = (data) => {
+const persistAuth = (data, sessionType = getSessionTypeForRole(data.user.role)) => {
   const user = {
     id: data.user.id,
     name: data.user.name,
     email: data.user.email,
     role: data.user.role || 'patient',
-    patientId: data.user.patientId
+    patientId: data.user.patientId,
+    employeeId: data.user.employeeId,
   };
   const token = data.accessToken;
-  return { user, token };
+  return { user, token, sessionType };
 };
 
-export const loginUser = async (email, password) => {
-  const data = await api.post('/auth/login', { email, password });
-  return persistAuth(data);
+export const loginPatient = async (email, password) => {
+  const data = await api.post('/auth/patient/login', { email, password });
+  return persistAuth(data, 'patient');
 };
+
+export const loginEmployee = async (identifier, password, role) => {
+  const data = await api.post('/auth/employee/login', { identifier, password, role });
+  return persistAuth(data, 'employee');
+};
+
+export const loginUser = loginPatient;
 
 export const loginWithPhonePin = async (phone, pin) => {
   const data = await api.post('/auth/login/phone', { phone, pin });
-  return persistAuth(data);
+  return persistAuth(data, 'patient');
 };
 
 export const sendLoginOtp = async (email) => {
@@ -28,7 +37,7 @@ export const sendLoginOtp = async (email) => {
 
 export const loginWithOtp = async (email, otp) => {
   const data = await api.post('/auth/login/otp/verify', { email, otp });
-  return persistAuth(data);
+  return persistAuth(data, 'patient');
 };
 
 export const findAccountForHelp = async (firstName, lastName, dob) => {
@@ -43,7 +52,9 @@ export const resetPassword = async (email, otp, newPassword, newPin) => {
   return await api.post('/auth/password/reset', { email, otp, newPassword, newPin });
 };
 
-export const registerUser = async (userData) => {
-  const data = await api.post('/auth/register', userData);
-  return persistAuth(data);
+export const registerPatient = async (userData) => {
+  const data = await api.post('/auth/patient/register', userData);
+  return persistAuth(data, 'patient');
 };
+
+export const registerUser = registerPatient;

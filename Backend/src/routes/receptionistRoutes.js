@@ -7,11 +7,11 @@ import {
 
 const router = express.Router();
 
-// Only superreceptionist can create receptionists (hierarchy enforced here)
+// Receptionists can be created only through approved management roles.
 router.post(
   "/create",
   verifyAccessToken,
-  authorizeRoles("superreceptionist", "superadmin", "admin"),
+  authorizeRoles("superadmin", "admin", "subadmin"),
   createReceptionistStaff
 );
 

@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { normalizeSystemRole } from "../constants/roles.js";
 
 export const requireSuperAdmin = async (req, res, next) => {
   try {
@@ -12,7 +13,7 @@ export const requireSuperAdmin = async (req, res, next) => {
       return res.status(401).json({ message: "User not found." });
     }
 
-    if (user.role !== "admin" || user.email !== superEmail) {
+    if (normalizeSystemRole(user.role) !== "superadmin" || user.email !== superEmail) {
       return res.status(403).json({ message: "Super admin access required." });
     }
 

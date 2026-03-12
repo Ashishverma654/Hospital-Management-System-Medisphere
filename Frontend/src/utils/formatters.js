@@ -94,13 +94,7 @@ export const checkAccess = (userRole, allowedRoles) => {
  * @returns {string} Formatted role label
  */
 export const getRoleLabel = (role) => {
-  const labels = {
-    admin: 'Administrator',
-    doctor: 'Doctor',
-    patient: 'Patient',
-    receptionist: 'Receptionist',
-  };
-  return labels[role] || role;
+  return ROLE_LABELS[role] || role;
 };
 
 /**
@@ -156,3 +150,4 @@ export default {
   isValidEmail,
   isValidPhone,
 };
+import { ROLE_LABELS } from '../auth/constants.js';

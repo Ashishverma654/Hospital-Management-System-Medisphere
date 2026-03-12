@@ -2,7 +2,7 @@ import api from '../lib/api.js';
 
 // Authentication
 export const loginUser = async (email, password) => {
-  const { data } = await api.post('/auth/login', { email, password });
+  const { data } = await api.post('/auth/patient/login', { email, password });
   return data;
 };
 

@@ -6,14 +6,11 @@ import Bed from "../models/Bed.js";
 import User from "../models/User.js";
 import CreationLog from "../models/CreationLog.js";
 import bcrypt from "bcryptjs";
-
-// ===== ROLE HIERARCHY: who can create whom =====
-// Rule: No role can create the SAME role as itself
-const CREATION_PERMISSIONS = {
-  superadmin: ["admin", "superreceptionist", "receptionist", "doctor", "nurse", "pharmacist", "labTechnician"],
-  admin: ["receptionist", "doctor", "nurse", "pharmacist", "labTechnician"],
-  superreceptionist: ["receptionist"],
-};
+import {
+  getCreatableRolesForRole,
+  getRoleLabel,
+  normalizeSystemRole,
+} from "../constants/roles.js";
 
 // Helper: Generate unique Employee ID (e.g., EMP-123456)
 const generateEmployeeId = async () => {
@@ -52,7 +49,7 @@ export const getDashboardStats = async (req, res) => {
     const totalNurses = await User.countDocuments({ role: "nurse", isActive: true });
     const totalPharmacists = await User.countDocuments({ role: "pharmacist", isActive: true });
     const totalLabTechs = await User.countDocuments({ role: "labTechnician", isActive: true });
-    const totalReceptionists = await User.countDocuments({ role: { $in: ["receptionist", "superreceptionist"] }, isActive: true });
+    const totalReceptionists = await User.countDocuments({ role: "receptionist", isActive: true });
 
     res.json({
       totalDoctors,
@@ -78,7 +75,7 @@ export const getDashboardStats = async (req, res) => {
 export const createStaffUser = async (req, res) => {
   try {
     const { name, email, password, role, phone, dob, gender, address } = req.body;
-    const creatorRole = req.user.role;
+    const creatorRole = normalizeSystemRole(req.user.role);
     const creatorId = req.user.id;
 
     // Validate required fields
@@ -87,10 +84,10 @@ export const createStaffUser = async (req, res) => {
     }
 
     // Check hierarchy permissions
-    const allowedRoles = CREATION_PERMISSIONS[creatorRole] || [];
+    const allowedRoles = getCreatableRolesForRole(creatorRole);
     if (!allowedRoles.includes(role)) {
       return res.status(403).json({
-        message: `A ${creatorRole} cannot create a ${role}. Allowed roles: ${allowedRoles.join(", ") || "none"}.`,
+        message: `A ${getRoleLabel(creatorRole)} cannot create a ${getRoleLabel(role)}. Allowed roles: ${allowedRoles.map(getRoleLabel).join(", ") || "none"}.`,
       });
     }
 
@@ -155,7 +152,7 @@ export const createStaffUser = async (req, res) => {
     await CreationLog.create({
       creatorId,
       creatorName: creator?.name || "System",
-      creatorRole: creatorRole,
+      creatorRole,
       createdUserId: user._id,
       createdUserName: user.name,
       createdUserEmail: user.email,
@@ -164,12 +161,12 @@ export const createStaffUser = async (req, res) => {
     });
 
     return res.status(201).json({
-      message: `${role} created successfully.`,
+      message: `${getRoleLabel(role)} created successfully.`,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: normalizeSystemRole(user.role),
         employeeId: user.employeeId,
         createdBy: creator?.name,
       },
@@ -205,8 +202,19 @@ export const getAllUsers = async (req, res) => {
 
     const total = await User.countDocuments(filter);
 
+    const normalizedUsers = users.map((user) => ({
+      ...user.toObject(),
+      role: normalizeSystemRole(user.role),
+      createdBy: user.createdBy
+        ? {
+            ...user.createdBy.toObject(),
+            role: normalizeSystemRole(user.createdBy.role),
+          }
+        : user.createdBy,
+    }));
+
     res.json({
-      users,
+      users: normalizedUsers,
       pagination: {
         total,
         page: parseInt(page),
@@ -232,8 +240,14 @@ export const getCreationHistory = async (req, res) => {
 
     const total = await CreationLog.countDocuments({ creatorId });
 
+    const normalizedLogs = logs.map((log) => ({
+      ...log.toObject(),
+      creatorRole: normalizeSystemRole(log.creatorRole),
+      createdUserRole: normalizeSystemRole(log.createdUserRole),
+    }));
+
     res.json({
-      logs,
+      logs: normalizedLogs,
       pagination: {
         total,
         page: parseInt(page),
@@ -254,7 +268,7 @@ export const deactivateUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found." });
 
     // Prevent deactivating superadmin
-    if (user.role === "superadmin") {
+    if (normalizeSystemRole(user.role) === "superadmin") {
       return res.status(403).json({ message: "Cannot deactivate a SuperAdmin." });
     }
 
@@ -266,11 +280,11 @@ export const deactivateUser = async (req, res) => {
     await CreationLog.create({
       creatorId: req.user.id,
       creatorName: creator?.name || "System",
-      creatorRole: req.user.role,
+      creatorRole: normalizeSystemRole(req.user.role),
       createdUserId: user._id,
       createdUserName: user.name,
       createdUserEmail: user.email,
-      createdUserRole: user.role,
+      createdUserRole: normalizeSystemRole(user.role),
       action: user.isActive ? "reactivated" : "deactivated",
     });
 
@@ -286,7 +300,7 @@ export const deactivateUser = async (req, res) => {
 // 6. Get allowed roles the current user can create
 export const getCreatableRoles = async (req, res) => {
   try {
-    const allowed = CREATION_PERMISSIONS[req.user.role] || [];
+    const allowed = getCreatableRolesForRole(req.user.role);
     res.json({ allowedRoles: allowed });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Button } from '../../components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
 import { DataTable, ErrorState, LoadingSkeleton } from '../../components';
 import { patientApi } from '../../services/apiServices';
-import { toast } from 'sonner';
 
 export default function PatientManagement() {
   const [patients, setPatients] = useState([]);
@@ -44,19 +41,9 @@ export default function PatientManagement() {
     { key: 'weight', label: 'Weight (kg)', sortable: true },
     { key: 'height', label: 'Height (cm)', sortable: true },
     {
-      key: '_id',
-      label: 'Actions',
-      render: (_, row) => (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => window.location.href = `/patient/${row.userId._id}`}
-          >
-            View
-          </Button>
-        </div>
-      ),
+      key: 'userId_patientId',
+      label: 'Patient ID',
+      render: (_, row) => row.userId?.patientId || 'N/A',
     },
   ];
 
@@ -66,8 +53,8 @@ export default function PatientManagement() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Patient Management</h2>
-        <p className="text-muted-foreground">View and manage all patients</p>
+        <h2 className="text-3xl font-bold tracking-tight">Patients</h2>
+        <p className="text-muted-foreground">View the complete patient list only</p>
       </div>
 
       <DataTable data={patients} columns={columns} isLoading={loading} />

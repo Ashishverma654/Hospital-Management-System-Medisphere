@@ -5,30 +5,7 @@ import { Button } from '../../components/ui/button';
 import { adminApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Plus, Search, RefreshCw, UserCheck, UserX, History, Shield } from 'lucide-react';
-
-const ROLE_LABELS = {
-  superadmin: 'Super Admin',
-  admin: 'Admin',
-  doctor: 'Doctor',
-  nurse: 'Nurse',
-  pharmacist: 'Pharmacist',
-  labTechnician: 'Lab Technician',
-  superreceptionist: 'Super Receptionist',
-  receptionist: 'Receptionist',
-  patient: 'Patient',
-};
-
-const ROLE_COLORS = {
-  superadmin: 'bg-red-100 text-red-800',
-  admin: 'bg-orange-100 text-orange-800',
-  doctor: 'bg-blue-100 text-blue-800',
-  nurse: 'bg-pink-100 text-pink-800',
-  pharmacist: 'bg-emerald-100 text-emerald-800',
-  labTechnician: 'bg-teal-100 text-teal-800',
-  superreceptionist: 'bg-purple-100 text-purple-800',
-  receptionist: 'bg-violet-100 text-violet-800',
-  patient: 'bg-gray-100 text-gray-800',
-};
+import { ROLE_COLORS, ROLE_LABELS } from '../../auth/constants.js';
 
 export default function UserManagement() {
   const { user: currentUser } = useSelector((state) => state.auth);
@@ -66,8 +43,8 @@ export default function UserManagement() {
       if (filterRole) params.role = filterRole;
       if (search) params.search = search;
       const res = await adminApi.getAllUsers(params);
-      setUsers(res.data.users || []);
-      setPagination(res.data.pagination || {});
+      setUsers(res.users || []);
+      setPagination(res.pagination || {});
     } catch (err) {
       toast.error('Failed to load users');
     } finally {
@@ -135,7 +112,7 @@ export default function UserManagement() {
   const loadHistory = async () => {
     try {
       const res = await adminApi.getHistory();
-      setLogs(res.data.logs || []);
+      setLogs(res.logs || []);
       setShowHistory(true);
     } catch {
       toast.error('Failed to load history');
@@ -147,9 +124,9 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Manage Roles</h2>
           <p className="text-muted-foreground">
-            Manage staff accounts — logged in as <strong className="capitalize">{currentUser?.role}</strong>
+            Manage employee roles and staff accounts — logged in as <strong className="capitalize">{currentUser?.role}</strong>
           </p>
         </div>
         <div className="flex gap-2">
@@ -185,8 +162,8 @@ export default function UserManagement() {
           onChange={e => { setFilterRole(e.target.value); setPage(1); }}
           className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none"
         >
-          <option value="">All Roles</option>
-          {Object.entries(ROLE_LABELS).map(([val, label]) => (
+          <option value="">All Employee Roles</option>
+          {Object.entries(ROLE_LABELS).filter(([val]) => val !== 'patient').map(([val, label]) => (
             <option key={val} value={val}>{label}</option>
           ))}
         </select>
@@ -213,10 +190,10 @@ export default function UserManagement() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading users…</td></tr>
-              ) : users.length === 0 ? (
+              ) : users.filter((user) => user.role !== 'patient').length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No users found</td></tr>
               ) : (
-                users.map(u => (
+                users.filter((user) => user.role !== 'patient').map(u => (
                   <tr key={u._id} className={`border-b border-border hover:bg-muted/30 transition-colors ${!u.isActive ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3 font-medium">{u.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
@@ -278,7 +255,7 @@ export default function UserManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold">Create New Staff Member</h3>
+              <h3 className="text-lg font-bold">Create New Staff Role</h3>
               <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
             <form onSubmit={handleCreateUser} className="space-y-4">

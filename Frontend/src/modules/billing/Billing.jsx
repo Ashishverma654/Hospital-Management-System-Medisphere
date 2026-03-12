@@ -18,6 +18,7 @@ import {
 import { billingApi, patientApi, prescriptionApi, pharmacyApi, labReportApi } from '../../services/apiServices';
 import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
+import { BILLING_STAFF_ROLES } from '../../auth/constants.js';
 
 export default function Billing() {
   const { user } = useSelector((state) => state.auth);
@@ -41,7 +42,7 @@ export default function Billing() {
   const [calculating, setCalculating] = useState(false);
 
   const fetchInvoices = () => {
-    if (user?.role === 'admin' || user?.role === 'receptionist' || user?.role === 'superadmin' || user?.role === 'superreceptionist') {
+    if (BILLING_STAFF_ROLES.includes(user?.role)) {
       setLoading(true);
       
       patientApi.getAll()
@@ -202,7 +203,7 @@ export default function Billing() {
             Manage patient billing, payments, and dynamically structured invoice generation.
           </p>
         </div>
-        {['admin', 'receptionist', 'superadmin', 'superreceptionist'].includes(user?.role) && (
+        {BILLING_STAFF_ROLES.includes(user?.role) && (
           <Button className="shadow-md shadow-primary/20" onClick={() => setShowGenerateModal(true)}>
             <Plus className="mr-2 h-4 w-4" /> Create Invoice
           </Button>
@@ -287,7 +288,7 @@ export default function Billing() {
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       </Button>
                       {inv.paymentStatus !== 'paid' &&
-                        ['admin', 'receptionist', 'superadmin', 'superreceptionist'].includes(user?.role) && (
+                        BILLING_STAFF_ROLES.includes(user?.role) && (
                           <Button
                             variant="ghost"
                             size="icon"

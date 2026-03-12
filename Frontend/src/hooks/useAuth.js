@@ -6,7 +6,7 @@ import { useCallback } from 'react';
  * @returns {{user: Object|null, isAuthenticated: boolean, token: string|null, hasRole: Function, checkPermission: Function}}
  */
 export const useAuth = () => {
-  const { user, token, isAuthenticated } = useSelector((state) => state.auth);
+  const { user, token, sessionType, isAuthenticated } = useSelector((state) => state.auth);
 
   const hasRole = useCallback((requiredRoles) => {
     if (!isAuthenticated || !user) return false;
@@ -22,6 +22,7 @@ export const useAuth = () => {
     user,
     isAuthenticated,
     token,
+    sessionType,
     hasRole,
     checkPermission,
   };

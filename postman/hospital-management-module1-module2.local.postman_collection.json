@@ -1,0 +1,596 @@
+{
+  "info": {
+    "_postman_id": "c2b8c7f2-7d40-45a6-bb2a-1e12fe18177f",
+    "name": "Hospital Management - Module 1 & 2 Local Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local Postman sequence for Module 1 route/auth split and Module 2 role hierarchy cleanup."
+  },
+  "item": [
+    {
+      "name": "00 - API Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3500/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3500"
+        },
+        "description": "Checks that the local backend is running before auth tests."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Backend is reachable', function () {",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Patient Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Module Test Patient\",\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"{{patientPassword}}\",\n  \"phone\": \"{{patientPhone}}\",\n  \"dob\": \"2012-01-01\",\n  \"pin\": \"1234\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/patient/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "patient",
+            "register"
+          ]
+        },
+        "description": "Registers a patient through the patient-only auth flow."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Patient register returns success or duplicate', function () {",
+              "  pm.expect([201, 400]).to.include(pm.response.code);",
+              "});",
+              "if (pm.response.code === 201) {",
+              "  const json = pm.response.json();",
+              "  pm.environment.set('patientToken', json.accessToken || '');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Patient Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{patientEmail}}\",\n  \"password\": \"{{patientPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/patient/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "patient",
+            "login"
+          ]
+        },
+        "description": "Verifies the patient login endpoint remains separate from employee login."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Patient login succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.environment.set('patientToken', json.accessToken || '');",
+              "pm.test('Patient role is patient', function () {",
+              "  pm.expect(json.user.role).to.eql('patient');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Employee Login (Superadmin, Correct Role)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"identifier\": \"{{superadminEmail}}\",\n  \"password\": \"{{superadminPassword}}\",\n  \"role\": \"superadmin\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/employee/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "employee",
+            "login"
+          ]
+        },
+        "description": "Logs in an employee using the role dropdown flow."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Superadmin employee login succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.environment.set('superadminToken', json.accessToken || '');",
+              "pm.test('Employee role matches selected role', function () {",
+              "  pm.expect(json.user.role).to.eql('superadmin');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Employee Login (Wrong Role Rejected)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"identifier\": \"{{superadminEmail}}\",\n  \"password\": \"{{superadminPassword}}\",\n  \"role\": \"admin\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/employee/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "employee",
+            "login"
+          ]
+        },
+        "description": "Confirms Module 1 and 2 role validation rejects a mismatched selected role."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Wrong employee role is rejected', function () {",
+              "  pm.expect(pm.response.code).to.eql(400);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Creatable Roles (Superadmin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{superadminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/creatable-roles",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "creatable-roles"
+          ]
+        },
+        "description": "Verifies the Module 2 hierarchy for superadmin."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Superadmin creatable roles match hierarchy', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const roles = pm.response.json().allowedRoles || [];",
+              "  pm.expect(roles).to.eql(['admin', 'subadmin', 'doctor', 'nurse', 'receptionist', 'labTechnician', 'pharmacist']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Create Admin as Superadmin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{superadminToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Module Test Admin\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"role\": \"admin\",\n  \"phone\": \"9876500001\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/create-user",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "create-user"
+          ]
+        },
+        "description": "Creates an admin using the centralized creation-permission map."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Admin create returns success or duplicate', function () {",
+              "  pm.expect([201, 400]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Employee Login (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"identifier\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"role\": \"admin\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/employee/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "employee",
+            "login"
+          ]
+        },
+        "description": "Logs in the created admin to continue hierarchy testing."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Admin login succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.environment.set('adminToken', json.accessToken || '');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - Creatable Roles (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/creatable-roles",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "creatable-roles"
+          ]
+        },
+        "description": "Checks Module 2 hierarchy for admin."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Admin creatable roles match hierarchy', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const roles = pm.response.json().allowedRoles || [];",
+              "  pm.expect(roles).to.eql(['subadmin', 'doctor', 'nurse', 'receptionist', 'labTechnician', 'pharmacist']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Create Subadmin as Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Module Test Subadmin\",\n  \"email\": \"{{subadminEmail}}\",\n  \"password\": \"{{subadminPassword}}\",\n  \"role\": \"subadmin\",\n  \"phone\": \"9876500002\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/create-user",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "create-user"
+          ]
+        },
+        "description": "Creates a subadmin using admin permissions."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Subadmin create returns success or duplicate', function () {",
+              "  pm.expect([201, 400]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Employee Login (Subadmin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"identifier\": \"{{subadminEmail}}\",\n  \"password\": \"{{subadminPassword}}\",\n  \"role\": \"subadmin\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/employee/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "employee",
+            "login"
+          ]
+        },
+        "description": "Confirms subadmin is recognized by the employee auth flow."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Subadmin login succeeds', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const json = pm.response.json();",
+              "pm.environment.set('subadminToken', json.accessToken || '');",
+              "pm.test('Subadmin role is returned', function () {",
+              "  pm.expect(json.user.role).to.eql('subadmin');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Creatable Roles (Subadmin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{subadminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/creatable-roles",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "creatable-roles"
+          ]
+        },
+        "description": "Checks the final restricted hierarchy for subadmin."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Subadmin creatable roles match hierarchy', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const roles = pm.response.json().allowedRoles || [];",
+              "  pm.expect(roles).to.eql(['nurse', 'receptionist', 'labTechnician', 'pharmacist']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Subadmin Cannot Create Doctor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{subadminToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Blocked Doctor\",\n  \"email\": \"{{doctorEmail}}\",\n  \"password\": \"{{doctorPassword}}\",\n  \"role\": \"doctor\",\n  \"phone\": \"9876500003\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/create-user",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "create-user"
+          ]
+        },
+        "description": "Validates that subadmin cannot create doctor, admin, subadmin, or superadmin."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Subadmin doctor create is forbidden', function () {",
+              "  pm.expect(pm.response.code).to.eql(403);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Subadmin Can Create Nurse",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{subadminToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Module Test Nurse\",\n  \"email\": \"{{nurseEmail}}\",\n  \"password\": \"{{nursePassword}}\",\n  \"role\": \"nurse\",\n  \"phone\": \"9876500004\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/admin/create-user",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "create-user"
+          ]
+        },
+        "description": "Validates the allowed subadmin creation path."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Subadmin nurse create returns success or duplicate', function () {",
+              "  pm.expect([201, 400]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

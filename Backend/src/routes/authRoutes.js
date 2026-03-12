@@ -1,7 +1,10 @@
 import express from "express";
 import { 
+  registerPatient,
   register, 
   login, 
+  loginPatient,
+  loginEmployee,
   loginWithPhonePin, 
   sendLoginOtp, 
   loginWithOtp,
@@ -13,7 +16,10 @@ import {
 const router = express.Router();
 
 router.post("/register", register);
+router.post("/patient/register", registerPatient);
 router.post("/login", login); // Legacy / Email & Password
+router.post("/patient/login", loginPatient);
+router.post("/employee/login", loginEmployee);
 router.post("/login/phone", loginWithPhonePin);
 router.post("/login/otp/send", sendLoginOtp);
 router.post("/login/otp/verify", loginWithOtp);

@@ -1,7 +1,7 @@
 import app from "./app.js";
 import connectDB from "./config/database.js";
 import { ensureSuperAdmin } from "./utils/ensureSuperAdmin.js";
-import { ensureSuperReceptionist } from "./utils/ensureSuperReceptionist.js";
+import { migrateLegacyRoles } from "./utils/migrateLegacyRoles.js";
 
 const PORT = process.env.PORT || 3500;
 
@@ -11,10 +11,10 @@ connectDB().then(async () => {
   try {
     await ensureSuperAdmin();
     console.log("Super Admin check done.");
-    await ensureSuperReceptionist();
-    console.log("Super Receptionist check done.");
+    await migrateLegacyRoles();
+    console.log("Legacy role migration check done.");
   } catch (e) {
-    console.error("Super admin/super receptionist seed failed:", e?.message || e);
+    console.error("Startup role setup failed:", e?.message || e);
   }
 
   console.log(`Starting server on port ${PORT}...`);

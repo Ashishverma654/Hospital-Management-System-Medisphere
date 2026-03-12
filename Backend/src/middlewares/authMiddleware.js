@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { normalizeSystemRole } from "../constants/roles.js";
 
 
 // ----- 1. Verify Access Token -----
@@ -18,7 +19,10 @@ export const verifyAccessToken = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      role: normalizeSystemRole(decoded.role),
+    };
 
     next();
   } catch (error) {
@@ -40,12 +44,15 @@ export const verifyAccessToken = (req, res, next) => {
 // ----- 2 . Authorize Role -----
 export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
+    const normalizedRole = normalizeSystemRole(req.user?.role);
+    const normalizedAllowedRoles = roles.map((role) => normalizeSystemRole(role));
+
     // SuperAdmin has universal access
-    if (req.user && req.user.role === "superadmin") {
+    if (normalizedRole === "superadmin") {
       return next();
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!normalizedAllowedRoles.includes(normalizedRole)) {
       return res.status(403).json({ message: "Access Forbidden." });
     }
     next();

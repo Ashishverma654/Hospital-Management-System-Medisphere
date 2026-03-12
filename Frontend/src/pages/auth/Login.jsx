@@ -50,9 +50,9 @@ export default function Login() {
     const rolePaths = { 
       superadmin: '/superadmin',
       admin: '/admin', 
+      subadmin: '/employee/subadmin',
       doctor: '/doctor', 
       patient: '/patient', 
-      superreceptionist: '/superreceptionist',
       receptionist: '/receptionist',
       nurse: '/nurse',
       pharmacist: '/pharmacist',
@@ -476,8 +476,8 @@ export default function Login() {
               {[
                 { label: 'SuperAdmin', email: 'superadmin@medanta.org', pass: 'SuperAdmin@123' },
                 { label: 'Admin', email: 'admin@medanta.org', pass: 'Admin@123' },
+                { label: 'SubAdmin', email: 'subadmin@medanta.org', pass: 'SubAdmin@123' },
                 { label: 'Doctor', email: 'doctor@hospital.com', pass: 'Doctor@123' },
-                { label: 'SuperRec', email: 'super.receptionist@hospital.com', pass: 'SuperRecPassword123!' },
                 { label: 'Receptionist', email: 'receptionist@medanta.org', pass: 'Receptionist@123' },
                 { label: 'Nurse', email: 'nurse@medanta.org', pass: 'Nurse@123' },
                 { label: 'Pharmacist', email: 'pharmacist@medanta.org', pass: 'Pharmacist@123' },

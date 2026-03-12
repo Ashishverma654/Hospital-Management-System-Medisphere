@@ -20,9 +20,9 @@ export const store = configureStore({
 // Persist auth to localStorage on change
 store.subscribe(() => {
   const state = store.getState();
-  const { user, token, isAuthenticated } = state.auth;
+  const { user, token, sessionType, isAuthenticated } = state.auth;
   if (isAuthenticated && user && token) {
-    localStorage.setItem('mediflow_auth', JSON.stringify({ user, token }));
+    localStorage.setItem('mediflow_auth', JSON.stringify({ user, token, sessionType }));
   } else {
     localStorage.removeItem('mediflow_auth');
   }

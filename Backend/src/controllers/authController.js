@@ -6,9 +6,42 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/generateTokens.js";
+import {
+  ALL_ROLES,
+  EMPLOYEE_ROLES,
+  isEmployeeRole,
+  normalizeSystemRole,
+  PATIENT_ROLE,
+} from "../constants/roles.js";
 
 // Helper to generate a 6-digit OTP
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const normalizeRole = (role) => {
+  if (!role) return role;
+  return normalizeSystemRole(role);
+};
+
+const sanitizeUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: normalizeRole(user.role),
+  patientId: user.patientId,
+  employeeId: user.employeeId,
+});
+
+const buildAuthResponse = (user) => ({
+  message: "Login successful",
+  accessToken: generateAccessToken(user),
+  refreshToken: generateRefreshToken(user),
+  user: sanitizeUser(user),
+});
+
+const findUserByIdentifier = async (identifier, fields = ["email"]) => {
+  const orFilters = fields.map((field) => ({ [field]: identifier }));
+  return User.findOne({ $or: orFilters });
+};
 
 // Helper to generate unique Patient ID (e.g., PAT-123456)
 const generatePatientId = async () => {
@@ -56,10 +89,14 @@ export const register = async (req, res) => {
       hashedPin = await bcrypt.hash(pin, salt);
     }
 
-    const assignedRole = role || "patient";
+    const assignedRole = normalizeRole(role || PATIENT_ROLE);
     let patientId;
+
+    if (!ALL_ROLES.includes(assignedRole)) {
+      return res.status(400).json({ message: "Invalid role selected." });
+    }
     
-    if (assignedRole === "patient") {
+    if (assignedRole === PATIENT_ROLE) {
       patientId = await generatePatientId();
     }
 
@@ -74,21 +111,19 @@ export const register = async (req, res) => {
       patientId
     });
 
-    const accessToken = generateAccessToken(user);
     res.status(201).json({
       message: "User registered successfully",
-      accessToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        patientId: user.patientId
-      },
+      accessToken: generateAccessToken(user),
+      user: sanitizeUser(user),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+export const registerPatient = async (req, res) => {
+  req.body.role = PATIENT_ROLE;
+  return register(req, res);
 };
 
 // 1. Login with Email or Patient ID and Password
@@ -96,9 +131,7 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body; // 'email' can be email or patientId
 
-    const user = await User.findOne({
-      $or: [{ email: email }, { patientId: email }]
-    });
+    const user = await findUserByIdentifier(email, ["email", "patientId", "employeeId"]);
 
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -110,21 +143,65 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    res.json(buildAuthResponse(user));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-    res.json({
-      message: "Login successful",
-      accessToken,
-      refreshToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        patientId: user.patientId
-      },
-    });
+export const loginPatient = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email or Patient ID and password are required" });
+    }
+
+    const user = await findUserByIdentifier(email, ["email", "patientId"]);
+
+    if (!user || normalizeRole(user.role) !== PATIENT_ROLE || !user.password) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    res.json(buildAuthResponse(user));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const loginEmployee = async (req, res) => {
+  try {
+    const { identifier, email, password, role } = req.body;
+    const loginIdentifier = identifier || email;
+    const selectedRole = normalizeRole(role);
+
+    if (!loginIdentifier || !password || !selectedRole) {
+      return res.status(400).json({ message: "Identifier, password, and role are required" });
+    }
+
+    if (!isEmployeeRole(selectedRole)) {
+      return res.status(400).json({ message: "Invalid employee role selection" });
+    }
+
+    const user = await findUserByIdentifier(loginIdentifier, ["email", "employeeId"]);
+
+    if (!user || !user.password || normalizeRole(user.role) === PATIENT_ROLE) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch || normalizeRole(user.role) !== selectedRole) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    res.json(buildAuthResponse(user));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -141,7 +218,7 @@ export const loginWithPhonePin = async (req, res) => {
 
     const user = await User.findOne({ phone });
 
-    if (!user || !user.pin) {
+    if (!user || !user.pin || normalizeRole(user.role) !== PATIENT_ROLE) {
       return res.status(400).json({ message: "Invalid phone number or PIN not set" });
     }
 
@@ -151,21 +228,7 @@ export const loginWithPhonePin = async (req, res) => {
       return res.status(400).json({ message: "Invalid PIN" });
     }
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    res.json({
-      message: "Login successful",
-      accessToken,
-      refreshToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        patientId: user.patientId
-      },
-    });
+    res.json(buildAuthResponse(user));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -184,7 +247,7 @@ export const sendLoginOtp = async (req, res) => {
       $or: [{ email: email }, { patientId: email }]
     });
 
-    if (!user) {
+    if (!user || normalizeRole(user.role) !== PATIENT_ROLE) {
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -216,7 +279,7 @@ export const loginWithOtp = async (req, res) => {
       $or: [{ email: email }, { patientId: email }]
     });
 
-    if (!user || !user.loginOtp || !user.loginOtp.code) {
+    if (!user || normalizeRole(user.role) !== PATIENT_ROLE || !user.loginOtp || !user.loginOtp.code) {
       return res.status(400).json({ message: "Invalid request or OTP expired" });
     }
 
@@ -232,21 +295,7 @@ export const loginWithOtp = async (req, res) => {
     user.loginOtp = undefined;
     await user.save();
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    res.json({
-      message: "Login successful",
-      accessToken,
-      refreshToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        patientId: user.patientId
-      },
-    });
+    res.json(buildAuthResponse(user));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -277,7 +326,7 @@ export const findAccountForHelp = async (req, res) => {
              uDate.getUTCDate() === targetDate.getUTCDate();
     });
 
-    if (!user) {
+    if (!user || normalizeRole(user.role) !== PATIENT_ROLE) {
       return res.status(404).json({ message: "No account found matching these details" });
     }
     
@@ -307,7 +356,7 @@ export const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user) {
+    if (!user || normalizeRole(user.role) !== PATIENT_ROLE) {
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -337,7 +386,7 @@ export const resetPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || !user.resetPasswordOtp || !user.resetPasswordOtp.code) {
+    if (!user || normalizeRole(user.role) !== PATIENT_ROLE || !user.resetPasswordOtp || !user.resetPasswordOtp.code) {
       return res.status(400).json({ message: "Invalid request or OTP expired" });
     }
 

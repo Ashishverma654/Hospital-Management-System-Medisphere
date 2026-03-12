@@ -60,13 +60,11 @@ export default function Sidebar({ isOpen }) {
       { name: 'Reports', path: '/receptionist/reports', icon: FiFileText },
       { name: 'Patient DB', path: '/receptionist/patients', icon: FiUsers },
     ],
-    superreceptionist: [
-      { name: 'Dashboard', path: '/superreceptionist', icon: FiGrid },
-      { name: 'Register Patient', path: '/superreceptionist/register', icon: FiUsers },
-      { name: 'Appointments', path: '/superreceptionist/appointments', icon: FiCalendar },
-      { name: 'Billing', path: '/superreceptionist/billing', icon: FiCreditCard },
-      { name: 'Reports', path: '/superreceptionist/reports', icon: FiFileText },
-      { name: 'Patient DB', path: '/superreceptionist/patients', icon: FiUsers },
+    subadmin: [
+      { name: 'Dashboard', path: '/employee/subadmin', icon: FiGrid },
+      { name: 'Staff Access', path: '/employee/subadmin', icon: FiUsers },
+      { name: 'Front Desk Support', path: '/employee/subadmin', icon: FiCalendar },
+      { name: 'Lab Support', path: '/employee/subadmin', icon: FiFileText },
     ],
     superadmin: [
       { name: 'Dashboard', path: '/superadmin', icon: FiGrid },
@@ -144,10 +142,10 @@ export default function Sidebar({ isOpen }) {
       </nav>
       
       {/* Create User Quick Action in Sidebar */}
-      {(role === 'superadmin' || role === 'admin' || role === 'superreceptionist') && (
+      {(role === 'superadmin' || role === 'admin' || role === 'subadmin') && (
         <div className="px-3 py-4 border-t border-border">
           <NavLink
-            to={role === 'superreceptionist' ? '/superreceptionist/users?create=true' : `/${role}/users?create=true`}
+            to={role === 'subadmin' ? '/employee/subadmin' : `/${role}/users?create=true`}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-3 rounded-xl transition-all shadow-sm ${
                 isActive 
