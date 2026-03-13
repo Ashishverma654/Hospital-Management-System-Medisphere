@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { departmentApi } from '../../services/apiServices.js';
+import { departmentApi, specializationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
 
 const initialForm = {
   name: '',
+  departmentId: '',
   description: '',
-  code: '',
-  icon: '',
-  image: '',
 };
 
-export default function DepartmentManagement() {
+export default function SpecializationManagement() {
+  const [specializations, setSpecializations] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -22,24 +22,29 @@ export default function DepartmentManagement() {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
-  const loadDepartments = async () => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const data = await departmentApi.getAll({
-        search,
-        isActive: filterStatus || undefined,
-      });
-      setDepartments(Array.isArray(data) ? data : []);
+      const [specializationData, departmentData] = await Promise.all([
+        specializationApi.getAll({
+          search,
+          departmentId: filterDepartment || undefined,
+          isActive: filterStatus || undefined,
+        }),
+        departmentApi.getAll(),
+      ]);
+      setSpecializations(Array.isArray(specializationData) ? specializationData : []);
+      setDepartments(Array.isArray(departmentData) ? departmentData.filter((item) => item.isActive) : []);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to load departments.');
+      toast.error(error.response?.data?.message || 'Failed to load specializations.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDepartments();
-  }, [search, filterStatus]);
+    loadData();
+  }, [search, filterDepartment, filterStatus]);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -52,16 +57,16 @@ export default function DepartmentManagement() {
     setSaving(true);
     try {
       if (editingItem) {
-        await departmentApi.update(editingItem._id, form);
-        toast.success('Department updated successfully.');
+        await specializationApi.update(editingItem._id, form);
+        toast.success('Specialization updated successfully.');
       } else {
-        await departmentApi.create(form);
-        toast.success('Department created successfully.');
+        await specializationApi.create(form);
+        toast.success('Specialization created successfully.');
       }
       resetForm();
-      loadDepartments();
+      loadData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save department.');
+      toast.error(error.response?.data?.message || 'Failed to save specialization.');
     } finally {
       setSaving(false);
     }
@@ -69,22 +74,24 @@ export default function DepartmentManagement() {
 
   const handleToggle = async (item) => {
     try {
-      await departmentApi.toggleActive(item._id);
+      await specializationApi.toggleActive(item._id);
       toast.success(`${item.name} has been ${item.isActive ? 'deactivated' : 'activated'}.`);
-      loadDepartments();
+      loadData();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update department.');
+      toast.error(error.response?.data?.message || 'Failed to update specialization.');
     }
   };
+
+  const departmentOptions = useMemo(() => departments, [departments]);
 
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Master Data</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Departments</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Specializations</h2>
           <p className="mt-2 max-w-3xl text-slate-600">
-            Manage the core clinical departments that future doctor management, public discovery, booking, and reporting modules depend on.
+            Manage doctor-facing specialization records and keep them mapped cleanly to departments for later doctor discovery and filtering.
           </p>
         </div>
         <Button
@@ -95,7 +102,7 @@ export default function DepartmentManagement() {
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Department
+          Add Specialization
         </Button>
       </div>
 
@@ -106,10 +113,20 @@ export default function DepartmentManagement() {
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by department name"
+            placeholder="Search by specialization name"
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
           />
         </div>
+        <select
+          value={filterDepartment}
+          onChange={(event) => setFilterDepartment(event.target.value)}
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900"
+        >
+          <option value="">All Departments</option>
+          {departmentOptions.map((dept) => (
+            <option key={dept._id} value={dept._id}>{dept.name}</option>
+          ))}
+        </select>
         <select
           value={filterStatus}
           onChange={(event) => setFilterStatus(event.target.value)}
@@ -119,7 +136,7 @@ export default function DepartmentManagement() {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <Button type="button" variant="outline" onClick={loadDepartments}>
+        <Button type="button" variant="outline" onClick={loadData}>
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
@@ -130,35 +147,33 @@ export default function DepartmentManagement() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
                 <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Code</th>
+                <th className="px-4 py-3 font-medium">Department</th>
                 <th className="px-4 py-3 font-medium">Description</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Updated</th>
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">Loading departments...</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">Loading specializations...</td>
                 </tr>
               )}
-              {!loading && departments.length === 0 && (
+              {!loading && specializations.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No departments found.</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">No specializations found.</td>
                 </tr>
               )}
-              {departments.map((item) => (
+              {specializations.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100 last:border-b-0">
                   <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{item.code || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{item.departmentId?.name || '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{item.description || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                       {item.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{new Date(item.updatedAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -168,11 +183,9 @@ export default function DepartmentManagement() {
                         onClick={() => {
                           setEditingItem(item);
                           setForm({
-                            name: item.name || '',
+                            name: item.name,
+                            departmentId: item.departmentId?._id || '',
                             description: item.description || '',
-                            code: item.code || '',
-                            icon: item.icon || '',
-                            image: item.image || '',
                           });
                           setShowForm(true);
                         }}
@@ -194,34 +207,47 @@ export default function DepartmentManagement() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
+          <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Department' : 'Add Department'}</h3>
+              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Specialization' : 'Add Specialization'}</h3>
               <button type="button" onClick={resetForm} className="text-slate-500 hover:text-slate-900">✕</button>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="Department Name">
-                <input type="text" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+            <div className="mt-5 space-y-4">
+              <Field label="Specialization Name">
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
+                  required
+                />
               </Field>
-              <Field label="Code">
-                <input type="text" value={form.code} onChange={(e) => setForm((c) => ({ ...c, code: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <Field label="Department">
+                <select
+                  value={form.departmentId}
+                  onChange={(event) => setForm((current) => ({ ...current, departmentId: event.target.value }))}
+                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
+                  required
+                >
+                  <option value="">Select department</option>
+                  {departmentOptions.map((dept) => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))}
+                </select>
               </Field>
-              <Field label="Icon Placeholder">
-                <input type="text" value={form.icon} onChange={(e) => setForm((c) => ({ ...c, icon: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
-              </Field>
-              <Field label="Display Image URL">
-                <input type="text" value={form.image} onChange={(e) => setForm((c) => ({ ...c, image: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <Field label="Description">
+                <textarea
+                  value={form.description}
+                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                  className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
+                />
               </Field>
             </div>
 
-            <Field label="Description" className="mt-4">
-              <textarea value={form.description} onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))} className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
-            </Field>
-
             <div className="mt-6 flex gap-3">
               <Button type="button" variant="outline" className="flex-1" onClick={resetForm}>Cancel</Button>
-              <Button type="submit" className="flex-1" disabled={saving}>{saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Department'}</Button>
+              <Button type="submit" className="flex-1" disabled={saving}>{saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Specialization'}</Button>
             </div>
           </form>
         </div>
@@ -230,9 +256,9 @@ export default function DepartmentManagement() {
   );
 }
 
-function Field({ children, className = '', label }) {
+function Field({ children, label }) {
   return (
-    <div className={className}>
+    <div>
       <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
       {children}
     </div>

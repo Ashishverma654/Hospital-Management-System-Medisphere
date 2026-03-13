@@ -1,6 +1,7 @@
 import express from "express";
 import HospitalLocation from "../models/HospitalLocation.js";
 import Department from "../models/Department.js";
+import Specialization from "../models/Specialization.js";
 import DiagnosticService from "../models/DiagnosticService.js";
 import HealthPackage from "../models/HealthPackage.js";
 import Doctor from "../models/Doctor.js";
@@ -22,6 +23,26 @@ router.get("/departments", async (req, res) => {
   try {
     const departments = await Department.find({ isActive: true });
     res.json(departments);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET all active specializations
+router.get("/specializations", async (req, res) => {
+  try {
+    const { departmentId } = req.query;
+    const filter = { isActive: true };
+
+    if (departmentId) {
+      filter.departmentId = departmentId;
+    }
+
+    const specializations = await Specialization.find(filter)
+      .populate("departmentId", "name")
+      .sort({ name: 1 });
+
+    res.json(specializations);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

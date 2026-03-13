@@ -1,60 +1,124 @@
 import Department from "../models/Department.js";
 
+const normalizeName = (value = "") => value.trim().replace(/\s+/g, " ");
+
 export const createDepartment = async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, icon, image, code } = req.body;
+    const normalizedName = normalizeName(name);
 
-    const exists = await Department.findOne({ name });
+    if (!normalizedName) {
+      return res.status(400).json({ message: "Department name is required." });
+    }
+
+    const exists = await Department.findOne({ name: new RegExp(`^${normalizedName}$`, "i") });
 
     if (exists) {
-      return res.status(400).json({ message: "Department Already Exists." });
+      return res.status(400).json({ message: "Department already exists." });
     }
 
     const department = await Department.create({
-      name,
+      name: normalizedName,
       description,
+      code,
+      icon,
+      image,
+      createdBy: req.user?.id,
+      updatedBy: req.user?.id,
     });
 
-    res
-      .status(201)
-      .json({ message: "Department Created Succesfully. ", department });
+    return res.status(201).json({
+      message: "Department created successfully.",
+      department,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
 export const getAllDepartment = async (req, res) => {
   try {
-    const departmnets = await Department.find();
+    const { search = "", isActive } = req.query;
+    const filter = {};
 
-    res.json(departmnets);
+    if (typeof isActive === "string" && isActive !== "") {
+      filter.isActive = isActive === "true";
+    }
+
+    if (search) {
+      filter.name = { $regex: search.trim(), $options: "i" };
+    }
+
+    const departments = await Department.find(filter)
+      .populate("createdBy", "name role")
+      .populate("updatedBy", "name role")
+      .sort({ name: 1 });
+
+    return res.json(departments);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
+    const { name, description, icon, image, code } = req.body;
 
-    const department = await Department.findByIdAndUpdate(id, req.body, {
-      new: true,
+    const department = await Department.findById(id);
+    if (!department) {
+      return res.status(404).json({ message: "Department not found." });
+    }
+
+    const normalizedName = name ? normalizeName(name) : department.name;
+
+    if (normalizedName !== department.name) {
+      const duplicate = await Department.findOne({
+        _id: { $ne: id },
+        name: new RegExp(`^${normalizedName}$`, "i"),
+      });
+
+      if (duplicate) {
+        return res.status(400).json({ message: "Another department with this name already exists." });
+      }
+    }
+
+    department.name = normalizedName;
+    department.description = description ?? department.description;
+    department.code = code ?? department.code;
+    department.icon = icon ?? department.icon;
+    department.image = image ?? department.image;
+    department.updatedBy = req.user?.id;
+
+    await department.save();
+
+    return res.json({
+      message: "Department updated successfully.",
+      department,
     });
-
-    res.json(department);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
-export const deleteDepartment = async (req, res) => {
+export const toggleDepartmentStatus = async (req, res) => {
   try {
     const { id } = req.params;
+    const department = await Department.findById(id);
 
-    await Department.findByIdAndDelete(id);
+    if (!department) {
+      return res.status(404).json({ message: "Department not found." });
+    }
 
-    res.json({ message: "Department Deleted. " });
+    department.isActive = !department.isActive;
+    department.updatedBy = req.user?.id;
+    await department.save();
+
+    return res.json({
+      message: `Department ${department.isActive ? "activated" : "deactivated"} successfully.`,
+      department,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };

@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { departmentApi } from '../../services/apiServices.js';
+import { locationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
 
 const initialForm = {
   name: '',
-  description: '',
-  code: '',
-  icon: '',
-  image: '',
+  city: '',
+  state: '',
+  address: '',
+  phone: '',
+  email: '',
+  mapUrl: '',
+  locationType: 'hospital',
 };
 
-export default function DepartmentManagement() {
-  const [departments, setDepartments] = useState([]);
+export default function LocationManagement() {
+  const [locations, setLocations] = useState([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [loading, setLoading] = useState(true);
@@ -22,23 +25,23 @@ export default function DepartmentManagement() {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
 
-  const loadDepartments = async () => {
+  const loadLocations = async () => {
     setLoading(true);
     try {
-      const data = await departmentApi.getAll({
+      const data = await locationApi.getAll({
         search,
         isActive: filterStatus || undefined,
       });
-      setDepartments(Array.isArray(data) ? data : []);
+      setLocations(Array.isArray(data) ? data : []);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to load departments.');
+      toast.error(error.response?.data?.message || 'Failed to load locations.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDepartments();
+    loadLocations();
   }, [search, filterStatus]);
 
   const resetForm = () => {
@@ -52,16 +55,16 @@ export default function DepartmentManagement() {
     setSaving(true);
     try {
       if (editingItem) {
-        await departmentApi.update(editingItem._id, form);
-        toast.success('Department updated successfully.');
+        await locationApi.update(editingItem._id, form);
+        toast.success('Location updated successfully.');
       } else {
-        await departmentApi.create(form);
-        toast.success('Department created successfully.');
+        await locationApi.create(form);
+        toast.success('Location created successfully.');
       }
       resetForm();
-      loadDepartments();
+      loadLocations();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save department.');
+      toast.error(error.response?.data?.message || 'Failed to save location.');
     } finally {
       setSaving(false);
     }
@@ -69,11 +72,11 @@ export default function DepartmentManagement() {
 
   const handleToggle = async (item) => {
     try {
-      await departmentApi.toggleActive(item._id);
+      await locationApi.toggleActive(item._id);
       toast.success(`${item.name} has been ${item.isActive ? 'deactivated' : 'activated'}.`);
-      loadDepartments();
+      loadLocations();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update department.');
+      toast.error(error.response?.data?.message || 'Failed to update location.');
     }
   };
 
@@ -82,9 +85,9 @@ export default function DepartmentManagement() {
       <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Master Data</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Departments</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Hospital Locations</h2>
           <p className="mt-2 max-w-3xl text-slate-600">
-            Manage the core clinical departments that future doctor management, public discovery, booking, and reporting modules depend on.
+            Manage hospital branches and care locations so later doctor assignment, public discovery, and booking filters use one clean source of truth.
           </p>
         </div>
         <Button
@@ -95,7 +98,7 @@ export default function DepartmentManagement() {
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Department
+          Add Location
         </Button>
       </div>
 
@@ -106,7 +109,7 @@ export default function DepartmentManagement() {
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search by department name"
+            placeholder="Search by name or city"
             className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
           />
         </div>
@@ -119,7 +122,7 @@ export default function DepartmentManagement() {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <Button type="button" variant="outline" onClick={loadDepartments}>
+        <Button type="button" variant="outline" onClick={loadLocations}>
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
@@ -130,35 +133,35 @@ export default function DepartmentManagement() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
                 <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Code</th>
-                <th className="px-4 py-3 font-medium">Description</th>
+                <th className="px-4 py-3 font-medium">City</th>
+                <th className="px-4 py-3 font-medium">Address</th>
+                <th className="px-4 py-3 font-medium">Contact</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Updated</th>
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">Loading departments...</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">Loading locations...</td>
                 </tr>
               )}
-              {!loading && departments.length === 0 && (
+              {!loading && locations.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No departments found.</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No locations found.</td>
                 </tr>
               )}
-              {departments.map((item) => (
+              {locations.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100 last:border-b-0">
                   <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{item.code || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.description || '—'}</td>
+                  <td className="px-4 py-3 text-slate-600">{item.city}{item.state ? `, ${item.state}` : ''}</td>
+                  <td className="px-4 py-3 text-slate-600">{item.address}</td>
+                  <td className="px-4 py-3 text-slate-600">{item.phone || item.email || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                       {item.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{new Date(item.updatedAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -169,10 +172,13 @@ export default function DepartmentManagement() {
                           setEditingItem(item);
                           setForm({
                             name: item.name || '',
-                            description: item.description || '',
-                            code: item.code || '',
-                            icon: item.icon || '',
-                            image: item.image || '',
+                            city: item.city || '',
+                            state: item.state || '',
+                            address: item.address || '',
+                            phone: item.phone || '',
+                            email: item.email || '',
+                            mapUrl: item.mapUrl || '',
+                            locationType: item.locationType || 'hospital',
                           });
                           setShowForm(true);
                         }}
@@ -196,32 +202,46 @@ export default function DepartmentManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Department' : 'Add Department'}</h3>
+              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Location' : 'Add Location'}</h3>
               <button type="button" onClick={resetForm} className="text-slate-500 hover:text-slate-900">✕</button>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="Department Name">
+              <Field label="Location Name">
                 <input type="text" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
               </Field>
-              <Field label="Code">
-                <input type="text" value={form.code} onChange={(e) => setForm((c) => ({ ...c, code: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <Field label="Location Type">
+                <select value={form.locationType} onChange={(e) => setForm((c) => ({ ...c, locationType: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                  <option value="hospital">Hospital</option>
+                  <option value="clinic">Clinic</option>
+                  <option value="lab">Lab</option>
+                  <option value="pharmacy">Pharmacy</option>
+                  <option value="other">Other</option>
+                </select>
               </Field>
-              <Field label="Icon Placeholder">
-                <input type="text" value={form.icon} onChange={(e) => setForm((c) => ({ ...c, icon: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <Field label="City">
+                <input type="text" value={form.city} onChange={(e) => setForm((c) => ({ ...c, city: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
               </Field>
-              <Field label="Display Image URL">
-                <input type="text" value={form.image} onChange={(e) => setForm((c) => ({ ...c, image: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <Field label="State">
+                <input type="text" value={form.state} onChange={(e) => setForm((c) => ({ ...c, state: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              </Field>
+              <Field label="Phone">
+                <input type="text" value={form.phone} onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              </Field>
+              <Field label="Email">
+                <input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
               </Field>
             </div>
-
-            <Field label="Description" className="mt-4">
-              <textarea value={form.description} onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))} className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+            <Field label="Address" className="mt-4">
+              <textarea value={form.address} onChange={(e) => setForm((c) => ({ ...c, address: e.target.value }))} className="min-h-[110px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+            </Field>
+            <Field label="Map URL" className="mt-4">
+              <input type="text" value={form.mapUrl} onChange={(e) => setForm((c) => ({ ...c, mapUrl: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
             </Field>
 
             <div className="mt-6 flex gap-3">
               <Button type="button" variant="outline" className="flex-1" onClick={resetForm}>Cancel</Button>
-              <Button type="submit" className="flex-1" disabled={saving}>{saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Department'}</Button>
+              <Button type="submit" className="flex-1" disabled={saving}>{saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Location'}</Button>
             </div>
           </form>
         </div>

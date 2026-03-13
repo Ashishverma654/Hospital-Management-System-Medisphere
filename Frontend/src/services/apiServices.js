@@ -7,10 +7,24 @@ export const loginUser = async (email, password) => {
 };
 
 export const departmentApi = {
-  getAll: () => api.get('/department'),
-  create: (body) => api.post('/department/create', body),
-  update: (id, body) => api.patch(`/department/update/${id}`, body),
-  delete: (id) => api.delete(`/department/delete/${id}`),
+  getAll: (params) => api.get('/department', { params }),
+  create: (body) => api.post('/department', body),
+  update: (id, body) => api.put(`/department/${id}`, body),
+  toggleActive: (id) => api.put(`/department/${id}/toggle-active`),
+};
+
+export const specializationApi = {
+  getAll: (params) => api.get('/specializations', { params }),
+  create: (body) => api.post('/specializations', body),
+  update: (id, body) => api.put(`/specializations/${id}`, body),
+  toggleActive: (id) => api.put(`/specializations/${id}/toggle-active`),
+};
+
+export const locationApi = {
+  getAll: (params) => api.get('/locations', { params }),
+  create: (body) => api.post('/locations', body),
+  update: (id, body) => api.put(`/locations/${id}`, body),
+  toggleActive: (id) => api.put(`/locations/${id}/toggle-active`),
 };
 
 export const doctorApi = {
@@ -91,6 +105,7 @@ export const resetPassword = async (email, otp, newPassword, newPin) => {
 // Dynamic Data
 export const getLocations = () => api.get('/dynamic/locations');
 export const getDepartments = () => api.get('/dynamic/departments');
+export const getSpecializations = (params) => api.get('/dynamic/specializations', { params });
 export const getDoctors = (params) => api.get('/dynamic/doctors', { params });
 export const getServices = () => api.get('/dynamic/services');
 export const getPackages = () => api.get('/dynamic/packages');

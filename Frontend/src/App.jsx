@@ -20,6 +20,9 @@ import AuditHistoryPage from './pages/employee/AuditHistoryPage.jsx';
 import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
 import UserManagement from './pages/admin/UserManagement.jsx';
+import DepartmentManagement from './pages/admin/DepartmentManagement.jsx';
+import SpecializationManagement from './pages/admin/SpecializationManagement.jsx';
+import LocationManagement from './pages/admin/LocationManagement.jsx';
 import { EMPLOYEE_ROLE_PATHS, EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, getEmployeeHomeRoute } from './auth/constants.js';
 
 function Unauthorized() {
@@ -187,6 +190,9 @@ function App() {
             </Route>
             <Route path="/employee/profile" element={<AdminProfilePage />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
+              <Route path="/employee/departments" element={<DepartmentManagement />} />
+              <Route path="/employee/specializations" element={<SpecializationManagement />} />
+              <Route path="/employee/locations" element={<LocationManagement />} />
               <Route path="/employee/audit" element={<AuditHistoryPage />} />
               <Route path="/employee/settings" element={<HospitalSettingsPage />} />
             </Route>
