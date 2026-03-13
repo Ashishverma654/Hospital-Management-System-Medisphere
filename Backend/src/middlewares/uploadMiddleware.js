@@ -6,7 +6,7 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "hospital_reports",
-    allowed_formats: ["jpg", "png", "pdf"],
+    allowed_formats: ["jpg", "jpeg", "png", "webp", "pdf"],
   },
 });
 

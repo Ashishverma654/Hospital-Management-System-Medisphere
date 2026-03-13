@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doctorApi, slotApi } from '../../services/apiServices';
+import { doctorApi } from '../../services/apiServices';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { 
@@ -28,15 +28,12 @@ export default function DoctorProfile() {
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('in-hospital');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [slots, setSlots] = useState([]);
 
   useEffect(() => {
     const fetchDoctor = async () => {
       try {
         const data = await doctorApi.getById(id);
         setDoctor(data);
-        fetchSlots(data._id);
       } catch (err) {
         console.error("Failed to fetch doctor", err);
         toast.error("Doctor profile not found");
@@ -46,16 +43,6 @@ export default function DoctorProfile() {
     };
     fetchDoctor();
   }, [id]);
-
-  const fetchSlots = async (doctorId) => {
-    try {
-      // Existing slot API logic
-      const data = await slotApi.getByDoctor(doctorId);
-      setSlots(data || []);
-    } catch (err) {
-      console.error("Failed to fetch slots", err);
-    }
-  };
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">

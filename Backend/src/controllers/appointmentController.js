@@ -161,10 +161,15 @@ export const bookAppointment = async (req, res) => {
 
 export const getAllAppointments = async (req, res) => {
   try {
-    const { date, status, doctorId, patientId, search, departmentId } = req.query;
+    const { date, status, doctorId, patientId, search, departmentId, startDate, endDate } = req.query;
     const filter = req.user.role === "patient" ? { patientId: req.user.id } : {};
 
     if (date) filter.date = date;
+    if (!date && (startDate || endDate)) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = startDate;
+      if (endDate) filter.date.$lte = endDate;
+    }
     if (status) filter.status = status;
     if (doctorId) filter.doctorId = doctorId;
     if (patientId) filter.$or = [{ patientId }, { patientProfileId: patientId }];
@@ -191,7 +196,10 @@ export const getAllAppointments = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate({
         path: "doctorId",
-        populate: { path: "userId", select: "name email phone" },
+        populate: [
+          { path: "userId", select: "name email phone" },
+          { path: "departmentId", select: "name" },
+        ],
       })
       .populate("patientId", "name email phone patientId")
       .populate({

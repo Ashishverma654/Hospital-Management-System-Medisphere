@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -16,6 +17,7 @@ import { toast } from 'sonner';
 import { FormDialog } from '../../components/FormDialog';
 
 export default function Pharmacy() {
+  const MotionDiv = motion.div;
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -32,6 +34,7 @@ export default function Pharmacy() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchInventory();
   }, []);
 
@@ -58,7 +61,7 @@ export default function Pharmacy() {
       toast.success('Medicine added successfully!');
       setShowForm(false);
       fetchInventory();
-    } catch (_err) {
+    } catch {
       toast.error('Failed to add medicine');
     }
   };
@@ -81,7 +84,7 @@ export default function Pharmacy() {
   };
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
@@ -104,7 +107,7 @@ export default function Pharmacy() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4 mb-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Total Unique Items</CardTitle>
@@ -113,8 +116,8 @@ export default function Pharmacy() {
               <div className="text-2xl font-bold">{total}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Low Stock Alerts</CardTitle>
@@ -123,8 +126,8 @@ export default function Pharmacy() {
               <div className="text-2xl font-bold text-yellow-500">{lowStock}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Out of Stock</CardTitle>
@@ -133,8 +136,8 @@ export default function Pharmacy() {
               <div className="text-2xl font-bold text-destructive">{outOfStock}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">In Stock</CardTitle>
@@ -143,7 +146,7 @@ export default function Pharmacy() {
               <div className="text-2xl font-bold text-primary">{total - outOfStock}</div>
             </CardContent>
           </Card>
-        </motion.div>
+        </MotionDiv>
       </div>
 
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -221,6 +224,6 @@ export default function Pharmacy() {
         onSubmit={handleSubmit}
         onClose={() => setShowForm(false)}
       />
-    </motion.div>
+    </MotionDiv>
   );
 }

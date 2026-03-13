@@ -31,10 +31,12 @@ import receptionistRoutes from "./routes/receptionistRoutes.js";
 import nurseRoutes from "./routes/nurseRoutes.js";
 import labTechRoutes from "./routes/labTechRoutes.js";
 import pharmacistRoutes from "./routes/pharmacistRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import limiter from "./middlewares/rateLimiter.js";
 
 const app = express();
+const isDev = process.env.NODE_ENV !== "production";
 
 const configuredOrigins = [
   process.env.FRONTEND_URL,
@@ -48,9 +50,22 @@ const isAllowedLocalOrigin = (origin = '') =>
   /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
 
 app.use(express.json());
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid JSON payload.",
+    });
+  }
+  return next(err);
+});
 app.use(
   cors({
     origin(origin, callback) {
+      if (isDev) {
+        return callback(null, true);
+      }
+
       if (!origin) {
         return callback(null, true);
       }
@@ -121,6 +136,7 @@ app.use("/api/receptionists", receptionistRoutes);
 app.use("/api/nurses", nurseRoutes);
 app.use("/api/lab-techs", labTechRoutes);
 app.use("/api/pharmacists", pharmacistRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use(errorHandler);
 
 export default app;

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -21,6 +22,7 @@ import { toast } from 'sonner';
 import { BILLING_STAFF_ROLES } from '../../auth/constants.js';
 
 export default function Billing() {
+  const MotionDiv = motion.div;
   const { user } = useSelector((state) => state.auth);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +125,7 @@ export default function Billing() {
         }));
         setComputedLabReports(attachedReports);
 
-      } catch (_err) {
+      } catch {
         toast.error("Failed to auto-resolve patient's clinical chronologies.");
       } finally {
         setCalculating(false);
@@ -191,7 +193,7 @@ export default function Billing() {
   const pendingAmount = pending.reduce((s, i) => s + (i.totalAmount || 0), 0);
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
@@ -211,7 +213,7 @@ export default function Billing() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Total Revenue (Paid)</CardTitle>
@@ -220,8 +222,8 @@ export default function Billing() {
               <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Pending Payments</CardTitle>
@@ -230,8 +232,8 @@ export default function Billing() {
               <div className="text-2xl font-bold">${pendingAmount.toFixed(2)}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Pending Count</CardTitle>
@@ -240,7 +242,7 @@ export default function Billing() {
               <div className="text-2xl font-bold text-destructive">{pending.length}</div>
             </CardContent>
           </Card>
-        </motion.div>
+        </MotionDiv>
       </div>
 
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -451,6 +453,6 @@ export default function Billing() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </motion.div>
+    </MotionDiv>
   );
 }

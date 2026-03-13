@@ -1,0 +1,219 @@
+import Appointment from "../models/Appointment.js";
+import Invoice from "../models/Invoice.js";
+import LabOrder from "../models/LabOrder.js";
+import Notification from "../models/Notification.js";
+import PharmacyOrder from "../models/PharmacyOrder.js";
+import { ensurePatientProfileForUser } from "../utils/patientContext.js";
+import { normalizeLabOrderStatus } from "../utils/labWorkflow.js";
+import { normalizePharmacyStatus, PHARMACY_STATUS } from "../utils/pharmacyWorkflow.js";
+
+const buildKey = (parts = []) => parts.filter(Boolean).join(":");
+
+const upsertNotification = async ({ userId, patientId, key, type, title, message, sourceType, sourceId, metadata }) => {
+  if (!key) return null;
+  return Notification.findOneAndUpdate(
+    { userId, key },
+    {
+      $setOnInsert: {
+        userId,
+        patientId,
+        key,
+        type,
+        title,
+        message,
+        sourceType,
+        sourceId,
+        metadata,
+      },
+    },
+    { new: true, upsert: true }
+  );
+};
+
+const hydrateNotifications = async ({ userId, patientId }) => {
+  const now = new Date();
+  const todayKey = now.toISOString().split("T")[0];
+
+  const [appointments, labOrders, pharmacyOrders, invoices] = await Promise.all([
+    Appointment.find({ patientId: userId }).sort({ date: 1 }).limit(10),
+    LabOrder.find({ patientId }).sort({ createdAt: -1 }).limit(10),
+    PharmacyOrder.find({ patientId }).sort({ createdAt: -1 }).limit(10),
+    Invoice.find({ patientId, paymentStatus: "pending" }).sort({ createdAt: -1 }).limit(10),
+  ]);
+
+  const tasks = [];
+
+  appointments
+    .filter((appointment) => appointment.date >= todayKey && appointment.status !== "cancelled")
+    .forEach((appointment) => {
+    const key = buildKey(["appointment", appointment._id, "upcoming", todayKey]);
+    const title = "Upcoming appointment";
+    const message = `${appointment.date} at ${appointment.slot}`;
+    tasks.push(
+      upsertNotification({
+        userId,
+        patientId,
+        key,
+        type: "appointment",
+        title,
+        message,
+        sourceType: "appointment",
+        sourceId: appointment._id,
+        metadata: { date: appointment.date, slot: appointment.slot, status: appointment.status },
+      })
+    );
+    });
+
+  labOrders.forEach((order) => {
+    const status = normalizeLabOrderStatus(order.status);
+    if (status === "reportReady" && order.paymentStatus !== "paid") {
+      const key = buildKey(["lab", order._id, "paymentPending"]);
+      tasks.push(
+        upsertNotification({
+          userId,
+          patientId,
+          key,
+          type: "lab",
+          title: "Lab report ready (payment pending)",
+          message: `${order.orderNumber || "Lab order"} is ready after payment.`,
+          sourceType: "labOrder",
+          sourceId: order._id,
+          metadata: { status, paymentStatus: order.paymentStatus },
+        })
+      );
+    }
+    if (status === "reportReleasedToPortal" || order.releasedToPortal) {
+      const key = buildKey(["lab", order._id, "released"]);
+      tasks.push(
+        upsertNotification({
+          userId,
+          patientId,
+          key,
+          type: "lab",
+          title: "Lab report released",
+          message: `${order.orderNumber || "Lab order"} report is available in your portal.`,
+          sourceType: "labOrder",
+          sourceId: order._id,
+          metadata: { status, paymentStatus: order.paymentStatus },
+        })
+      );
+    }
+  });
+
+  pharmacyOrders.forEach((order) => {
+    const status = normalizePharmacyStatus(order.status);
+    if (status === PHARMACY_STATUS.READY_FOR_PICKUP) {
+      const key = buildKey(["pharmacy", order._id, "ready"]);
+      tasks.push(
+        upsertNotification({
+          userId,
+          patientId,
+          key,
+          type: "pharmacy",
+          title: "Medicine ready for pickup",
+          message: "Your medicine order is ready for pickup.",
+          sourceType: "pharmacyOrder",
+          sourceId: order._id,
+          metadata: { status, paymentStatus: order.paymentStatus },
+        })
+      );
+    }
+    if (order.paymentStatus === "pending" && [PHARMACY_STATUS.ORDER_PLACED, PHARMACY_STATUS.ORDER_ACCEPTED, PHARMACY_STATUS.PREPARING].includes(status)) {
+      const key = buildKey(["pharmacy", order._id, "paymentPending"]);
+      tasks.push(
+        upsertNotification({
+          userId,
+          patientId,
+          key,
+          type: "billing",
+          title: "Payment pending for medicines",
+          message: "Payment is pending for your pharmacy order.",
+          sourceType: "pharmacyOrder",
+          sourceId: order._id,
+          metadata: { status, paymentStatus: order.paymentStatus },
+        })
+      );
+    }
+  });
+
+  invoices.forEach((invoice) => {
+    const key = buildKey(["invoice", invoice._id, invoice.paymentStatus]);
+    tasks.push(
+      upsertNotification({
+        userId,
+        patientId,
+        key,
+        type: "billing",
+        title: "Payment pending",
+        message: `${invoice.billType} bill awaiting payment.`,
+        sourceType: "invoice",
+        sourceId: invoice._id,
+        metadata: { billType: invoice.billType, totalAmount: invoice.totalAmount },
+      })
+    );
+  });
+
+  await Promise.all(tasks);
+};
+
+export const getMyNotifications = async (req, res) => {
+  try {
+    const { patient, user } = await ensurePatientProfileForUser(req.user.id);
+    await hydrateNotifications({ userId: user._id, patientId: patient._id });
+
+    const notifications = await Notification.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json(
+      notifications.map((notification) => ({
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        status: notification.status,
+        readAt: notification.readAt,
+        createdAt: notification.createdAt,
+        sourceType: notification.sourceType,
+        sourceId: notification.sourceId,
+        metadata: notification.metadata || {},
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const markNotificationRead = async (req, res) => {
+  try {
+    const notification = await Notification.findById(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found." });
+    }
+
+    if (String(notification.userId) !== String(req.user.id)) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    notification.status = "read";
+    notification.readAt = new Date();
+    await notification.save();
+
+    return res.json({ message: "Notification marked as read." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const markAllNotificationsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { userId: req.user.id, status: "unread" },
+      { $set: { status: "read", readAt: new Date() } }
+    );
+
+    return res.json({ message: "All notifications marked as read." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};

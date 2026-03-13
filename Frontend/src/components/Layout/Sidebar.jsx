@@ -13,7 +13,8 @@ import {
   FiActivity,
   FiVideo,
   FiServer,
-  FiUserPlus
+  FiUserPlus,
+  FiUser
 } from 'react-icons/fi';
 import { FaPills, FaBed } from 'react-icons/fa';
 
@@ -45,13 +46,16 @@ export default function Sidebar({ isOpen }) {
       { name: 'Availability', path: '/doctor/availability', icon: FiSettings },
     ],
     patient: [
-      { name: 'Dashboard', path: '/patient', icon: FiGrid },
-      { name: 'Book Appointment', path: '/patient/book', icon: FiCalendar },
+      { name: 'Dashboard', path: '/patient/dashboard', icon: FiGrid },
       { name: 'My Appointments', path: '/patient/appointments', icon: FiCalendar },
       { name: 'Prescriptions', path: '/patient/prescriptions', icon: FiFileText },
-      { name: 'Reports', path: '/patient/reports', icon: FiFileText },
-      { name: 'Billing', path: '/patient/billing', icon: FiCreditCard },
-      { name: 'Telemedicine', path: '/patient/telemedicine', icon: FiVideo },
+      { name: 'Medicine Orders', path: '/patient/medicine-orders', icon: FiFileText },
+      { name: 'Lab Tests', path: '/patient/lab-tests', icon: FiActivity },
+      { name: 'Lab Reports', path: '/patient/lab-reports', icon: FiFileText },
+      { name: 'Billing', path: '/patient/bills', icon: FiCreditCard },
+      { name: 'Medical History', path: '/patient/history', icon: FiActivity },
+      { name: 'Profile', path: '/patient/profile', icon: FiUser },
+      { name: 'Notifications', path: '/patient/notifications', icon: FiActivity },
     ],
     receptionist: [
       { name: 'Dashboard', path: '/receptionist', icon: FiGrid },

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
   ArrowLeft, MapPin, Search, ChevronRight, X, HeartPulse, Activity, Brain, 
   Stethoscope, Thermometer, Accessibility, Filter, ArrowUpDown 
@@ -16,6 +16,7 @@ import {
 
 export default function BookingOverlay({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const MotionDiv = motion.div;
   // Valid views: 'main', 'specialities', 'doctors'
   const [view, setView] = useState('main'); 
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,10 +25,8 @@ export default function BookingOverlay({ isOpen, onClose }) {
   // Dynamic data states
   const [departments, setDepartments] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   
   // Doctor filters
-  const [videoConsult, setVideoConsult] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [sortOrder, setSortOrder] = useState(null); // 'fee-asc', 'fee-desc', 'exp-desc'
@@ -36,14 +35,7 @@ export default function BookingOverlay({ isOpen, onClose }) {
   // Redux Auth
   const user = useSelector((state) => state.auth.user);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadInitialData();
-    }
-  }, [isOpen]);
-
   const loadInitialData = async () => {
-    setIsLoading(true);
     try {
       const depts = await getDepartments();
       setDepartments(Array.isArray(depts) ? depts : []);
@@ -52,10 +44,15 @@ export default function BookingOverlay({ isOpen, onClose }) {
       setDoctors(Array.isArray(docs) ? docs : []);
     } catch (err) {
       console.error("Failed to load booking data:", err);
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadInitialData();
+    }
+  }, [isOpen]);
 
   // If overlay is closed, don't render content
   if (!isOpen) return null;
@@ -131,7 +128,7 @@ export default function BookingOverlay({ isOpen, onClose }) {
         
         {/* VIEW 1: Main Search Overlay */}
         {view === 'main' && (
-          <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className="space-y-6">
+          <MotionDiv initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className="space-y-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="font-semibold text-gray-700 text-sm">Showing in</span>
               <div className="flex items-center text-[#ee4c35] font-semibold cursor-pointer">
@@ -179,12 +176,12 @@ export default function BookingOverlay({ isOpen, onClose }) {
                 </div>
               </div>
             </div>
-          </motion.div>
+          </MotionDiv>
         )}
 
         {/* VIEW 2: All Specialities List */}
         {view === 'specialities' && (
-          <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} className="h-full flex flex-col">
+          <MotionDiv initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} className="h-full flex flex-col">
             <div className="bg-white border rounded-xl p-4 flex items-center shadow-sm mb-4">
               <input 
                 type="text" 
@@ -217,12 +214,12 @@ export default function BookingOverlay({ isOpen, onClose }) {
                 )}
               </div>
             </div>
-          </motion.div>
+          </MotionDiv>
         )}
 
         {/* VIEW 3: Doctors List */}
         {view === 'doctors' && (
-          <motion.div initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} className="space-y-4">
+          <MotionDiv initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} className="space-y-4">
             
             <div className="bg-white border rounded-xl p-3 flex items-center justify-between shadow-sm">
               <span className="text-gray-700 font-bold pl-2">{selectedSpeciality}</span>
@@ -326,7 +323,7 @@ export default function BookingOverlay({ isOpen, onClose }) {
                onSelect={(location) => setSelectedLocation(location)}
                title="Select Media Hospital Branch"
             />
-          </motion.div>
+          </MotionDiv>
         )}
       </div>
     </div>

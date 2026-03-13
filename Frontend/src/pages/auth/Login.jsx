@@ -6,7 +6,6 @@ import { loginSuccess } from '../../store/authSlice';
 import { 
   loginUser, 
   loginWithPhonePin, 
-  sendLoginOtp, 
   loginWithOtp,
   findAccountForHelp,
   forgotPassword,
@@ -20,6 +19,7 @@ import logoImg from '../../assets/logo.png';
 export default function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const MotionDiv = motion.div;
   
   // View states: 'phone', 'email', 'otp', 'help', 'forgot', 'reset'
   const [view, setView] = useState('phone');
@@ -84,20 +84,6 @@ export default function Login() {
       handleSuccess(user, token);
     } catch (error) {
       toast.error(error.message || 'Login failed.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSendLoginOtp = async () => {
-    if (!email) return toast.error("Please enter Email or Patient ID first.");
-    setIsLoading(true);
-    try {
-      await sendLoginOtp(email);
-      toast.success("OTP sent to your registered email!");
-      setView('otp');
-    } catch (error) {
-      toast.error(error.message || 'Failed to send OTP.');
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +192,7 @@ export default function Login() {
           <AnimatePresence mode="wait">
             {/* VIEW: PHONE LOGIN */}
             {view === 'phone' && (
-              <motion.div key="phone" initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} exit={{opacity:0, x:20}}>
+              <MotionDiv key="phone" initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} exit={{opacity:0, x:20}}>
                 <h2 className="text-xl font-bold text-center text-gray-800 mb-6">Login with Mobile Number</h2>
                 <form onSubmit={handlePhoneLogin} className="space-y-4">
                   
@@ -258,12 +244,12 @@ export default function Login() {
                     Need Help Logging in?
                   </button>
                 </div>
-              </motion.div>
+              </MotionDiv>
             )}
 
             {/* VIEW: EMAIL LOGIN */}
             {view === 'email' && (
-              <motion.div key="email" initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} exit={{opacity:0, x:-20}}>
+              <MotionDiv key="email" initial={{opacity:0, x:20}} animate={{opacity:1, x:0}} exit={{opacity:0, x:-20}}>
                 <h2 className="text-xl font-bold text-center text-gray-800 mb-6">Login with Email / Patient ID</h2>
                 <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
                   
@@ -306,12 +292,12 @@ export default function Login() {
                     Need Help Logging in?
                   </button>
                 </div>
-              </motion.div>
+              </MotionDiv>
             )}
 
              {/* VIEW: LOGIN OTP VERIFICATION */}
             {view === 'otp' && (
-              <motion.div key="otp" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}}>
+              <MotionDiv key="otp" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}}>
                 <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Verify OTP</h2>
                 <p className="text-center text-gray-500 mb-6 text-sm">We've sent a 6-digit code to your email.</p>
                 <form onSubmit={handleLoginOtpVerify} className="space-y-6">
@@ -334,12 +320,12 @@ export default function Login() {
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5 mx-auto"/> : "Verify & Login"}
                   </Button>
                 </form>
-              </motion.div>
+              </MotionDiv>
             )}
 
             {/* VIEW: NEED HELP */}
             {view === 'help' && (
-              <motion.div key="help" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}}>
+              <MotionDiv key="help" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}}>
                 <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Find Your Account</h2>
                 <p className="text-center text-gray-500 mb-6 text-sm text-balance">Enter your details exactly as they appear on your hospital records.</p>
                 <form onSubmit={handleFindAccount} className="space-y-4">
@@ -388,12 +374,12 @@ export default function Login() {
                     Back to Login
                   </button>
                 </div>
-              </motion.div>
+              </MotionDiv>
             )}
 
              {/* VIEW: FORGOT PW / PIN */}
              {view === 'forgot' && (
-              <motion.div key="forgot" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}}>
+              <MotionDiv key="forgot" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}}>
                 <h2 className="text-xl font-bold text-center text-gray-800 mb-2">Reset Credentials</h2>
                 <p className="text-center text-gray-500 mb-6 text-sm">Enter the email associated with your account.</p>
                 <form onSubmit={handleSendForgotPasswordOtp} className="space-y-4">
@@ -414,12 +400,12 @@ export default function Login() {
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5 mx-auto"/> : "Send Recovery OTP"}
                   </Button>
                 </form>
-              </motion.div>
+              </MotionDiv>
             )}
 
             {/* VIEW: RESET PW / PIN */}
             {view === 'reset' && (
-              <motion.div key="reset" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="space-y-6">
+              <MotionDiv key="reset" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} className="space-y-6">
                 <div className="text-center">
                    <h2 className="text-xl font-bold text-gray-800 mb-1">Set New Credentials</h2>
                    <p className="text-gray-500 text-sm">Enter the 6-digit OTP sent to {obfuscatedEmail || "your email"}.</p>
@@ -461,7 +447,7 @@ export default function Login() {
                     {isLoading ? <Loader2 className="animate-spin w-5 h-5 mx-auto"/> : "Reset & Continue"}
                   </Button>
                 </form>
-              </motion.div>
+              </MotionDiv>
             )}
           </AnimatePresence>
 

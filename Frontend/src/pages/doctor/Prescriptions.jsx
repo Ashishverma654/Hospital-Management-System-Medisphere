@@ -48,7 +48,8 @@ export default function DoctorPrescriptions() {
     try {
       const data = await pharmacyApi.getAll();
       setMedicines(Array.isArray(data) ? data : []);
-    } catch (_err) {
+    } catch {
+      toast.error('Failed to load medicines');
     }
   };
 

@@ -33,7 +33,7 @@ export default function PatientPrescriptions() {
       link.download = `prescription-${id}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (_) {
+    } catch {
       toast.error('Unable to download PDF.');
     }
   };

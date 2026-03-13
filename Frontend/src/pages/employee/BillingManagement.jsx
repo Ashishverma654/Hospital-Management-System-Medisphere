@@ -53,7 +53,7 @@ export default function BillingManagement() {
     try {
       const response = await patientApi.getAdminList({});
       setPatients(response.patients || []);
-    } catch (_) {
+    } catch {
       setPatients([]);
     }
   };

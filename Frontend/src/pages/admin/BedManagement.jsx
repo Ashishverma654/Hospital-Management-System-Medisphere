@@ -31,7 +31,7 @@ export default function BedManagement() {
     try {
       const data = await wardApi.getAll({ isActive: true });
       setWards(Array.isArray(data) ? data : []);
-    } catch (_) {
+    } catch {
       setWards([]);
     }
   };

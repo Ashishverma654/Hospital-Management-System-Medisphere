@@ -35,7 +35,7 @@ export default function AppointmentManagement() {
       await appointmentApi.cancel(id);
       toast.success('Appointment cancelled');
       fetchAppointments();
-    } catch (err) {
+    } catch {
       toast.error('Failed to cancel appointment');
     }
   };
@@ -45,7 +45,7 @@ export default function AppointmentManagement() {
       await appointmentApi.complete(id);
       toast.success('Appointment marked as completed');
       fetchAppointments();
-    } catch (err) {
+    } catch {
       toast.error('Failed to complete appointment');
     }
   };

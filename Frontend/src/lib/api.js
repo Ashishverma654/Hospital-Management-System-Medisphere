@@ -35,7 +35,9 @@ api.interceptors.request.use((config) => {
     try {
       const { token } = JSON.parse(auth);
       if (token) config.headers.Authorization = `Bearer ${token}`;
-    } catch (_) {}
+    } catch {
+      /* ignore malformed local auth */
+    }
   }
   return config;
 });
@@ -70,7 +72,9 @@ api.interceptors.response.use(
       let sessionType = null;
       try {
         sessionType = auth ? JSON.parse(auth).sessionType : null;
-      } catch (_) {}
+      } catch {
+        /* ignore malformed local auth */
+      }
 
       localStorage.removeItem('mediflow_auth');
       const isEmployeePath = window.location.pathname.startsWith('/employee');

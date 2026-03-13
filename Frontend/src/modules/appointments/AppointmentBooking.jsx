@@ -26,6 +26,7 @@ const dateToInput = (d) => {
 
 export default function AppointmentBooking() {
   const navigate = useNavigate();
+  const MotionDiv = motion.div;
   const [departments, setDepartments] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [department, setDepartment] = useState('');
@@ -49,7 +50,9 @@ export default function AppointmentBooking() {
 
   useEffect(() => {
     if (!department) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDoctors([]);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDoctor(null);
       return;
     }
@@ -68,6 +71,7 @@ export default function AppointmentBooking() {
 
   useEffect(() => {
     if (!doctor?._id || !date) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAvailableSlots([]);
       return;
     }
@@ -86,6 +90,7 @@ export default function AppointmentBooking() {
       d.setDate(today.getDate() + i);
       next14.push(dateToInput(d));
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAvailableDates(next14);
   }, []);
 
@@ -104,7 +109,7 @@ export default function AppointmentBooking() {
   const doctorName = doctor?.userId?.name || doctor?.name || 'Doctor';
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="max-w-4xl mx-auto space-y-6"
@@ -121,7 +126,7 @@ export default function AppointmentBooking() {
           style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
         />
         {[1, 2, 3].map((s) => (
-          <motion.div
+          <MotionDiv
             key={s}
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
@@ -137,14 +142,14 @@ export default function AppointmentBooking() {
             <span className="text-xs font-medium mt-2 bg-background px-1 whitespace-nowrap">
               {s === 1 ? 'Specialist' : s === 2 ? 'Schedule' : 'Confirm'}
             </span>
-          </motion.div>
+          </MotionDiv>
         ))}
       </div>
 
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm shadow-md overflow-hidden">
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div
+            <MotionDiv
               key="step1"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -217,11 +222,11 @@ export default function AppointmentBooking() {
                   Next Step
                 </Button>
               </CardFooter>
-            </motion.div>
+            </MotionDiv>
           )}
 
           {step === 2 && (
-            <motion.div
+            <MotionDiv
               key="step2"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -299,24 +304,24 @@ export default function AppointmentBooking() {
                   Confirm Booking
                 </Button>
               </CardFooter>
-            </motion.div>
+            </MotionDiv>
           )}
 
           {step === 3 && (
-            <motion.div
+            <MotionDiv
               key="step3"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               className="py-12 flex flex-col items-center text-center space-y-4"
             >
-              <motion.div
+              <MotionDiv
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 200 }}
                 className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-4"
               >
                 <CheckCircle2 className="w-8 h-8" />
-              </motion.div>
+              </MotionDiv>
               <h3 className="text-2xl font-bold text-foreground">Booking Confirmed!</h3>
               <p className="text-muted-foreground max-w-md">
                 Your appointment with <span className="font-semibold text-foreground">{doctorName}</span> has been
@@ -341,10 +346,10 @@ export default function AppointmentBooking() {
                 </Button>
                 <Button onClick={() => navigate('/patient')}>Go to Dashboard</Button>
               </div>
-            </motion.div>
+            </MotionDiv>
           )}
         </AnimatePresence>
       </Card>
-    </motion.div>
+    </MotionDiv>
   );
 }

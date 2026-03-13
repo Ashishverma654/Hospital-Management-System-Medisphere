@@ -15,7 +15,7 @@ const loadAuthFromStorage = () => {
         };
       }
     }
-  } catch (_) { /* ignore */ }
+  } catch { /* ignore */ }
   return { user: null, token: null, sessionType: null, isAuthenticated: false };
 };
 

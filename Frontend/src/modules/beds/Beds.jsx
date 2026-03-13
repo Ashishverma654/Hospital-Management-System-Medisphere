@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -15,6 +16,7 @@ import { bedApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 
 export default function Beds() {
+  const MotionDiv = motion.div;
   const [beds, setBeds] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,13 +31,14 @@ export default function Beds() {
       .finally(() => setLoading(false));
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => loadBeds(), []);
 
   const available = beds.filter((b) => b.status !== 'occupied').length;
   const occupied = beds.filter((b) => b.status === 'occupied').length;
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
@@ -51,7 +54,7 @@ export default function Beds() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Total Beds</CardTitle>
@@ -60,8 +63,8 @@ export default function Beds() {
               <div className="text-2xl font-bold">{beds.length}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Available</CardTitle>
@@ -70,8 +73,8 @@ export default function Beds() {
               <div className="text-2xl font-bold text-green-600">{available}</div>
             </CardContent>
           </Card>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        </MotionDiv>
+        <MotionDiv initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="bg-background/50 backdrop-blur-sm border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">Occupied</CardTitle>
@@ -80,7 +83,7 @@ export default function Beds() {
               <div className="text-2xl font-bold text-primary">{occupied}</div>
             </CardContent>
           </Card>
-        </motion.div>
+        </MotionDiv>
       </div>
 
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm shadow-sm overflow-hidden">
@@ -132,6 +135,6 @@ export default function Beds() {
           )}
         </div>
       </Card>
-    </motion.div>
+    </MotionDiv>
   );
 }

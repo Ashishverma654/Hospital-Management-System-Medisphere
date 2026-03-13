@@ -27,7 +27,6 @@ const departments = ['All', 'Pathology', 'Radiology', 'Cardiology', 'Neurology']
 
 export default function LabReports() {
   const [reportsData, setReportsData] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
@@ -43,8 +42,7 @@ export default function LabReports() {
         const data = res.data?.data ?? res.data ?? [];
         setReportsData(Array.isArray(data) ? data : []);
       })
-      .catch(() => toast.error('Failed to load reports'))
-      .finally(() => setLoading(false));
+      .catch(() => toast.error('Failed to load reports'));
   }, []);
 
   const filteredReports = useMemo(() => {

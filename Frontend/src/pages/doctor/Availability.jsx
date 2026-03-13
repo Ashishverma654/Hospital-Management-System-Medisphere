@@ -14,7 +14,7 @@ import { FormDialog, LoadingSkeleton, ErrorState } from '../../components';
 import { availabilityApi } from '../../services/apiServices';
 import { useAuth } from '../../hooks';
 import { toast } from 'sonner';
-import { Clock, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Clock, Plus, Edit2 } from 'lucide-react';
 
 const DAYS_OF_WEEK = [
   'Sunday',
@@ -66,15 +66,6 @@ export default function DoctorAvailability() {
       fetchAvailabilities();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save availability');
-    }
-  };
-
-  const handleDelete = async (id) => {
-    // Note: Backend may not have delete endpoint, so this might need backend update
-    try {
-      toast.info('Delete functionality coming soon');
-    } catch (err) {
-      toast.error('Failed to delete availability');
     }
   };
 

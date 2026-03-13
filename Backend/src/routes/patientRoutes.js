@@ -6,7 +6,11 @@ import {
   getAdminPatients,
   getAllPatients,
   getPatientById,
+  getMyDashboard,
+  getMyPatientProfile,
+  getMyTimeline,
   updateAdminPatient,
+  updateMyPatientProfile,
   updatePatient,
 } from "../controllers/patientController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
@@ -23,6 +27,11 @@ router.get("/admin/list", verifyAccessToken, authorizeRoles("superadmin", "admin
 router.get("/admin/board", verifyAccessToken, authorizeRoles("superadmin", "admin"), getAdminPatientBoard);
 router.get("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), getAdminPatientById);
 router.put("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), updateAdminPatient);
+
+router.get("/me", verifyAccessToken, authorizeRoles("patient"), getMyPatientProfile);
+router.put("/me", verifyAccessToken, authorizeRoles("patient"), updateMyPatientProfile);
+router.get("/me/dashboard", verifyAccessToken, authorizeRoles("patient"), getMyDashboard);
+router.get("/me/timeline", verifyAccessToken, authorizeRoles("patient"), getMyTimeline);
 
 router.get("/:id", verifyAccessToken, authorizeRoles("admin", "subadmin", "doctor", "receptionist", "patient"), getPatientById);
 

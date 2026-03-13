@@ -117,7 +117,7 @@ export default function Navbar({ toggleSidebar }) {
             <nav className="hidden md:flex items-center gap-8 font-medium text-gray-600 text-[15px]">
               <NavLink to="/" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Home</NavLink>
               <NavLink to="/patient/appointments" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Appointments</NavLink>
-              <NavLink to="/patient/reports" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Records</NavLink>
+              <NavLink to="/patient/lab-reports" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Records</NavLink>
               <NavLink to="/login" className={({isActive}) => isActive ? "text-gray-900 border-b-2 border-[#ee4c35] pb-4 -mb-[19px] font-semibold" : "hover:text-[#ee4c35] transition-colors"}>Login</NavLink>
             </nav>
             <div className="flex md:hidden items-center gap-4">

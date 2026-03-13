@@ -51,7 +51,7 @@ export default function WardManagement() {
     try {
       const data = await locationApi.getAll({ isActive: true });
       setLocations(Array.isArray(data) ? data : []);
-    } catch (_) {
+    } catch {
       setLocations([]);
     }
   };

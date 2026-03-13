@@ -93,6 +93,10 @@ export const patientApi = {
   getAdminById: (id) => api.get(`/patients/admin/${id}`),
   updateAdmin: (id, body) => api.put(`/patients/admin/${id}`, body),
   getAdminBoard: (params) => api.get('/patients/admin/board', { params }),
+  getMyProfile: () => api.get('/patients/me'),
+  updateMyProfile: (body) => api.put('/patients/me', body),
+  getMyDashboard: () => api.get('/patients/me/dashboard'),
+  getMyTimeline: () => api.get('/patients/me/timeline'),
 };
 
 export const billingApi = {
@@ -251,4 +255,10 @@ export const nurseApi = {
   createHandover: (body) => api.post('/nurses/handover', body),
   getProfile: () => api.get('/nurses/profile'),
   updateProfile: (body) => api.put('/nurses/profile', body),
+};
+
+export const notificationsApi = {
+  getMy: () => api.get('/notifications/my'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.patch('/notifications/read-all'),
 };

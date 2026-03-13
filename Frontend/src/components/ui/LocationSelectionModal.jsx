@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Search, Loader2 } from 'lucide-react';
 import { getLocations } from '../../services/apiServices';
 
 export default function LocationSelectionModal({ isOpen, onClose, onSelect, title = "Select Hospital Location" }) {
+  const MotionDiv = motion.div;
   const [searchQuery, setSearchQuery] = useState("");
   const [locations, setLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,12 +48,12 @@ export default function LocationSelectionModal({ isOpen, onClose, onSelect, titl
   }, {});
 
   // Remove empty regions
-  const filteredData = Object.entries(groupedData).filter(([_, hospitals]) => hospitals.length > 0);
+  const filteredData = Object.entries(groupedData).filter(([, hospitals]) => hospitals.length > 0);
 
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-        <motion.div 
+        <MotionDiv 
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -122,7 +123,7 @@ export default function LocationSelectionModal({ isOpen, onClose, onSelect, titl
               ))
             )}
           </div>
-        </motion.div>
+        </MotionDiv>
       </div>
     </AnimatePresence>
   );

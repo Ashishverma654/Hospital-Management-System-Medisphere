@@ -13,12 +13,16 @@ import PublicDoctorProfile from './pages/public/PublicDoctorProfile.jsx';
 import PatientLogin from './pages/auth/PatientLogin.jsx';
 import PatientRegister from './pages/auth/PatientRegister.jsx';
 import EmployeeLogin from './pages/auth/EmployeeLogin.jsx';
-import PatientSectionPage from './pages/patient/PatientSectionPage.jsx';
+import PatientDashboard from './pages/patient/Dashboard.jsx';
+import PatientAppointments from './pages/patient/Appointments.jsx';
 import PatientPrescriptions from './pages/patient/Prescriptions.jsx';
 import PatientMedicineOrders from './pages/patient/MedicineOrders.jsx';
 import PatientLabTests from './pages/patient/LabTests.jsx';
 import PatientLabReports from './pages/patient/LabReports.jsx';
 import PatientBilling from './pages/patient/Billing.jsx';
+import PatientProfile from './pages/patient/Profile.jsx';
+import PatientNotifications from './pages/patient/Notifications.jsx';
+import PatientTimeline from './pages/patient/Timeline.jsx';
 import GovernanceDashboard from './pages/employee/GovernanceDashboard.jsx';
 import EmployeeRoleDashboard from './pages/employee/EmployeeRoleDashboard.jsx';
 import AdminProfilePage from './pages/employee/AdminProfilePage.jsx';
@@ -105,23 +109,11 @@ function App() {
             <Route path="/patient" element={<Navigate to="/patient/dashboard" replace />} />
             <Route
               path="/patient/dashboard"
-              element={
-                <PatientSectionPage
-                  eyebrow="Patient overview"
-                  title="Patient dashboard"
-                  description="Your personal care summary, upcoming visits, records, and account activity will be organized from this dashboard."
-                />
-              }
+              element={<PatientDashboard />}
             />
             <Route
               path="/patient/appointments"
-              element={
-                <PatientSectionPage
-                  eyebrow="Appointments"
-                  title="Appointments"
-                  description="Booking history, upcoming visits, cancellations, and future scheduling tools will appear in this section."
-                />
-              }
+              element={<PatientAppointments />}
             />
             <Route
               path="/patient/prescriptions"
@@ -145,23 +137,15 @@ function App() {
             />
             <Route
               path="/patient/profile"
-              element={
-                <PatientSectionPage
-                  eyebrow="Profile"
-                  title="Profile"
-                  description="Personal details, contact information, and future patient preferences will be managed from this profile area."
-                />
-              }
+              element={<PatientProfile />}
             />
             <Route
               path="/patient/notifications"
-              element={
-                <PatientSectionPage
-                  eyebrow="Updates"
-                  title="Notifications"
-                  description="Appointment alerts, report releases, reminders, and portal notices will be collected in this section."
-                />
-              }
+              element={<PatientNotifications />}
+            />
+            <Route
+              path="/patient/history"
+              element={<PatientTimeline />}
             />
           </Route>
         </Route>

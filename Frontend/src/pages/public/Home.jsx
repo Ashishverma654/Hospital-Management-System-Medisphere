@@ -194,12 +194,13 @@ function StatCard({ title, value, description }) {
   );
 }
 
-function Panel({ children, icon: Icon, title }) {
+function Panel({ children, icon, title }) {
+  const IconComponent = icon;
   return (
     <article className="rounded-[2rem] bg-white p-6 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="rounded-full bg-[#fff1ee] p-3 text-[#ee4c35]">
-          <Icon className="h-5 w-5" />
+          <IconComponent className="h-5 w-5" />
         </div>
         <div>
           <p className="text-sm uppercase tracking-[0.22em] text-slate-500">Public Content</p>

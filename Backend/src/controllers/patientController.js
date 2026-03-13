@@ -7,7 +7,9 @@ import LabReport from "../models/LabReport.js";
 import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
 import User from "../models/User.js";
+import PharmacyOrder from "../models/PharmacyOrder.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
+import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 
 const formatDateKey = (value = new Date()) => {
   const date = new Date(value);
@@ -160,6 +162,33 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
   return events.sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
 };
 
+const mapPatientProfile = (patientDoc) => ({
+  id: patientDoc._id,
+  profileStatus: patientDoc.profileStatus,
+  isActive: patientDoc.isActive,
+  dateOfBirth: patientDoc.dateOfBirth,
+  age: patientDoc.age || calculateAge(patientDoc.dateOfBirth),
+  gender: patientDoc.gender,
+  bloodGroup: patientDoc.bloodGroup,
+  allergies: patientDoc.allergies || [],
+  chronicDiseases: patientDoc.chronicDiseases || [],
+  emergencyContact: patientDoc.emergencyContact || {},
+  insuranceProvider: patientDoc.insuranceProvider,
+  insuranceNumber: patientDoc.insuranceNumber,
+  address: patientDoc.userId?.address || "",
+  user: patientDoc.userId
+    ? {
+        id: patientDoc.userId._id,
+        name: patientDoc.userId.name,
+        email: patientDoc.userId.email,
+        phone: patientDoc.userId.phone,
+        patientId: patientDoc.userId.patientId,
+        gender: patientDoc.userId.gender,
+        dob: patientDoc.userId.dob,
+      }
+    : null,
+});
+
 export const createPatient = async (req, res) => {
   try {
     const patient = new Patient({
@@ -206,6 +235,13 @@ export const getPatientById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Patient not Found.",
+      });
+    }
+
+    if (req.user.role === "patient" && String(patient.userId?._id || patient.userId) !== String(req.user.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Access forbidden.",
       });
     }
 
@@ -551,6 +587,158 @@ export const getAdminPatientBoard = async (req, res) => {
           doctor: appointment.doctorId?.userId?.name || "Doctor",
           updatedAt: appointment.updatedAt,
         })),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMyPatientProfile = async (req, res) => {
+  try {
+    const { patient } = await ensurePatientProfileForUser(req.user.id);
+    const populated = await Patient.findById(patient._id).populate(
+      "userId",
+      "name email phone patientId gender dob address isActive createdAt"
+    );
+
+    return res.json({ patient: mapPatientProfile(populated) });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateMyPatientProfile = async (req, res) => {
+  try {
+    const { patient } = await ensurePatientProfileForUser(req.user.id);
+    const currentPatient = await Patient.findById(patient._id).populate("userId");
+
+    if (!currentPatient) {
+      return res.status(404).json({ message: "Patient profile not found." });
+    }
+
+    const {
+      name,
+      phone,
+      address,
+      gender,
+      dateOfBirth,
+      bloodGroup,
+      emergencyContact,
+      allergies,
+      chronicDiseases,
+    } = req.body;
+
+    if (name !== undefined) currentPatient.userId.name = name;
+    if (phone !== undefined) currentPatient.userId.phone = phone;
+    if (address !== undefined) currentPatient.userId.address = address;
+    if (gender !== undefined) currentPatient.userId.gender = gender;
+    if (dateOfBirth !== undefined) {
+      currentPatient.dateOfBirth = dateOfBirth || null;
+      currentPatient.userId.dob = dateOfBirth || null;
+      currentPatient.age = calculateAge(dateOfBirth);
+    }
+    if (gender !== undefined) currentPatient.gender = gender;
+    if (bloodGroup !== undefined) currentPatient.bloodGroup = bloodGroup || undefined;
+    if (emergencyContact !== undefined) currentPatient.emergencyContact = emergencyContact || {};
+    if (allergies !== undefined) currentPatient.allergies = Array.isArray(allergies) ? allergies : [];
+    if (chronicDiseases !== undefined) currentPatient.chronicDiseases = Array.isArray(chronicDiseases)
+      ? chronicDiseases
+      : [];
+
+    await currentPatient.userId.save();
+    await currentPatient.save();
+
+    const refreshed = await Patient.findById(currentPatient._id).populate(
+      "userId",
+      "name email phone patientId gender dob address isActive createdAt"
+    );
+
+    return res.json({ message: "Profile updated.", patient: mapPatientProfile(refreshed) });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMyTimeline = async (req, res) => {
+  try {
+    const { patient, user } = await ensurePatientProfileForUser(req.user.id);
+    const populated = await Patient.findById(patient._id).populate("userId");
+
+    const [appointments, prescriptions, labOrders, labReports, invoices, bedEvents] = await Promise.all([
+      Appointment.find({ patientId: user._id }).sort({ createdAt: -1 }).limit(30),
+      Prescription.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
+      LabOrder.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
+      LabReport.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
+      Invoice.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
+      Bed.find({ $or: [{ patientProfileId: patient._id }, { patientId: user._id }] })
+        .populate("wardId", "name wardNumber")
+        .sort({ updatedAt: -1 })
+        .limit(20),
+    ]);
+
+    return res.json({
+      timeline: buildTimeline({
+        patient: populated,
+        appointments,
+        prescriptions,
+        labOrders,
+        labReports,
+        invoices,
+        bedEvents,
+      }),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMyDashboard = async (req, res) => {
+  try {
+    const { patient, user } = await ensurePatientProfileForUser(req.user.id);
+    const today = new Date().toISOString().split("T")[0];
+
+    const [appointments, prescriptions, labOrders, pharmacyOrders, invoices] = await Promise.all([
+      Appointment.find({ patientId: user._id }).sort({ date: 1, slot: 1 }).limit(10)
+        .populate({
+          path: "doctorId",
+          populate: [
+            { path: "userId", select: "name" },
+            { path: "departmentId", select: "name" },
+          ],
+        }),
+      Prescription.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(5)
+        .populate({ path: "doctorId", populate: { path: "userId", select: "name" } }),
+      LabOrder.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(5),
+      PharmacyOrder.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(5),
+      Invoice.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(10),
+    ]);
+
+    const upcomingAppointments = appointments.filter((appointment) => appointment.date >= today && appointment.status !== "cancelled");
+    const pendingBills = invoices.filter((invoice) => invoice.paymentStatus === "pending");
+    const readyReports = labOrders.filter((order) => order.status === "reportReady");
+    const reportReleased = labOrders.filter((order) => order.releasedToPortal);
+    const medicineReady = pharmacyOrders.filter((order) => order.status === "readyForPickup");
+
+    return res.json({
+      summary: {
+        upcomingAppointments: upcomingAppointments.length,
+        prescriptions: prescriptions.length,
+        activeLabOrders: labOrders.length,
+        pendingBills: pendingBills.length,
+        medicineOrders: pharmacyOrders.length,
+      },
+      lists: {
+        upcomingAppointments: upcomingAppointments.slice(0, 5),
+        recentPrescriptions: prescriptions,
+        activeLabOrders: labOrders,
+        medicineOrders: pharmacyOrders,
+        pendingBills: pendingBills.slice(0, 5),
+      },
+      highlights: {
+        reportReadyCount: readyReports.length,
+        reportReleasedCount: reportReleased.length,
+        medicineReadyCount: medicineReady.length,
       },
     });
   } catch (error) {

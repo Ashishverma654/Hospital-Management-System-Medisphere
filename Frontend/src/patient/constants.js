@@ -6,6 +6,7 @@ export const PATIENT_PORTAL_NAV_ITEMS = [
   { to: '/patient/lab-tests', label: 'Lab Tests', description: 'Ordered tests and collection updates.' },
   { to: '/patient/lab-reports', label: 'Lab Reports', description: 'Released reports and report history.' },
   { to: '/patient/bills', label: 'Bills & Payments', description: 'Invoices, payment status, and receipts.' },
+  { to: '/patient/history', label: 'Medical History', description: 'Timeline of visits, tests, and bills.' },
   { to: '/patient/profile', label: 'Profile', description: 'Personal details and portal preferences.' },
   { to: '/patient/notifications', label: 'Notifications', description: 'Care alerts and account messages.' },
 ];

@@ -47,9 +47,20 @@ export default function PatientLabReports() {
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
-              <a href={report.reportFile} target="_blank" rel="noreferrer" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-                Open Report
-              </a>
+              {report.reportFile ? (
+                <a
+                  href={report.reportFile}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Open Report
+                </a>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-600">
+                  Report file pending
+                </span>
+              )}
             </div>
           </article>
         ))}

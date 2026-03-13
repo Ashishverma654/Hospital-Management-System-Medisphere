@@ -154,11 +154,12 @@ function Section({ children, title }) {
   );
 }
 
-function InfoCard({ icon: Icon, label, value }) {
+function InfoCard({ icon, label, value }) {
+  const IconComponent = icon;
   return (
     <article className="rounded-[1.5rem] border border-slate-200 p-4">
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Icon className="h-4 w-4 text-[#ee4c35]" />
+        <IconComponent className="h-4 w-4 text-[#ee4c35]" />
         {label}
       </div>
       <p className="mt-3 text-lg font-semibold text-slate-900">{value}</p>

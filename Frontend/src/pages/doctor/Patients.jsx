@@ -36,7 +36,7 @@ export default function DoctorPatients() {
       const history = await appointmentApi.getPatientHistory(patientId);
       setPatientHistory(Array.isArray(history) ? history : []);
       setSelectedPatient(patientId);
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch patient history');
     }
   };
