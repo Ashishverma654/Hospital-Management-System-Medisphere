@@ -50,6 +50,13 @@ import PharmacistDashboard from './pages/pharmacist/Dashboard.jsx';
 import PharmacistOrders from './pages/pharmacist/Orders.jsx';
 import PharmacistInventory from './pages/pharmacist/Inventory.jsx';
 import PharmacistHistory from './pages/pharmacist/History.jsx';
+import NurseDashboard from './pages/nurse/Dashboard.jsx';
+import NursePatients from './pages/nurse/Patients.jsx';
+import NurseWardBoard from './pages/nurse/WardBoard.jsx';
+import NurseTasks from './pages/nurse/Tasks.jsx';
+import NurseVitals from './pages/nurse/Vitals.jsx';
+import NurseNotes from './pages/nurse/Notes.jsx';
+import NurseHandover from './pages/nurse/Handover.jsx';
 import { EMPLOYEE_ROLE_PATHS, EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, getEmployeeHomeRoute } from './auth/constants.js';
 
 function Unauthorized() {
@@ -175,7 +182,13 @@ function App() {
               <Route path={EMPLOYEE_ROLE_PATHS.doctor} element={<EmployeeRoleDashboard role="doctor" />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['nurse']} />}>
-              <Route path={EMPLOYEE_ROLE_PATHS.nurse} element={<EmployeeRoleDashboard role="nurse" />} />
+              <Route path={EMPLOYEE_ROLE_PATHS.nurse} element={<NurseDashboard />} />
+              <Route path="/employee/nurse/patients" element={<NursePatients />} />
+              <Route path="/employee/nurse/ward-board" element={<NurseWardBoard />} />
+              <Route path="/employee/nurse/tasks" element={<NurseTasks />} />
+              <Route path="/employee/nurse/vitals" element={<NurseVitals />} />
+              <Route path="/employee/nurse/notes" element={<NurseNotes />} />
+              <Route path="/employee/nurse/handover" element={<NurseHandover />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['receptionist']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.receptionist} element={<ReceptionistDashboard />} />

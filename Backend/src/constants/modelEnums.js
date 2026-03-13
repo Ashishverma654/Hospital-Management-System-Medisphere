@@ -81,8 +81,8 @@ export const PHARMACY_ITEM_STATUSES = [
 export const ORDER_STATUSES = PHARMACY_ORDER_STATUSES;
 export const ORDER_PAYMENT_STATUSES = ["pending", "partiallyPaid", "paid", "refunded", "cancelled"];
 
-export const NURSING_TASK_STATUSES = ["pending", "inProgress", "completed", "cancelled"];
-export const NURSING_NOTE_TYPES = ["general", "assessment", "medication", "incident", "handover", "discharge"];
+export const NURSING_TASK_STATUSES = ["pending", "inProgress", "completed", "missed", "cancelled"];
+export const NURSING_NOTE_TYPES = ["general", "assessment", "condition", "observation", "medication", "incident", "handover", "discharge"];
 export const HANDOVER_PRIORITIES = ["low", "medium", "high", "critical"];
 
 export const SHIFT_TYPES = ["morning", "afternoon", "evening", "night", "custom"];

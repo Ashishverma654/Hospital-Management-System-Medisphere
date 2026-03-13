@@ -20,6 +20,7 @@ export default function EmployeeAppLayout() {
   const isReceptionist = user?.role === 'receptionist';
   const isLabTechnician = user?.role === 'labTechnician';
   const isPharmacist = user?.role === 'pharmacist';
+  const isNurse = user?.role === 'nurse';
   const navigationItems = [
     { to: homeRoute, label: `${getRoleLabel(user?.role || 'employee')} Dashboard` },
     ...(isReceptionist
@@ -42,6 +43,16 @@ export default function EmployeeAppLayout() {
           { to: '/employee/pharmacist/orders', label: 'Pharmacy Orders' },
           { to: '/employee/pharmacist/inventory', label: 'Inventory' },
           { to: '/employee/pharmacist/history', label: 'Order History' },
+        ]
+      : []),
+    ...(isNurse
+      ? [
+          { to: '/employee/nurse/patients', label: 'Assigned Patients' },
+          { to: '/employee/nurse/ward-board', label: 'Ward Board' },
+          { to: '/employee/nurse/tasks', label: 'Tasks' },
+          { to: '/employee/nurse/vitals', label: 'Vitals' },
+          { to: '/employee/nurse/notes', label: 'Notes' },
+          { to: '/employee/nurse/handover', label: 'Handover' },
         ]
       : []),
     ...(canManageUsers

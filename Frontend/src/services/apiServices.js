@@ -217,3 +217,24 @@ export const receptionistApi = {
   searchPatients: (query) => api.get('/receptionists/patients/search', { params: { query } }),
   getBookingOptions: (params) => api.get('/receptionists/booking-options', { params }),
 };
+
+export const nurseApi = {
+  getDashboard: () => api.get('/nurses/dashboard'),
+  getAssignments: () => api.get('/nurses/assignments'),
+  getAssignedPatients: () => api.get('/nurses/patients'),
+  getWardBoard: () => api.get('/nurses/ward-board'),
+  getTasks: (params) => api.get('/nurses/tasks', { params }),
+  createTask: (body) => api.post('/nurses/tasks', body),
+  updateTask: (id, body) => api.patch(`/nurses/tasks/${id}`, body),
+  getVitals: (params) => api.get('/nurses/vitals', { params }),
+  getPatientVitalsHistory: (patientId) => api.get(`/nurses/vitals/${patientId}/history`),
+  recordVitals: (body) => api.post('/nurses/vitals', body),
+  getNotes: (params) => api.get('/nurses/notes', { params }),
+  createNote: (body) => api.post('/nurses/notes', body),
+  getEscalations: (params) => api.get('/nurses/escalations', { params }),
+  createEscalation: (body) => api.post('/nurses/escalations', body),
+  getHandover: (params) => api.get('/nurses/handover', { params }),
+  createHandover: (body) => api.post('/nurses/handover', body),
+  getProfile: () => api.get('/nurses/profile'),
+  updateProfile: (body) => api.put('/nurses/profile', body),
+};
