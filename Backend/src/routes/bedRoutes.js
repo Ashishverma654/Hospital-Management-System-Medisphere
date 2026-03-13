@@ -1,10 +1,13 @@
 import express from "express";
 
 import {
-    addBed,
-    getBeds,
     assignBed,
-    dischargePatient
+    createBed,
+    dischargePatient,
+    getAdmissionCandidates,
+    getBeds,
+    getCurrentAdmissions,
+    updateBed,
 } from "../controllers/bedController.js";
 
 import {
@@ -20,7 +23,7 @@ router.post(
     "/",
     verifyAccessToken,
     authorizeRoles("admin"),
-    addBed
+    createBed
 );
 
 
@@ -28,8 +31,29 @@ router.post(
 router.get(
     "/",
     verifyAccessToken,
-    authorizeRoles("admin", "doctor", "receptionist"),
+    authorizeRoles("admin"),
     getBeds
+);
+
+router.get(
+    "/admission-candidates",
+    verifyAccessToken,
+    authorizeRoles("admin"),
+    getAdmissionCandidates
+);
+
+router.get(
+    "/admissions/current",
+    verifyAccessToken,
+    authorizeRoles("admin"),
+    getCurrentAdmissions
+);
+
+router.put(
+    "/:id",
+    verifyAccessToken,
+    authorizeRoles("admin"),
+    updateBed
 );
 
 
@@ -37,7 +61,7 @@ router.get(
 router.put(
     "/assign/:id",
     verifyAccessToken,
-    authorizeRoles("admin", "receptionist"),
+    authorizeRoles("admin"),
     assignBed
 );
 
@@ -46,7 +70,7 @@ router.put(
 router.put(
     "/discharge/:id",
     verifyAccessToken,
-    authorizeRoles("admin", "receptionist"),
+    authorizeRoles("admin"),
     dischargePatient
 );
 

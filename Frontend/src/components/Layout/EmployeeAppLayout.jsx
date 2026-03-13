@@ -68,6 +68,9 @@ export default function EmployeeAppLayout() {
     ...(canAccessGovernance
       ? [
           { to: '/employee/patients', label: 'Patients' },
+          { to: '/employee/wards', label: 'Wards' },
+          { to: '/employee/beds', label: 'Beds' },
+          { to: '/employee/admissions', label: 'Admissions' },
           { to: '/employee/awards', label: 'Awards' },
           { to: '/employee/departments', label: 'Departments' },
           { to: '/employee/specializations', label: 'Specializations' },

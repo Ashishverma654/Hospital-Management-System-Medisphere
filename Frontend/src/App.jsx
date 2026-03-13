@@ -25,6 +25,9 @@ import AdminProfilePage from './pages/employee/AdminProfilePage.jsx';
 import AuditHistoryPage from './pages/employee/AuditHistoryPage.jsx';
 import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
+import WardManagement from './pages/admin/WardManagement.jsx';
+import BedManagement from './pages/admin/BedManagement.jsx';
+import AdmissionManagement from './pages/admin/AdmissionManagement.jsx';
 import UserManagement from './pages/admin/UserManagement.jsx';
 import DoctorManagement from './pages/admin/DoctorManagement.jsx';
 import AwardManagement from './pages/admin/AwardManagement.jsx';
@@ -215,6 +218,9 @@ function App() {
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/patients" element={<PatientManagement />} />
+              <Route path="/employee/wards" element={<WardManagement />} />
+              <Route path="/employee/beds" element={<BedManagement />} />
+              <Route path="/employee/admissions" element={<AdmissionManagement />} />
               <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
               <Route path="/employee/specializations" element={<SpecializationManagement />} />

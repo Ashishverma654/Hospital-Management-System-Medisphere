@@ -26,6 +26,15 @@ export const locationApi = {
   toggleActive: (id) => api.put(`/locations/${id}/toggle-active`),
 };
 
+export const wardApi = {
+  getAll: (params) => api.get('/wards', { params }),
+  getSummary: () => api.get('/wards/summary'),
+  getById: (id) => api.get(`/wards/${id}`),
+  create: (body) => api.post('/wards', body),
+  update: (id, body) => api.put(`/wards/${id}`, body),
+  toggleActive: (id) => api.put(`/wards/${id}/toggle-active`),
+};
+
 export const doctorApi = {
   getAll: () => api.get('/doctors'),
   getById: (id) => api.get(`/doctors/${id}`),
@@ -162,8 +171,11 @@ export const prescriptionApi = {
 };
 
 export const bedApi = {
-  getAll: () => api.get('/beds'),
+  getAll: (params) => api.get('/beds', { params }),
   add: (body) => api.post('/beds', body),
+  update: (id, body) => api.put(`/beds/${id}`, body),
+  getCurrentAdmissions: (params) => api.get('/beds/admissions/current', { params }),
+  getAdmissionCandidates: (params) => api.get('/beds/admission-candidates', { params }),
   assign: (id, body) => api.put(`/beds/assign/${id}`, body),
   discharge: (id) => api.put(`/beds/discharge/${id}`),
 };
