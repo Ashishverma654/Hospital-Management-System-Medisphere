@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import Award from "../models/Award.js";
 import CreationLog from "../models/CreationLog.js";
 import Department from "../models/Department.js";
 import Doctor from "../models/Doctor.js";
@@ -139,6 +140,8 @@ const buildDoctorPayload = (doctor) => ({
   profileImage: doctor.profileImage,
   isActive: doctor.isActive,
   isPublished: doctor.isPublished,
+  isFeatured: doctor.isFeatured,
+  featureOrder: doctor.featureOrder,
   onboardingStatus: doctor.onboardingStatus,
   createdAt: doctor.createdAt,
   updatedAt: doctor.updatedAt,
@@ -165,6 +168,8 @@ export const createDoctor = async (req, res) => {
       profileImage,
       isPublished = false,
       isActive = true,
+      isFeatured = false,
+      featureOrder = 0,
     } = req.body;
 
     if (!name || !email || !departmentId) {
@@ -218,6 +223,8 @@ export const createDoctor = async (req, res) => {
       profileImage: profileImage || user.profileImage,
       isActive,
       isPublished: Boolean(isPublished),
+      isFeatured: Boolean(isFeatured),
+      featureOrder: Number(featureOrder) || 0,
       onboardingStatus: "created",
     });
 
@@ -346,6 +353,8 @@ export const updateDoctorAdmin = async (req, res) => {
       profileImage,
       isPublished,
       isActive,
+      isFeatured,
+      featureOrder,
     } = req.body;
 
     const nextDepartmentId = departmentId || doctor.departmentId;
@@ -389,6 +398,8 @@ export const updateDoctorAdmin = async (req, res) => {
     if (about !== undefined) doctor.about = about;
     if (expertise !== undefined) doctor.expertise = parseStringArray(expertise);
     if (typeof isPublished === "boolean") doctor.isPublished = isPublished;
+    if (typeof isFeatured === "boolean") doctor.isFeatured = isFeatured;
+    if (featureOrder !== undefined) doctor.featureOrder = Number(featureOrder) || 0;
 
     doctor.onboardingStatus = determineDoctorOnboardingStatus(doctor);
     if (doctor.onboardingStatus !== "published") {
@@ -516,7 +527,7 @@ export const getDoctors = async (req, res) => {
       .populate("departmentId", "name")
       .populate("specializationIds", "name")
       .populate("hospitalLocations", "name city")
-      .sort({ createdAt: -1 });
+      .sort({ isFeatured: -1, featureOrder: 1, createdAt: -1 });
 
     res.status(200).json(doctors);
   } catch (error) {
@@ -547,7 +558,16 @@ export const getDoctorById = async (req, res) => {
       return res.status(404).json({ message: "Doctor not found." });
     }
 
-    res.json(doctor);
+    const awards = await Award.find({
+      doctorId: doctor._id,
+      type: "doctor",
+      isActive: true,
+    }).sort({ year: -1, createdAt: -1 });
+
+    res.json({
+      ...doctor.toObject(),
+      awards,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

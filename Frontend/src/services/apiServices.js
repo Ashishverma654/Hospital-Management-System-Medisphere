@@ -44,6 +44,13 @@ export const doctorApi = {
     }),
 };
 
+export const awardApi = {
+  getAll: (params) => api.get('/awards', { params }),
+  create: (body) => api.post('/awards', body),
+  update: (id, body) => api.put(`/awards/${id}`, body),
+  toggleActive: (id) => api.put(`/awards/${id}/toggle-active`),
+};
+
 export const slotApi = {
   getByDoctor: (doctorId) => api.get(`/slots/${doctorId}/slots`),
 };
@@ -114,9 +121,12 @@ export const resetPassword = async (email, otp, newPassword, newPin) => {
 
 // Dynamic Data
 export const getLocations = () => api.get('/dynamic/locations');
-export const getDepartments = () => api.get('/dynamic/departments');
+export const getDepartments = (params) => api.get('/dynamic/departments', { params });
 export const getSpecializations = (params) => api.get('/dynamic/specializations', { params });
 export const getDoctors = (params) => api.get('/dynamic/doctors', { params });
+export const getDoctorPublicById = (id) => api.get(`/dynamic/doctors/${id}`);
+export const getAwards = () => api.get('/dynamic/awards');
+export const getHomepageContent = () => api.get('/dynamic/homepage');
 export const getServices = () => api.get('/dynamic/services');
 export const getPackages = () => api.get('/dynamic/packages');
 

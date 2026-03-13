@@ -30,6 +30,16 @@ const departmentSchema = mongoose.Schema({
         default: true
     },
 
+    isFeatured: {
+        type: Boolean,
+        default: false
+    },
+
+    featureOrder: {
+        type: Number,
+        default: 0
+    },
+
     displayOrder: {
         type: Number,
         default: 0

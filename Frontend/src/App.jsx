@@ -9,6 +9,7 @@ import EmployeeRoute from './routes/guards/EmployeeRoute.jsx';
 import Home from './pages/public/Home.jsx';
 import PublicAbout from './pages/public/PublicAbout.jsx';
 import FindDoctors from './pages/public/FindDoctors.jsx';
+import PublicDoctorProfile from './pages/public/PublicDoctorProfile.jsx';
 import PatientLogin from './pages/auth/PatientLogin.jsx';
 import PatientRegister from './pages/auth/PatientRegister.jsx';
 import EmployeeLogin from './pages/auth/EmployeeLogin.jsx';
@@ -21,6 +22,7 @@ import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
 import UserManagement from './pages/admin/UserManagement.jsx';
 import DoctorManagement from './pages/admin/DoctorManagement.jsx';
+import AwardManagement from './pages/admin/AwardManagement.jsx';
 import DepartmentManagement from './pages/admin/DepartmentManagement.jsx';
 import SpecializationManagement from './pages/admin/SpecializationManagement.jsx';
 import LocationManagement from './pages/admin/LocationManagement.jsx';
@@ -58,6 +60,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<PublicAbout />} />
           <Route path="/find-doctors" element={<FindDoctors />} />
+          <Route path="/find-doctors/:id" element={<PublicDoctorProfile />} />
           <Route path="/patient/login" element={<PatientLogin />} />
           <Route path="/patient/register" element={<PatientRegister />} />
         </Route>
@@ -192,6 +195,7 @@ function App() {
             <Route path="/employee/profile" element={<AdminProfilePage />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/doctors" element={<DoctorManagement />} />
+              <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
               <Route path="/employee/specializations" element={<SpecializationManagement />} />
               <Route path="/employee/locations" element={<LocationManagement />} />

@@ -4,7 +4,7 @@ const normalizeName = (value = "") => value.trim().replace(/\s+/g, " ");
 
 export const createDepartment = async (req, res) => {
   try {
-    const { name, description, icon, image, code } = req.body;
+    const { name, description, icon, image, code, isFeatured = false, featureOrder = 0 } = req.body;
     const normalizedName = normalizeName(name);
 
     if (!normalizedName) {
@@ -23,6 +23,8 @@ export const createDepartment = async (req, res) => {
       code,
       icon,
       image,
+      isFeatured: Boolean(isFeatured),
+      featureOrder: Number(featureOrder) || 0,
       createdBy: req.user?.id,
       updatedBy: req.user?.id,
     });
@@ -63,7 +65,7 @@ export const getAllDepartment = async (req, res) => {
 export const updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, icon, image, code } = req.body;
+    const { name, description, icon, image, code, isFeatured, featureOrder } = req.body;
 
     const department = await Department.findById(id);
     if (!department) {
@@ -88,6 +90,12 @@ export const updateDepartment = async (req, res) => {
     department.code = code ?? department.code;
     department.icon = icon ?? department.icon;
     department.image = image ?? department.image;
+    if (typeof isFeatured === "boolean") {
+      department.isFeatured = isFeatured;
+    }
+    if (featureOrder !== undefined) {
+      department.featureOrder = Number(featureOrder) || 0;
+    }
     department.updatedBy = req.user?.id;
 
     await department.save();

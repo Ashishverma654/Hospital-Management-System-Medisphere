@@ -103,6 +103,16 @@ const doctorSchema = mongoose.Schema(
       default: false,
     },
 
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+
+    featureOrder: {
+      type: Number,
+      default: 0,
+    },
+
     onboardingStatus: {
       type: String,
       enum: ["created", "invited", "profileIncomplete", "active", "published", "suspended"],

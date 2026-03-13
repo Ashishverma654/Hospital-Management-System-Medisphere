@@ -20,6 +20,8 @@ const initialForm = {
   profileImage: '',
   isActive: true,
   isPublished: false,
+  isFeatured: false,
+  featureOrder: '',
 };
 
 export default function DoctorManagement() {
@@ -130,6 +132,8 @@ export default function DoctorManagement() {
       profileImage: doctor.profileImage || doctor.userId?.profileImage || '',
       isActive: doctor.isActive,
       isPublished: doctor.isPublished,
+      isFeatured: doctor.isFeatured || false,
+      featureOrder: doctor.featureOrder ?? '',
     });
     setShowForm(true);
   };
@@ -274,6 +278,7 @@ export default function DoctorManagement() {
                 <th className="px-4 py-3 font-medium">Department</th>
                 <th className="px-4 py-3 font-medium">Specializations</th>
                 <th className="px-4 py-3 font-medium">Fee</th>
+                <th className="px-4 py-3 font-medium">Featured</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Onboarding</th>
                 <th className="px-4 py-3 font-medium">Actions</th>
@@ -282,12 +287,12 @@ export default function DoctorManagement() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">Loading doctors...</td>
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">Loading doctors...</td>
                 </tr>
               )}
               {!loading && doctors.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No doctors found.</td>
+                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">No doctors found.</td>
                 </tr>
               )}
               {doctors.map((doctor) => (
@@ -308,6 +313,15 @@ export default function DoctorManagement() {
                   <td className="px-4 py-3 text-slate-600">{doctor.departmentId?.name || '—'}</td>
                   <td className="px-4 py-3 text-slate-600">{(doctor.specializationIds || []).map((item) => item.name).join(', ') || '—'}</td>
                   <td className="px-4 py-3 text-slate-600">₹{Number(doctor.consultationFee || 0).toLocaleString()}</td>
+                  <td className="px-4 py-3">
+                    {doctor.isFeatured ? (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        Featured #{doctor.featureOrder || 0}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${doctor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
@@ -420,6 +434,9 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
           <Field label="Profile Image URL">
             <input type="text" value={form.profileImage} onChange={(e) => onChange({ ...form, profileImage: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
           </Field>
+          <Field label="Feature Order">
+            <input type="number" value={form.featureOrder} onChange={(e) => onChange({ ...form, featureOrder: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+          </Field>
         </div>
 
         <Field label="Qualifications (comma separated)" className="mt-4">
@@ -478,6 +495,10 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
           <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
             <input type="checkbox" checked={form.isPublished} onChange={(e) => onChange({ ...form, isPublished: e.target.checked })} />
             Published for future public visibility
+          </label>
+          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 md:col-span-2">
+            <input type="checkbox" checked={form.isFeatured} onChange={(e) => onChange({ ...form, isFeatured: e.target.checked })} />
+            Feature this doctor on the public website
           </label>
         </div>
 

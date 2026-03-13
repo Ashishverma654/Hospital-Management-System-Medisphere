@@ -100,7 +100,7 @@ export default function BookingOverlay({ isOpen, onClose }) {
 
   const handleBookClick = () => {
     if (!user) {
-      navigate('/login');
+      navigate('/patient/login');
     } else {
       alert("Proceeding to actual booking gateway.");
     }
@@ -290,7 +290,7 @@ export default function BookingOverlay({ isOpen, onClose }) {
                         <h4 className="font-bold text-gray-800 text-lg">{doc.userId?.name || "Dr. Medanta"}</h4>
                         <p className="text-[#ee4c35] font-bold text-xs mb-1 uppercase tracking-wider">{doc.departmentId?.name}</p>
                         <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                           <span>{doc.experienceYear}Y Exp</span>
+                           <span>{doc.experienceYears || 0}Y Exp</span>
                            <span className="text-gray-300">|</span>
                            <span className="font-bold text-gray-800">₹{doc.consultationFee}</span>
                         </div>

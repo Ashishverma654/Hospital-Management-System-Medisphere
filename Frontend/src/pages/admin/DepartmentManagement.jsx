@@ -10,6 +10,8 @@ const initialForm = {
   code: '',
   icon: '',
   image: '',
+  isFeatured: false,
+  featureOrder: '',
 };
 
 export default function DepartmentManagement() {
@@ -131,6 +133,7 @@ export default function DepartmentManagement() {
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Code</th>
+                <th className="px-4 py-3 font-medium">Featured</th>
                 <th className="px-4 py-3 font-medium">Description</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Updated</th>
@@ -140,18 +143,27 @@ export default function DepartmentManagement() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">Loading departments...</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">Loading departments...</td>
                 </tr>
               )}
               {!loading && departments.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No departments found.</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No departments found.</td>
                 </tr>
               )}
               {departments.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100 last:border-b-0">
                   <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-500">{item.code || '—'}</td>
+                  <td className="px-4 py-3">
+                    {item.isFeatured ? (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                        Featured #{item.featureOrder || 0}
+                      </span>
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{item.description || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
@@ -173,6 +185,8 @@ export default function DepartmentManagement() {
                             code: item.code || '',
                             icon: item.icon || '',
                             image: item.image || '',
+                            isFeatured: item.isFeatured || false,
+                            featureOrder: item.featureOrder ?? '',
                           });
                           setShowForm(true);
                         }}
@@ -213,11 +227,19 @@ export default function DepartmentManagement() {
               <Field label="Display Image URL">
                 <input type="text" value={form.image} onChange={(e) => setForm((c) => ({ ...c, image: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
               </Field>
+              <Field label="Feature Order">
+                <input type="number" value={form.featureOrder} onChange={(e) => setForm((c) => ({ ...c, featureOrder: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              </Field>
             </div>
 
             <Field label="Description" className="mt-4">
               <textarea value={form.description} onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))} className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
             </Field>
+
+            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+              <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm((c) => ({ ...c, isFeatured: e.target.checked }))} />
+              Show this department in featured public content
+            </label>
 
             <div className="mt-6 flex gap-3">
               <Button type="button" variant="outline" className="flex-1" onClick={resetForm}>Cancel</Button>
