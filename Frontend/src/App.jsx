@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Toaster } from 'sonner';
-import PublicPatientLayout from './components/layout/PublicPatientLayout.jsx';
-import PatientPortalLayout from './components/layout/PatientPortalLayout.jsx';
-import EmployeeAppLayout from './components/layout/EmployeeAppLayout.jsx';
+import PublicPatientLayout from './components/Layout/PublicPatientLayout.jsx';
+import PatientPortalLayout from './components/Layout/PatientPortalLayout.jsx';
+import EmployeeAppLayout from './components/Layout/EmployeeAppLayout.jsx';
 import PatientRoute from './routes/guards/PatientRoute.jsx';
 import EmployeeRoute from './routes/guards/EmployeeRoute.jsx';
 import Home from './pages/public/Home.jsx';
