@@ -43,7 +43,42 @@ export const LAB_ITEM_STATUSES = [
 ];
 export const LAB_ORDER_URGENCY = ["routine", "urgent", "stat"];
 
-export const ORDER_STATUSES = ["pending", "accepted", "inProgress", "ready", "completed", "cancelled"];
+export const PHARMACY_ORDER_STATUSES = [
+  "prescribed",
+  "orderPlaced",
+  "orderAccepted",
+  "awaitingPayment",
+  "paid",
+  "preparing",
+  "readyForPickup",
+  "completed",
+  "cancelled",
+  "partiallyFulfilled",
+  // Legacy values retained for older data compatibility.
+  "pending",
+  "accepted",
+  "inProgress",
+  "ready",
+];
+export const PHARMACY_ITEM_STATUSES = [
+  "prescribed",
+  "orderPlaced",
+  "orderAccepted",
+  "awaitingPayment",
+  "paid",
+  "preparing",
+  "readyForPickup",
+  "completed",
+  "cancelled",
+  "partiallyFulfilled",
+  "outOfStock",
+  // Legacy values retained for older data compatibility.
+  "pending",
+  "accepted",
+  "inProgress",
+  "ready",
+];
+export const ORDER_STATUSES = PHARMACY_ORDER_STATUSES;
 export const ORDER_PAYMENT_STATUSES = ["pending", "partiallyPaid", "paid", "refunded", "cancelled"];
 
 export const NURSING_TASK_STATUSES = ["pending", "inProgress", "completed", "cancelled"];

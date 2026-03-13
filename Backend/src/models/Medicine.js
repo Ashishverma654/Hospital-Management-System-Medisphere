@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const medicineSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true
+        required: true,
+        trim: true
     },
 
     manufacturer: {
@@ -15,12 +16,30 @@ const medicineSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
     },
 
     stock: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
+    },
+
+    lowStockThreshold: {
+        type: Number,
+        default: 10,
+        min: 0
+    },
+
+    unit: {
+        type: String,
+        default: "unit"
+    },
+
+    isActive: {
+        type: Boolean,
+        default: true
     },
 
     expiryDate: {
@@ -37,6 +56,8 @@ const medicineSchema = new mongoose.Schema({
 },
     { timestamps: true }
 );
+
+medicineSchema.index({ name: 1 }, { unique: true });
 
 export default mongoose.model("Medicine", medicineSchema);
 

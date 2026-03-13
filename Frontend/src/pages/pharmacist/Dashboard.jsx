@@ -1,74 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { Pill, Package, Clock, ShoppingCart } from 'lucide-react';
-import api from '../../lib/api.js';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../../components/ui/button';
+import { pharmacistApi } from '../../services/apiServices.js';
+import { toast } from 'sonner';
+
+const cards = [
+  ['newOrders', 'New Orders'],
+  ['acceptedOrders', 'Accepted'],
+  ['preparingOrders', 'Preparing'],
+  ['readyForPickupOrders', 'Ready for Pickup'],
+  ['completedToday', 'Completed Today'],
+  ['lowStockMedicines', 'Low Stock'],
+  ['outOfStockMedicines', 'Out of Stock'],
+];
 
 export default function PharmacistDashboard() {
-  const user = useSelector((state) => state.auth.user);
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const load = async () => {
       try {
-        const data = await api.get('/pharmacists/dashboard');
-        setStats(data);
-      } catch (err) {
-        console.error("Failed to fetch pharmacist dashboard:", err);
-      } finally {
-        setIsLoading(false);
+        setStats(await pharmacistApi.getDashboard());
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to load pharmacist dashboard.');
       }
     };
-    fetchStats();
+
+    load();
   }, []);
 
-  const cards = [
-    { title: "Assigned Counter", value: stats?.assignedCounter || "—", icon: ShoppingCart, color: "bg-emerald-500" },
-    { title: "Current Shift", value: stats?.shift || "—", icon: Clock, color: "bg-amber-500" },
-    { title: "Total Medicines", value: stats?.totalMedicines || 0, icon: Pill, color: "bg-rose-500" },
-    { title: "Total Prescriptions", value: stats?.totalPrescriptions || 0, icon: Package, color: "bg-violet-500" },
-  ];
-
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Pharmacist Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">Welcome back, {user?.name}</p>
-        </div>
-        <div className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full uppercase tracking-wider">
-          {user?.employeeId || "Pharmacist"}
-        </div>
+    <section className="space-y-6">
+      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Pharmacy Operations</p>
+        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Pharmacist dashboard</h2>
+        <p className="mt-2 max-w-3xl text-slate-600">
+          Monitor incoming orders, preparation workload, pickup-ready handovers, and stock pressure from one workspace.
+        </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-gray-400">Loading...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {cards.map((card) => (
-            <div key={card.title} className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-medium text-gray-500">{card.title}</span>
-                <div className={`p-2 rounded-lg ${card.color} text-white`}>
-                  <card.icon className="h-5 w-5" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {cards.map(([key, label]) => (
+          <article key={key} className="rounded-[1.5rem] bg-white p-6 shadow-sm">
+            <p className="text-sm text-slate-500">{label}</p>
+            <h3 className="mt-2 text-3xl font-semibold text-slate-900">{stats?.[key] ?? '—'}</h3>
+          </article>
+        ))}
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
+        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Quick Actions</p>
+          <div className="mt-4 grid gap-3">
+            {(stats?.quickActions || []).map((action) => (
+              <Button key={action.path} variant="outline" onClick={() => navigate(action.path)}>
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Inventory Alerts</p>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Low and out-of-stock medicines</h3>
+          <div className="mt-4 space-y-3">
+            {(stats?.urgentInventory || []).map((medicine) => (
+              <div key={medicine.id} className="rounded-[1.25rem] border border-slate-200 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900">{medicine.name}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Stock: {medicine.stock} • Threshold: {medicine.lowStockThreshold}
+                    </p>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${medicine.stock <= 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {medicine.stock <= 0 ? 'Out of stock' : 'Low stock'}
+                  </span>
                 </div>
               </div>
-              <p className="text-2xl font-bold text-gray-800 capitalize">{card.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
-        <h3 className="font-bold text-gray-800 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {["Dispense Medicine", "View Prescriptions", "Stock Check", "My Profile"].map((action) => (
-            <button key={action} className="p-4 bg-gray-50 hover:bg-emerald-50 rounded-xl text-sm font-medium text-gray-700 hover:text-emerald-700 transition-colors border border-gray-100 hover:border-emerald-200">
-              {action}
-            </button>
-          ))}
-        </div>
+            ))}
+            {stats?.urgentInventory?.length === 0 && (
+              <p className="text-sm text-slate-500">No urgent inventory alerts right now.</p>
+            )}
+          </div>
+        </article>
       </div>
-    </div>
+    </section>
   );
 }

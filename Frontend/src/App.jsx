@@ -14,8 +14,11 @@ import PatientLogin from './pages/auth/PatientLogin.jsx';
 import PatientRegister from './pages/auth/PatientRegister.jsx';
 import EmployeeLogin from './pages/auth/EmployeeLogin.jsx';
 import PatientSectionPage from './pages/patient/PatientSectionPage.jsx';
+import PatientPrescriptions from './pages/patient/Prescriptions.jsx';
+import PatientMedicineOrders from './pages/patient/MedicineOrders.jsx';
 import PatientLabTests from './pages/patient/LabTests.jsx';
 import PatientLabReports from './pages/patient/LabReports.jsx';
+import PatientBilling from './pages/patient/Billing.jsx';
 import GovernanceDashboard from './pages/employee/GovernanceDashboard.jsx';
 import EmployeeRoleDashboard from './pages/employee/EmployeeRoleDashboard.jsx';
 import AdminProfilePage from './pages/employee/AdminProfilePage.jsx';
@@ -43,6 +46,10 @@ import DoctorAvailability from './pages/doctor/Availability.jsx';
 import PatientSummary from './pages/doctor/PatientSummary.jsx';
 import LabTechDashboard from './pages/labtech/Dashboard.jsx';
 import LabTechOrdersInbox from './pages/labtech/OrdersInbox.jsx';
+import PharmacistDashboard from './pages/pharmacist/Dashboard.jsx';
+import PharmacistOrders from './pages/pharmacist/Orders.jsx';
+import PharmacistInventory from './pages/pharmacist/Inventory.jsx';
+import PharmacistHistory from './pages/pharmacist/History.jsx';
 import { EMPLOYEE_ROLE_PATHS, EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, getEmployeeHomeRoute } from './auth/constants.js';
 
 function Unauthorized() {
@@ -107,23 +114,11 @@ function App() {
             />
             <Route
               path="/patient/prescriptions"
-              element={
-                <PatientSectionPage
-                  eyebrow="Prescriptions"
-                  title="Prescriptions"
-                  description="Prescription summaries, dosage guidance, and refill-ready information will be connected here in a later module."
-                />
-              }
+              element={<PatientPrescriptions />}
             />
             <Route
               path="/patient/medicine-orders"
-              element={
-                <PatientSectionPage
-                  eyebrow="Pharmacy"
-                  title="Medicine Orders"
-                  description="Pharmacy orders, refill requests, and order status updates will be available here for patients later."
-                />
-              }
+              element={<PatientMedicineOrders />}
             />
             <Route
               path="/patient/lab-tests"
@@ -135,13 +130,7 @@ function App() {
             />
             <Route
               path="/patient/bills"
-              element={
-                <PatientSectionPage
-                  eyebrow="Billing"
-                  title="Bills & Payments"
-                  description="Invoices, receipts, balances, and payment progress will be organized here without mixing with employee billing tools."
-                />
-              }
+              element={<PatientBilling />}
             />
             <Route
               path="/patient/profile"
@@ -202,7 +191,10 @@ function App() {
               <Route path="/employee/lab-technician/completed" element={<LabTechOrdersInbox presetStatus="reportReady" title="Reports Ready For Release" description="Review report-ready orders, confirm payment, and release eligible results to the patient portal." />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['pharmacist']} />}>
-              <Route path={EMPLOYEE_ROLE_PATHS.pharmacist} element={<EmployeeRoleDashboard role="pharmacist" />} />
+              <Route path={EMPLOYEE_ROLE_PATHS.pharmacist} element={<PharmacistDashboard />} />
+              <Route path="/employee/pharmacist/orders" element={<PharmacistOrders />} />
+              <Route path="/employee/pharmacist/inventory" element={<PharmacistInventory />} />
+              <Route path="/employee/pharmacist/history" element={<PharmacistHistory />} />
             </Route>
             <Route path="/employee/profile" element={<AdminProfilePage />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>

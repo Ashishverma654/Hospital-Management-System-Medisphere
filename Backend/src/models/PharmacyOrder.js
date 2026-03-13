@@ -1,18 +1,41 @@
 import mongoose from "mongoose";
-import { ORDER_PAYMENT_STATUSES, ORDER_STATUSES } from "../constants/modelEnums.js";
+import { ORDER_PAYMENT_STATUSES, PHARMACY_ITEM_STATUSES, PHARMACY_ORDER_STATUSES } from "../constants/modelEnums.js";
 
 const pharmacyOrderItemSchema = new mongoose.Schema(
   {
     medicineId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Medicine",
-      required: true,
+      required: false,
     },
-    quantity: {
+    medicineName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    prescriptionMedicineIndex: {
+      type: Number,
+      default: 0,
+    },
+    requestedQuantity: {
       type: Number,
       required: true,
       min: 1,
     },
+    fulfilledQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    unavailableQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    dosage: String,
+    frequency: String,
+    duration: String,
+    instructions: String,
     unitPrice: {
       type: Number,
       required: true,
@@ -25,8 +48,12 @@ const pharmacyOrderItemSchema = new mongoose.Schema(
     },
     fulfillmentStatus: {
       type: String,
-      enum: ORDER_STATUSES,
-      default: "pending",
+      enum: PHARMACY_ITEM_STATUSES,
+      default: "orderPlaced",
+    },
+    stockAvailableAtReview: {
+      type: Number,
+      default: 0,
     },
   },
   { _id: false }
@@ -51,10 +78,14 @@ const pharmacyOrderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    invoiceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Invoice",
+    },
     status: {
       type: String,
-      enum: ORDER_STATUSES,
-      default: "pending",
+      enum: PHARMACY_ORDER_STATUSES,
+      default: "prescribed",
     },
     paymentStatus: {
       type: String,
@@ -74,9 +105,13 @@ const pharmacyOrderSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    placedAt: Date,
     acceptedAt: Date,
+    preparingAt: Date,
     readyAt: Date,
     completedAt: Date,
+    cancelledAt: Date,
+    lastStatusUpdatedAt: Date,
     notes: String,
   },
   { timestamps: true }
@@ -87,6 +122,7 @@ pharmacyOrderSchema.pre("save", function computeTotals(next) {
     ? this.items.reduce((sum, item) => sum + (item.lineTotal || 0), 0)
     : 0;
   this.total = this.subtotal;
+  this.lastStatusUpdatedAt = new Date();
   next();
 });
 

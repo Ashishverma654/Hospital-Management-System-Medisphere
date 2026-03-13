@@ -19,6 +19,7 @@ export default function EmployeeAppLayout() {
   const canManageDoctors = ['superadmin', 'admin'].includes(user?.role);
   const isReceptionist = user?.role === 'receptionist';
   const isLabTechnician = user?.role === 'labTechnician';
+  const isPharmacist = user?.role === 'pharmacist';
   const navigationItems = [
     { to: homeRoute, label: `${getRoleLabel(user?.role || 'employee')} Dashboard` },
     ...(isReceptionist
@@ -34,6 +35,13 @@ export default function EmployeeAppLayout() {
           { to: '/employee/lab-technician/orders', label: 'Lab Orders' },
           { to: '/employee/lab-technician/processing', label: 'Processing Queue' },
           { to: '/employee/lab-technician/completed', label: 'Ready Reports' },
+        ]
+      : []),
+    ...(isPharmacist
+      ? [
+          { to: '/employee/pharmacist/orders', label: 'Pharmacy Orders' },
+          { to: '/employee/pharmacist/inventory', label: 'Inventory' },
+          { to: '/employee/pharmacist/history', label: 'Order History' },
         ]
       : []),
     ...(canManageUsers

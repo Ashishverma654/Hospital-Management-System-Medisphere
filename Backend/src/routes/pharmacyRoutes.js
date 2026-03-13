@@ -5,12 +5,12 @@ import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware
 
 const router = express.Router();
 
-router.post("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), addMedicine);
+router.post("/", verifyAccessToken, authorizeRoles("admin", "pharmacist"), addMedicine);
 
-router.get("/", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist"), getMedicines);
+router.get("/", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist", "pharmacist"), getMedicines);
 
-router.get("/:id", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist"), getMedicineById);
-router.put("/:id", verifyAccessToken, authorizeRoles("admin", "receptionist"), updateMedicine);
-router.delete("/:id", verifyAccessToken, authorizeRoles("admin"), deleteMedicine);
+router.get("/:id", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist", "pharmacist"), getMedicineById);
+router.put("/:id", verifyAccessToken, authorizeRoles("admin", "pharmacist"), updateMedicine);
+router.delete("/:id", verifyAccessToken, authorizeRoles("admin", "pharmacist"), deleteMedicine);
 
 export default router;

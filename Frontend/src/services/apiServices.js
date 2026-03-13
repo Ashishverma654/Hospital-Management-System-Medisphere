@@ -96,11 +96,30 @@ export const billingApi = {
 };
 
 export const pharmacyApi = {
-  getAll: () => api.get('/medicines'),
+  getAll: (params) => api.get('/medicines', { params }),
   getById: (id) => api.get(`/medicines/${id}`),
   add: (body) => api.post('/medicines', body),
   update: (id, body) => api.put(`/medicines/${id}`, body),
   delete: (id) => api.delete(`/medicines/${id}`),
+};
+
+export const pharmacyOrderApi = {
+  placeFromPrescription: (prescriptionId, body) => api.post(`/pharmacy-orders/from-prescription/${prescriptionId}`, body),
+  getMy: () => api.get('/pharmacy-orders/my'),
+  getById: (id) => api.get(`/pharmacy-orders/${id}`),
+  getPharmacistOrders: (params) => api.get('/pharmacists/orders', { params }),
+  getPharmacistOrder: (id) => api.get(`/pharmacists/orders/${id}`),
+  accept: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/accept`, body),
+  markPreparing: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/preparing`, body),
+  markReady: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/ready`, body),
+  complete: (id) => api.patch(`/pharmacists/orders/${id}/complete`),
+  cancel: (id) => api.patch(`/pharmacists/orders/${id}/cancel`),
+};
+
+export const pharmacistApi = {
+  getDashboard: () => api.get('/pharmacists/dashboard'),
+  getProfile: () => api.get('/pharmacists/profile'),
+  updateProfile: (body) => api.put('/pharmacists/profile', body),
 };
 
 export const labReportApi = {

@@ -2,9 +2,11 @@ import Invoice from "../models/Invoice.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
 import LabOrder from "../models/LabOrder.js";
+import PharmacyOrder from "../models/PharmacyOrder.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 import { getOrderStatusForPayment } from "../utils/labWorkflow.js";
+import { getOrderStatusForPayment as getPharmacyStatusForPayment } from "../utils/pharmacyWorkflow.js";
 
 export const createInvoice = async (req, res) => {
     try {
@@ -118,6 +120,19 @@ export const payInvoice = async (req, res) => {
                 });
                 labOrder.invoiceId = invoice._id;
                 await labOrder.save();
+            }
+        }
+
+        if (invoice?.pharmacyOrderId) {
+            const pharmacyOrder = await PharmacyOrder.findById(invoice.pharmacyOrderId);
+            if (pharmacyOrder) {
+                pharmacyOrder.paymentStatus = "paid";
+                pharmacyOrder.status = getPharmacyStatusForPayment({
+                    currentStatus: pharmacyOrder.status,
+                    paymentStatus: "paid",
+                });
+                pharmacyOrder.invoiceId = invoice._id;
+                await pharmacyOrder.save();
             }
         }
 
