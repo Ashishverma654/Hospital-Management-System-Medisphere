@@ -5,6 +5,9 @@ import CreationLog from "../models/CreationLog.js";
 import Department from "../models/Department.js";
 import Doctor from "../models/Doctor.js";
 import HospitalLocation from "../models/HospitalLocation.js";
+import Appointment from "../models/Appointment.js";
+import Prescription from "../models/Prescription.js";
+import LabOrder from "../models/LabOrder.js";
 import Specialization from "../models/Specialization.js";
 import User from "../models/User.js";
 import { normalizeSystemRole } from "../constants/roles.js";
@@ -567,6 +570,73 @@ export const getDoctorById = async (req, res) => {
     res.json({
       ...doctor.toObject(),
       awards,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Doctor Dashboard
+export const getDoctorDashboard = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ userId: req.user.id })
+      .populate("userId", "name email phone profileImage employeeId")
+      .populate("departmentId", "name");
+
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor profile not found." });
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    // Today's appointment stats
+    const todayAppointments = await Appointment.find({
+      doctorId: doctor._id,
+      date: today,
+    });
+
+    const todayStats = {
+      total: todayAppointments.length,
+      completed: todayAppointments.filter((a) => a.status === "completed").length,
+      inProgress: todayAppointments.filter((a) =>
+        ["arrived", "checked-in", "inConsultation"].includes(a.status)
+      ).length,
+      pending: todayAppointments.filter((a) =>
+        ["booked", "confirmed"].includes(a.status)
+      ).length,
+    };
+
+    // Upcoming appointments
+    const upcomingAppointments = await Appointment.find({
+      doctorId: doctor._id,
+      date: { $gt: today },
+      status: { $ne: "cancelled" },
+    })
+      .limit(5)
+      .sort({ date: 1, slot: 1 })
+      .populate("patientId", "name email phone");
+
+    // Recent prescriptions
+    const recentPrescriptions = await Prescription.find({
+      doctorId: doctor._id,
+    })
+      .limit(5)
+      .sort({ createdAt: -1 });
+
+    // Pending lab orders
+    const pendingLabOrders = await LabOrder.find({
+      doctorId: doctor._id,
+      status: { $in: ["ordered", "awaitingPayment", "paid", "sampleCollected", "inProcessing", "pending", "inProgress"] },
+    }).limit(5);
+
+    res.json({
+      success: true,
+      data: {
+        doctor: doctor,
+        todayStats,
+        upcomingAppointments,
+        recentPrescriptions,
+        pendingLabOrders,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

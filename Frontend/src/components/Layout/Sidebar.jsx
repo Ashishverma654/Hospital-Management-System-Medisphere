@@ -40,6 +40,7 @@ export default function Sidebar({ isOpen }) {
       { name: 'Appointments', path: '/doctor/appointments', icon: FiCalendar },
       { name: 'Patients', path: '/doctor/patients', icon: FiUsers },
       { name: 'Prescriptions', path: '/doctor/prescriptions', icon: FiFileText },
+      { name: 'Lab Orders', path: '/doctor/lab-orders', icon: FiActivity },
       { name: 'Lab Reports', path: '/doctor/reports', icon: FiFileText },
       { name: 'Availability', path: '/doctor/availability', icon: FiSettings },
     ],

@@ -11,8 +11,8 @@ export default function NurseDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await api.get('/nurses/dashboard');
-        setStats(res.data);
+        const data = await api.get('/nurses/dashboard');
+        setStats(data);
       } catch (err) {
         console.error("Failed to fetch nurse dashboard:", err);
       } finally {

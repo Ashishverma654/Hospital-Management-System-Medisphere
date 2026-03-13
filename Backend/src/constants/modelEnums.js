@@ -1,13 +1,46 @@
 export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
-export const APPOINTMENT_STATUSES = ["booked", "confirmed", "checked-in", "completed", "cancelled", "no-show"];
+export const APPOINTMENT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed", "cancelled", "no-show"];
+export const VISIT_TYPES = ["newConsultation", "followUp", "walkIn"];
 export const BED_STATUSES = ["available", "occupied", "maintenance", "reserved", "cleaning"];
 export const BILL_TYPES = ["consultation", "lab", "pharmacy", "ward", "mixed", "other"];
 export const PAYMENT_STATUSES = ["pending", "partiallyPaid", "paid", "refunded", "cancelled"];
 export const PAYMENT_METHODS = ["cash", "card", "upi", "insurance", "bank-transfer", "wallet"];
 
-export const LAB_ORDER_STATUSES = ["pending", "sampleCollected", "inProgress", "completed", "released", "cancelled"];
-export const LAB_ITEM_STATUSES = ["pending", "sampleCollected", "processing", "completed", "released", "cancelled"];
+export const LAB_ORDER_STATUSES = [
+  "ordered",
+  "awaitingPayment",
+  "paid",
+  "sampleScheduled",
+  "sampleCollected",
+  "inProcessing",
+  "reportReady",
+  "reportAvailableForPickup",
+  "reportReleasedToPortal",
+  "completed",
+  "cancelled",
+  // Legacy values kept for backward compatibility with older records.
+  "pending",
+  "inProgress",
+  "released",
+];
+export const LAB_ITEM_STATUSES = [
+  "ordered",
+  "awaitingPayment",
+  "paid",
+  "sampleScheduled",
+  "sampleCollected",
+  "inProcessing",
+  "reportReady",
+  "reportAvailableForPickup",
+  "reportReleasedToPortal",
+  "completed",
+  "cancelled",
+  // Legacy values kept for backward compatibility with older records.
+  "pending",
+  "processing",
+  "released",
+];
 export const LAB_ORDER_URGENCY = ["routine", "urgent", "stat"];
 
 export const ORDER_STATUSES = ["pending", "accepted", "inProgress", "ready", "completed", "cancelled"];

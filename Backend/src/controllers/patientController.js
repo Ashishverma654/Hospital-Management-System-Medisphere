@@ -2,6 +2,7 @@ import Appointment from "../models/Appointment.js";
 import Bed from "../models/Bed.js";
 import Doctor from "../models/Doctor.js";
 import Invoice from "../models/Invoice.js";
+import LabOrder from "../models/LabOrder.js";
 import LabReport from "../models/LabReport.js";
 import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
@@ -73,7 +74,7 @@ const mapPatientSummary = (patient) => ({
     : null,
 });
 
-const buildTimeline = ({ patient, appointments, prescriptions, labReports, invoices, bedEvents }) => {
+const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labReports, invoices, bedEvents }) => {
   const events = [];
 
   if (patient?.createdAt) {
@@ -102,6 +103,16 @@ const buildTimeline = ({ patient, appointments, prescriptions, labReports, invoi
       description: prescription.diagnosis || "Prescription created",
       occurredAt: prescription.createdAt,
       id: prescription._id,
+    });
+  });
+
+  labOrders.forEach((order) => {
+    events.push({
+      type: "labOrder",
+      title: `Lab order ${order.status}`,
+      description: order.orderNumber || "Diagnostic order created",
+      occurredAt: order.createdAt,
+      id: order._id,
     });
   });
 
@@ -281,7 +292,7 @@ export const getAdminPatientById = async (req, res) => {
       })
       .populate("hospitalLocationId", "name city state address");
 
-    const [appointments, prescriptions, labReports, invoices, bedEvents] = await Promise.all([
+    const [appointments, prescriptions, labOrders, labReports, invoices, bedEvents] = await Promise.all([
       Appointment.find({
         $or: [{ patientProfileId: patient._id }, { patientId: user._id }],
       })
@@ -293,6 +304,13 @@ export const getAdminPatientById = async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(20),
       Prescription.find({ patientId: patient._id })
+        .populate({
+          path: "doctorId",
+          populate: { path: "userId", select: "name email" },
+        })
+        .sort({ createdAt: -1 })
+        .limit(20),
+      LabOrder.find({ patientId: patient._id })
         .populate({
           path: "doctorId",
           populate: { path: "userId", select: "name email" },
@@ -322,6 +340,7 @@ export const getAdminPatientById = async (req, res) => {
       related: {
         appointments,
         prescriptions,
+        labOrders,
         labReports,
         invoices,
         admissions: bedEvents,
@@ -330,6 +349,7 @@ export const getAdminPatientById = async (req, res) => {
         patient: populatedPatient,
         appointments,
         prescriptions,
+        labOrders,
         labReports,
         invoices,
         bedEvents,

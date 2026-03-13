@@ -36,6 +36,10 @@ const labReportSchema = new mongoose.Schema({
         required: true,
     },
 
+    filePublicId: {
+        type: String,
+    },
+
     uploadedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -53,13 +57,17 @@ const labReportSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        enum: ["uploaded", "reviewed", "released", "archived"],
+        enum: ["uploaded", "ready", "released", "archived"],
         default: "uploaded"
     },
 
     releasedToPortal: {
         type: Boolean,
-        default: true
+        default: false
+    },
+
+    releasedAt: {
+        type: Date,
     },
 
 },

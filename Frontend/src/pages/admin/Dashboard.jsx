@@ -34,7 +34,7 @@ const revenueData = [
 ];
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [stats, setStats] = useState({
     totalPatients: 0,
     todayAppointments: 0,
@@ -43,6 +43,7 @@ export default function AdminDashboard() {
     totalRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchStats();
@@ -58,7 +59,9 @@ export default function AdminDashboard() {
         totalBeds: (data.availableBeds || 0) + (data.occupiedBeds || 0),
         totalRevenue: data.totalRevenue || 0,
       });
+      setError('');
     } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load dashboard stats.');
       console.error("Failed to load dashboard stats", err);
     } finally {
       setLoading(false);
@@ -73,6 +76,12 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground">Welcome back. Here's a summary of today's hospital metrics.</p>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

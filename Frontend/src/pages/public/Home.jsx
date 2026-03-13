@@ -12,6 +12,7 @@ export default function Home() {
     specializations: [],
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const loadHomepage = async () => {
@@ -25,6 +26,9 @@ export default function Home() {
           awards: data.awards || [],
           specializations: data.specializations || [],
         });
+        setError('');
+      } catch (err) {
+        setError(err.response?.data?.message || 'Unable to load public homepage content.');
       } finally {
         setLoading(false);
       }
@@ -36,6 +40,11 @@ export default function Home() {
   return (
     <section className="px-4 py-12 sm:px-6">
       <div className="mx-auto max-w-6xl space-y-8">
+        {error && (
+          <article className="rounded-[1.5rem] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </article>
+        )}
         <div className="grid gap-8 lg:grid-cols-[1.15fr,0.85fr] lg:items-center">
           <div className="rounded-[2rem] bg-gradient-to-br from-[#ee4c35] via-[#f26b57] to-[#f8c08f] p-8 text-white shadow-xl sm:p-12">
             <p className="text-sm uppercase tracking-[0.3em] text-white/75">Patient + Public App</p>

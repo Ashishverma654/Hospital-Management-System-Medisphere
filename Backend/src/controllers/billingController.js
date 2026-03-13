@@ -1,6 +1,10 @@
 import Invoice from "../models/Invoice.js";
+import Appointment from "../models/Appointment.js";
+import Doctor from "../models/Doctor.js";
+import LabOrder from "../models/LabOrder.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
+import { getOrderStatusForPayment } from "../utils/labWorkflow.js";
 
 export const createInvoice = async (req, res) => {
     try {
@@ -94,13 +98,28 @@ export const getPatientInvoice = async (req, res) => {
 
 export const payInvoice = async (req, res) => {
     try {
+        const paidAt = new Date();
         const invoice = await Invoice.findByIdAndUpdate(req.params.id, {
             paymentStatus: "paid",
             paymentMethod: req.body.paymentMethod,
-            paidAt: new Date()
+            paidAt
         },
             { new: true }
         );
+
+        if (invoice?.labOrderId) {
+            const labOrder = await LabOrder.findById(invoice.labOrderId);
+            if (labOrder) {
+                labOrder.paymentStatus = "paid";
+                labOrder.paymentCompletedAt = paidAt;
+                labOrder.status = getOrderStatusForPayment({
+                    currentStatus: labOrder.status,
+                    paymentStatus: "paid",
+                });
+                labOrder.invoiceId = invoice._id;
+                await labOrder.save();
+            }
+        }
 
         res.status(200).json({
             success: true,
@@ -113,5 +132,52 @@ export const payInvoice = async (req, res) => {
             success: false,
             message: error.message
         });
+    }
+};
+
+export const initiateConsultationBilling = async (req, res) => {
+    try {
+        const appointment = await Appointment.findById(req.params.appointmentId);
+
+        if (!appointment) {
+            return res.status(404).json({ success: false, message: "Appointment not found." });
+        }
+
+        const existingInvoice = await Invoice.findOne({ appointmentId: appointment._id });
+        if (existingInvoice) {
+            return res.status(400).json({ success: false, message: "Billing already initiated for this appointment." });
+        }
+
+        const doctor = await Doctor.findById(appointment.doctorId);
+        const { patient, user } = await resolvePatientContext(appointment.patientProfileId || appointment.patientId);
+        const doctorFee = doctor?.consultationFee || 0;
+
+        const invoice = await Invoice.create({
+            patientId: patient._id,
+            patientUserId: user._id,
+            appointmentId: appointment._id,
+            billType: "consultation",
+            doctorFee,
+            lineItems: [
+                {
+                    label: "Consultation Fee",
+                    category: "consultation",
+                    referenceType: "appointment",
+                    referenceId: appointment._id,
+                    quantity: 1,
+                    unitPrice: doctorFee,
+                    lineTotal: doctorFee,
+                },
+            ],
+            createdBy: req.user.id,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "Consultation billing initiated successfully.",
+            data: invoice,
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };

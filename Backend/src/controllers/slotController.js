@@ -79,7 +79,7 @@ export const getDoctorSlots = async (req, res) => {
       {
         doctorId: actualDoctorId,
         date,
-        status: { $in: ["booked", "completed"] },
+        status: { $in: ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed"] },
       },
       "slot",
     );

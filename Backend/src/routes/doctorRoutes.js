@@ -10,6 +10,7 @@ import {
   toggleDoctorPublished,
   updateDoctorAdmin,
   uploadDoctorProfileImage,
+  getDoctorDashboard,
 } from "../controllers/doctorController.js";
 
 import { getDoctorSlots } from "../controllers/slotController.js";
@@ -21,6 +22,9 @@ import {
 import upload from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
+
+// Doctor dashboard
+router.get("/dashboard", verifyAccessToken, authorizeRoles("doctor"), getDoctorDashboard);
 
 router.get("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin"), getDoctorsAdmin);
 router.post("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin"), createDoctor);

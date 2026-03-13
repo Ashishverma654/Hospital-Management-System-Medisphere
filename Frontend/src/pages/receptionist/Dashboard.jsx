@@ -1,108 +1,146 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Calendar, Users, Activity, FilePlus, UserPlus, CreditCard } from 'lucide-react';
-import { Input } from '../../components/ui/input';
+import { billingApi, receptionistApi } from '../../services/apiServices.js';
+import { Calendar, CreditCard, FilePlus, UserPlus, Users } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ReceptionistDashboard() {
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadDashboard = async () => {
+    setLoading(true);
+    try {
+      const data = await receptionistApi.getDashboard();
+      setDashboard(data);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to load receptionist dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const handleInitiateBilling = async (appointmentId) => {
+    try {
+      await billingApi.initiateForAppointment(appointmentId);
+      toast.success('Consultation billing initiated.');
+      loadDashboard();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to initiate billing.');
+    }
+  };
+
+  const stats = [
+    { title: "Today's Appointments", icon: Calendar, value: dashboard?.stats?.todayAppointments ?? 0 },
+    { title: 'Waiting / Checked In', icon: Users, value: dashboard?.stats?.waitingPatients ?? 0 },
+    { title: 'Registrations Today', icon: FilePlus, value: dashboard?.stats?.registrationsToday ?? 0 },
+    { title: 'Pending Billing', icon: CreditCard, value: dashboard?.stats?.pendingBillingActions ?? 0 },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Front Desk Dashboard</h2>
-          <p className="text-muted-foreground">Manage incoming patients, appointments, and quick billing.</p>
+          <p className="text-muted-foreground">Operate today&apos;s queue, patient onboarding, and appointment flow from one receptionist workspace.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-           <Button className="shadow-md shadow-primary/20" asChild>
-            <Link to="/receptionist/register"><UserPlus className="mr-2 h-4 w-4" /> Register Patient</Link>
+          <Button asChild>
+            <Link to="/employee/receptionist/register-patient"><UserPlus className="mr-2 h-4 w-4" /> Register Patient</Link>
           </Button>
-          <Button variant="secondary" className="bg-secondary/20 text-secondary hover:bg-secondary/30" asChild>
-            <Link to="/receptionist/appointments"><Calendar className="mr-2 h-4 w-4" /> New Booking</Link>
+          <Button variant="outline" asChild>
+            <Link to="/employee/receptionist/appointments"><Calendar className="mr-2 h-4 w-4" /> Book Appointment</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/employee/receptionist/queue">Open Today&apos;s Queue</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/employee/receptionist/patients">Search Patient</Link>
           </Button>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          { title: "Patients Waiting", icon: Users, value: "14", trend: "Normal influx" },
-          { title: "Bookings Today", icon: Calendar, value: "48", trend: "12 unconfirmed" },
-          { title: "Registrations", icon: FilePlus, value: "8", trend: "+2 from yesterday" },
-          { title: "Bills Collected", icon: CreditCard, value: "$2,450", trend: "14 transactions" }
-        ].map((stat, i) => (
-          <Card key={i} className="bg-background/50 backdrop-blur-sm border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1 cursor-pointer">
-                {stat.trend}
-              </p>
-            </CardContent>
-          </Card>
+        {stats.map((stat) => (
+          <article key={stat.title} className="rounded-[1.75rem] bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">{stat.title}</p>
+              <stat.icon className="h-4 w-4 text-[#ee4c35]" />
+            </div>
+            <p className="mt-4 text-3xl font-semibold text-slate-900">{loading ? '...' : stat.value}</p>
+          </article>
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="md:col-span-2 bg-background/50 backdrop-blur-sm border-border/50">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle>Today's Appointments Queue</CardTitle>
-            <div className="flex w-full max-w-sm items-center space-x-2">
-              <Input type="text" placeholder="Search patient name..." className="h-8" />
-              <Button type="button" size="sm" variant="ghost">Search</Button>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
+        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Today&apos;s Queue</p>
+              <h3 className="mt-2 text-2xl font-semibold text-slate-900">Active front-desk flow</h3>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { time: "09:00 AM", name: "Alice Johnson", doc: "Dr. Smith (Cardiology)", status: "Completed" },
-                { time: "09:30 AM", name: "Mark Davis", doc: "Dr. Lee (Neurology)", status: "Waiting" },
-                { time: "10:00 AM", name: "Emma Wilson", doc: "Dr. Chu (Pediatrics)", status: "In Consultation" },
-                { time: "10:15 AM", name: "Sarah Smith", doc: "Dr. Smith (Cardiology)", status: "Upcoming" },
-              ].map((apt, i) => (
-                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0 gap-2">
-                  <div className="flex flex-col">
-                    <span className="font-medium text-primary">{apt.name}</span>
-                    <span className="text-xs text-muted-foreground">{apt.doc}</span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm whitespace-nowrap">
-                     <span className="font-medium">{apt.time}</span>
-                     <span className={`text-xs px-2 py-1 rounded-full w-24 text-center
-                        ${apt.status === 'Waiting' ? 'bg-yellow-500/10 text-yellow-600' : ''}
-                        ${apt.status === 'Completed' ? 'bg-green-500/10 text-green-600' : ''}
-                        ${apt.status === 'In Consultation' ? 'bg-blue-500/10 text-blue-600' : ''}
-                        ${apt.status === 'Upcoming' ? 'bg-muted text-muted-foreground' : ''}
-                     `}>
-                       {apt.status}
-                     </span>
-                     <Button variant="outline" size="sm" className="hidden sm:inline-flex">Process</Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            <Button variant="outline" asChild>
+              <Link to="/employee/receptionist/queue">Manage Queue</Link>
+            </Button>
+          </div>
 
-        <div className="space-y-4">
-          <Card className="bg-background/50 backdrop-blur-sm border-border/50">
-            <CardHeader>
-               <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                 <Button variant="outline" className="w-full justify-start text-left bg-background/50 backdrop-blur-sm">
-                   <CreditCard className="mr-2 h-4 w-4 text-primary" /> Quick Billing
-                 </Button>
-                 <Button variant="outline" className="w-full justify-start text-left bg-background/50 backdrop-blur-sm">
-                   <Calendar className="mr-2 h-4 w-4 text-primary" /> Check Availabilities
-                 </Button>
-                 <Button variant="outline" className="w-full justify-start text-left bg-background/50 backdrop-blur-sm shadow-sm border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive">
-                   <Activity className="mr-2 h-4 w-4" /> Emergency Dispatch
-                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mt-5 space-y-3">
+            {(dashboard?.queue || []).slice(0, 8).map((appointment) => (
+              <article key={appointment._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-900">{appointment.patientId?.name || 'Patient'}</p>
+                    <p className="text-sm text-slate-600">
+                      {appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
+                    {appointment.status}
+                  </span>
+                </div>
+              </article>
+            ))}
+            {!loading && (dashboard?.queue || []).length === 0 && (
+              <p className="text-sm text-slate-500">No appointments in today&apos;s queue yet.</p>
+            )}
+          </div>
+        </section>
+
+        <div className="space-y-6">
+          <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">New Registrations</p>
+            <div className="mt-4 space-y-3">
+              {(dashboard?.registrations || []).slice(0, 5).map((patient) => (
+                <article key={patient._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+                  <p className="font-semibold text-slate-900">{patient.userId?.name}</p>
+                  <p className="mt-1 text-sm text-slate-600">{patient.userId?.patientId} • {patient.userId?.phone}</p>
+                </article>
+              ))}
+              {!loading && (dashboard?.registrations || []).length === 0 && <p className="text-sm text-slate-500">No new registrations today.</p>}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Pending Billing Actions</p>
+            <div className="mt-4 space-y-3">
+              {(dashboard?.pendingBillingAppointments || []).slice(0, 5).map((appointment) => (
+                <article key={appointment._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+                  <p className="font-semibold text-slate-900">{appointment.patientId?.name}</p>
+                  <p className="mt-1 text-sm text-slate-600">{appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}</p>
+                  <Button className="mt-3" size="sm" onClick={() => handleInitiateBilling(appointment._id)}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Initiate Bill
+                  </Button>
+                </article>
+              ))}
+              {!loading && (dashboard?.pendingBillingAppointments || []).length === 0 && <p className="text-sm text-slate-500">No pending billing actions right now.</p>}
+            </div>
+          </section>
         </div>
       </div>
     </div>

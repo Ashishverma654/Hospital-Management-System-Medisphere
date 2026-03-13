@@ -11,8 +11,8 @@ export default function PharmacistDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await api.get('/pharmacists/dashboard');
-        setStats(res.data);
+        const data = await api.get('/pharmacists/dashboard');
+        setStats(data);
       } catch (err) {
         console.error("Failed to fetch pharmacist dashboard:", err);
       } finally {

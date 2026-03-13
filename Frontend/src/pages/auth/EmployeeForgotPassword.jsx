@@ -22,7 +22,7 @@ export default function EmployeeForgotPassword() {
     if (!email) return setError('Email is required.');
     setIsLoading(true);
     try {
-      await api.post('/auth/forgot-password', { email });
+      await api.post('/auth/password/forgot', { email });
       setStep('otp');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send OTP.');
@@ -45,7 +45,7 @@ export default function EmployeeForgotPassword() {
     
     setIsLoading(true);
     try {
-      await api.post('/auth/reset-password', { email, otp, newPassword });
+      await api.post('/auth/password/reset', { email, otp, newPassword });
       setStep('success');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reset password.');
@@ -178,7 +178,7 @@ export default function EmployeeForgotPassword() {
               <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
               <h3 className="text-xl font-bold text-gray-800">Password Reset Successful!</h3>
               <p className="text-gray-500 text-sm">You can now login with your new password.</p>
-              <Button onClick={() => navigate('/login')} className="w-full bg-[#1e293b] hover:bg-[#0f172a] text-white py-3 rounded-xl font-bold">
+              <Button onClick={() => navigate('/employee/login')} className="w-full bg-[#1e293b] hover:bg-[#0f172a] text-white py-3 rounded-xl font-bold">
                 Go to Login
               </Button>
             </div>
@@ -186,7 +186,7 @@ export default function EmployeeForgotPassword() {
 
           {step !== 'success' && (
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/employee/login')}
               className="mt-4 w-full flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Login

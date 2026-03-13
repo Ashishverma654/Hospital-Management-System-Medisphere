@@ -19,7 +19,7 @@ const labOrderItemSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: LAB_ITEM_STATUSES,
-      default: "pending",
+      default: "ordered",
     },
     remarks: String,
     price: {
@@ -30,6 +30,10 @@ const labOrderItemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "LabReport",
     },
+    sampleCollectedAt: Date,
+    processingStartedAt: Date,
+    reportReadyAt: Date,
+    reportReleasedAt: Date,
   },
   { timestamps: true }
 );

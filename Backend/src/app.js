@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
 import cors from "cors";
+import mongoose from "mongoose";
 
 import authRoutes from "./routes/authRoutes.js";
 import dynamicDataRoutes from "./routes/dynamicDataRoutes.js";
@@ -19,6 +20,7 @@ import reportRoutes from "./routes/reportRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import patientRoutes from "./routes/patientRoutes.js";
 import labReportRoutes from "./routes/labReportRoutes.js";
+import labOrderRoutes from "./routes/labOrderRoutes.js";
 import billingRoutes from "./routes/billingRoutes.js";
 import pharmacyRoutes from "./routes/pharmacyRoutes.js";
 import bedRoutes from "./routes/bedRoutes.js";
@@ -32,19 +34,62 @@ import limiter from "./middlewares/rateLimiter.js";
 
 const app = express();
 
+const configuredOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.PUBLIC_APP_URL,
+  'https://hospital-management-system-beryl-two.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+].filter(Boolean);
+
+const isAllowedLocalOrigin = (origin = '') =>
+  /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
 app.use(express.json());
-app.use(cors({
-  origin: [
-    'https://hospital-management-system-beryl-two.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173'
-  ],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (configuredOrigins.includes(origin) || isAllowedLocalOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+  })
+);
 app.use(limiter);
 
 app.get("/", (req, res) => {
   res.send("Hospital Management API Running");
+});
+
+app.get("/api/health", (req, res) => {
+  const isConnected = mongoose.connection.readyState === 1;
+
+  res.status(isConnected ? 200 : 503).json({
+    success: isConnected,
+    message: isConnected ? "API and database are ready." : "API is running, but the database is still connecting.",
+    database: {
+      readyState: mongoose.connection.readyState,
+      connected: isConnected,
+    },
+  });
+});
+
+app.use("/api", (req, res, next) => {
+  if (mongoose.connection.readyState === 1) {
+    return next();
+  }
+
+  return res.status(503).json({
+    success: false,
+    message: "The server is starting up and the database is not ready yet. Please try again in a moment.",
+  });
 });
 
 app.use("/api/auth", authRoutes);
@@ -63,6 +108,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/lab-reports", labReportRoutes);
+app.use("/api/lab-orders", labOrderRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/medicines", pharmacyRoutes);
 app.use("/api/beds", bedRoutes);

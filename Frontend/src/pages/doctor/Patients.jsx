@@ -22,7 +22,7 @@ export default function DoctorPatients() {
       setLoading(true);
       setError(null);
       const data = await patientApi.getAll();
-      setPatients(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
+      setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch patients');
       toast.error('Failed to load patients');

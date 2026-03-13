@@ -109,7 +109,4 @@ const patientSchema = new mongoose.Schema({
     { timestamps: true }
 );
 
-patientSchema.index({ userId: 1 }, { unique: true });
-patientSchema.index({ medicalRecordNumber: 1 }, { sparse: true, unique: true });
-
 export default mongoose.model("Patient", patientSchema);

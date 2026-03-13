@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Plus, Bed, Loader2, UserCheck } from 'lucide-react';
@@ -23,8 +23,7 @@ export default function Beds() {
     bedApi
       .getAll()
       .then((res) => {
-        const data = res.data?.data ?? res.data ?? [];
-        setBeds(Array.isArray(data) ? data : []);
+        setBeds(Array.isArray(res) ? res : []);
       })
       .catch(() => toast.error('Failed to load beds'))
       .finally(() => setLoading(false));

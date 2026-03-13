@@ -10,8 +10,8 @@ export default function AppointmentManagement() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showDelete, setShowDelete] = useState(false);
-  const [selectedApt, setSelectedApt] = useState(null);
+  const [_showDelete, _setShowDelete] = useState(false);
+  const [_selectedApt, _setSelectedApt] = useState(null);
 
   useEffect(() => {
     fetchAppointments();

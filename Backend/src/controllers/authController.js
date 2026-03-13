@@ -36,12 +36,17 @@ const sanitizeUser = (user) => ({
   mustResetPassword: user.mustResetPassword,
 });
 
-const buildAuthResponse = (user) => ({
-  message: "Login successful",
-  accessToken: generateAccessToken(user),
-  refreshToken: generateRefreshToken(user),
-  user: sanitizeUser(user),
-});
+const buildAuthResponse = (user) => {
+  const accessToken = generateAccessToken(user);
+
+  return {
+    message: "Login successful",
+    accessToken,
+    token: accessToken,
+    refreshToken: generateRefreshToken(user),
+    user: sanitizeUser(user),
+  };
+};
 
 const findUserByIdentifier = async (identifier, fields = ["email"]) => {
   const orFilters = fields.map((field) => ({ [field]: identifier }));
@@ -122,9 +127,12 @@ export const register = async (req, res) => {
       });
     }
 
+    const accessToken = generateAccessToken(user);
+
     res.status(201).json({
       message: "User registered successfully",
-      accessToken: generateAccessToken(user),
+      accessToken,
+      token: accessToken,
       user: sanitizeUser(user),
     });
   } catch (error) {

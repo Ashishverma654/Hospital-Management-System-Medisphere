@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
+
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -89,7 +89,7 @@ export default function Billing() {
       try {
         // 1. Fetch historical Prescriptions structurally
         const presRes = await prescriptionApi.getByPatient(selectedPatientId);
-        const prescriptions = Array.isArray(presRes?.data) ? presRes.data : [];
+        const prescriptions = Array.isArray(presRes) ? presRes : [];
 
         // Determine Base Doctor Fee chronologically (use most recent explicit appointment mapping)
         let docFee = 0;
@@ -116,14 +116,14 @@ export default function Billing() {
 
         // 2. Fetch structural historical Lab Reports
         const labRes = await labReportApi.getByPatient(selectedPatientId);
-        const reports = Array.isArray(labRes?.data) ? labRes.data : [];
+        const reports = Array.isArray(labRes) ? labRes : [];
         const attachedReports = reports.map(r => ({
           reportName: r.reportName || r.reportType || "Internal Test",
           price: 0 // Explicitly allows Administrator injection visually
         }));
         setComputedLabReports(attachedReports);
 
-      } catch (err) {
+      } catch (_err) {
         toast.error("Failed to auto-resolve patient's clinical chronologies.");
       } finally {
         setCalculating(false);

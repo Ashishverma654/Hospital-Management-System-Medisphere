@@ -2,6 +2,7 @@ import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Invoice from "../models/Invoice.js";
 import Bed from "../models/Bed.js";
+import Doctor from "../models/Doctor.js";
 import User from "../models/User.js";
 import CreationLog from "../models/CreationLog.js";
 import bcrypt from "bcryptjs";
@@ -162,12 +163,6 @@ export const createStaffUser = async (req, res) => {
     if (!allowedRoles.includes(normalizedTargetRole)) {
       return res.status(403).json({
         message: `A ${getRoleLabel(creatorRole)} cannot create a ${getRoleLabel(normalizedTargetRole)}. Allowed roles: ${allowedRoles.map(getRoleLabel).join(", ") || "none"}.`,
-      });
-    }
-
-    if (normalizedTargetRole === "doctor") {
-      return res.status(400).json({
-        message: "Doctors must be created from the Doctor Administration module so the employee account and professional profile stay in sync.",
       });
     }
 
@@ -403,7 +398,7 @@ export const deactivateUser = async (req, res) => {
 // 6. Get allowed roles the current user can create
 export const getCreatableRoles = async (req, res) => {
   try {
-    const allowed = getCreatableRolesForRole(req.user.role).filter((role) => role !== "doctor");
+    const allowed = getCreatableRolesForRole(req.user.role);
     res.json({
       allowedRoles: allowed,
       manageableRoles: getManageableRolesForRole(req.user.role),

@@ -54,9 +54,36 @@ const prescriptionSchema = new mongoose.Schema(
       type: String,
     },
 
+    clinicalNotes: {
+      type: String,
+    },
+
+    advice: {
+      type: String,
+    },
+
     medicines: [medicineSchema],
 
     notes: {
+      type: String,
+    },
+
+    // Follow-up and admission
+    followUpDate: {
+      type: Date,
+    },
+
+    revisitRecommended: {
+      type: Boolean,
+      default: false,
+    },
+
+    admissionRecommended: {
+      type: Boolean,
+      default: false,
+    },
+
+    admissionRecommendationNotes: {
       type: String,
     },
 

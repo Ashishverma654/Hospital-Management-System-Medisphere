@@ -42,7 +42,7 @@ export default function AppointmentBooking() {
 
   useEffect(() => {
     departmentApi.getAll()
-      .then((res) => setDepartments(res.data?.data || res.data || []))
+      .then((res) => setDepartments(Array.isArray(res) ? res : []))
       .catch(() => toast.error('Failed to load departments'))
       .finally(() => setLoadingDepts(false));
   }, []);
@@ -56,7 +56,7 @@ export default function AppointmentBooking() {
     setLoadingDoctors(true);
     doctorApi.getAll()
       .then((res) => {
-        const list = res.data?.data || res.data || [];
+        const list = Array.isArray(res) ? res : [];
         const filtered = list.filter(
           (d) => d.departmentId?._id === department || d.departmentId?.name === department
         );
@@ -73,7 +73,7 @@ export default function AppointmentBooking() {
     }
     setLoadingSlots(true);
     api.get(`/doctors/${doctor._id}/slots`, { params: { date } })
-      .then((res) => setAvailableSlots(res.data?.availableSlots || []))
+      .then((res) => setAvailableSlots(Array.isArray(res.availableSlots) ? res.availableSlots : []))
       .catch(() => setAvailableSlots([]))
       .finally(() => setLoadingSlots(false));
   }, [doctor?._id, date]);

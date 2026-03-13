@@ -16,17 +16,39 @@ export default function EmployeeAppLayout() {
   const homeRoute = getEmployeeHomeRoute(user?.role);
   const canManageUsers = STAFF_MANAGEMENT_ROLES.includes(user?.role);
   const canAccessGovernance = ['superadmin', 'admin'].includes(user?.role);
+  const canManageDoctors = ['superadmin', 'admin'].includes(user?.role);
+  const isReceptionist = user?.role === 'receptionist';
+  const isLabTechnician = user?.role === 'labTechnician';
   const navigationItems = [
     { to: homeRoute, label: `${getRoleLabel(user?.role || 'employee')} Dashboard` },
+    ...(isReceptionist
+      ? [
+          { to: '/employee/receptionist/register-patient', label: 'Register Patient' },
+          { to: '/employee/receptionist/appointments', label: 'Book Appointment' },
+          { to: '/employee/receptionist/queue', label: 'Today Queue' },
+          { to: '/employee/receptionist/patients', label: 'Search Patients' },
+        ]
+      : []),
+    ...(isLabTechnician
+      ? [
+          { to: '/employee/lab-technician/orders', label: 'Lab Orders' },
+          { to: '/employee/lab-technician/processing', label: 'Processing Queue' },
+          { to: '/employee/lab-technician/completed', label: 'Ready Reports' },
+        ]
+      : []),
     ...(canManageUsers
       ? [
           { to: '/employee/manage-roles', label: 'Manage Roles' },
         ]
       : []),
+    ...(canManageDoctors
+      ? [
+          { to: '/employee/doctors', label: 'Doctors' },
+        ]
+      : []),
     ...(canAccessGovernance
       ? [
           { to: '/employee/patients', label: 'Patients' },
-          { to: '/employee/doctors', label: 'Doctors' },
           { to: '/employee/awards', label: 'Awards' },
           { to: '/employee/departments', label: 'Departments' },
           { to: '/employee/specializations', label: 'Specializations' },

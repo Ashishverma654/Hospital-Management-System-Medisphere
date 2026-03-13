@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { adminApi } from '../../services/apiServices';
+import { adminApi, departmentApi, doctorApi, locationApi, specializationApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { History, Plus, RefreshCw, Search, Shield, UserCheck, UserX } from 'lucide-react';
 import { ROLE_COLORS, ROLE_LABELS } from '../../auth/constants.js';
@@ -16,6 +16,19 @@ const initialForm = {
   gender: '',
   dob: '',
   address: '',
+  title: 'Consultant',
+  departmentId: '',
+  specializationIds: [],
+  hospitalLocations: [],
+  qualifications: '',
+  experienceYears: '',
+  consultationFee: '',
+  about: '',
+  expertise: '',
+  profileImage: '',
+  isPublished: false,
+  isFeatured: false,
+  featureOrder: '',
 };
 
 export default function UserManagement() {
@@ -35,6 +48,9 @@ export default function UserManagement() {
   const [pagination, setPagination] = useState({});
   const [form, setForm] = useState(initialForm);
   const [formLoading, setFormLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [specializations, setSpecializations] = useState([]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -71,11 +87,50 @@ export default function UserManagement() {
       .getCreatableRoles()
       .then((res) => {
         const allowedRoles = Array.isArray(res?.allowedRoles) ? res.allowedRoles : [];
-        setCreatableRoles(allowedRoles.filter((role) => role !== 'doctor'));
+        setCreatableRoles(allowedRoles);
         setManageableRoles(res.manageableRoles || []);
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!showForm || form.role !== 'doctor') {
+      return;
+    }
+
+    const loadDoctorMasters = async () => {
+      try {
+        const [departmentData, locationData] = await Promise.all([
+          departmentApi.getAll({ isActive: true }),
+          locationApi.getAll({ isActive: true }),
+        ]);
+        setDepartments(Array.isArray(departmentData) ? departmentData : []);
+        setLocations(Array.isArray(locationData) ? locationData : []);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to load doctor setup data.');
+      }
+    };
+
+    loadDoctorMasters();
+  }, [form.role, showForm]);
+
+  useEffect(() => {
+    if (!showForm || form.role !== 'doctor' || !form.departmentId) {
+      setSpecializations([]);
+      return;
+    }
+
+    const loadSpecializations = async () => {
+      try {
+        const data = await specializationApi.getAll({ departmentId: form.departmentId, isActive: true });
+        setSpecializations(Array.isArray(data) ? data : []);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to load specializations.');
+      }
+    };
+
+    loadSpecializations();
+  }, [form.departmentId, form.role, showForm]);
 
   const resetForm = () => {
     setForm(initialForm);
@@ -85,20 +140,55 @@ export default function UserManagement() {
   const handleCreateUser = async (event) => {
     event.preventDefault();
 
-    if (!form.name || !form.email || !form.password || !form.role) {
-      toast.error('Name, email, password, and role are required.');
+    const needsManualPassword = form.role !== 'doctor';
+
+    if (!form.name || !form.email || !form.role || (needsManualPassword && !form.password)) {
+      toast.error(
+        needsManualPassword
+          ? 'Name, email, password, and role are required.'
+          : 'Name, email, role, and department are required for doctor creation.'
+      );
       return;
     }
 
-    if (form.role === 'doctor') {
-      toast.error('Doctors must be created from the Doctor Administration page.');
+    if (form.role === 'doctor' && !form.departmentId) {
+      toast.error('Department is required for doctor creation.');
       return;
     }
 
     setFormLoading(true);
     try {
-      await adminApi.createUser(form);
-      toast.success(`${ROLE_LABELS[form.role] || form.role} created successfully.`);
+      if (form.role === 'doctor') {
+        const response = await doctorApi.createAdminDoctor({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          title: form.title,
+          departmentId: form.departmentId,
+          specializationIds: form.specializationIds,
+          hospitalLocations: form.hospitalLocations,
+          qualifications: form.qualifications,
+          experienceYears: Number(form.experienceYears) || 0,
+          consultationFee: Number(form.consultationFee) || 0,
+          about: form.about,
+          expertise: form.expertise,
+          profileImage: form.profileImage,
+          isActive: true,
+          isPublished: form.isPublished,
+          isFeatured: form.isFeatured,
+          featureOrder: Number(form.featureOrder) || 0,
+        });
+
+        const temporary = response?.temporaryCredential;
+        toast.success(
+          temporary
+            ? `Doctor created. Temporary password: ${temporary.temporaryPassword}`
+            : 'Doctor created successfully.'
+        );
+      } else {
+        await adminApi.createUser(form);
+        toast.success(`${ROLE_LABELS[form.role] || form.role} created successfully.`);
+      }
       resetForm();
       loadUsers();
     } catch (error) {
@@ -148,11 +238,6 @@ export default function UserManagement() {
             <Plus className="mr-2 h-4 w-4" /> Create User
           </Button>
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        Doctor accounts are now created from the dedicated Doctor Administration page so their employee login and
-        professional profile stay linked correctly.
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -342,7 +427,9 @@ export default function UserManagement() {
               {[
                 { name: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },
                 { name: 'email', label: 'Email', type: 'email', placeholder: 'user@hospital.com' },
-                { name: 'password', label: 'Password', type: 'password', placeholder: 'Min 6 characters' },
+                ...(form.role === 'doctor'
+                  ? []
+                  : [{ name: 'password', label: 'Password', type: 'password', placeholder: 'Min 6 characters' }]),
                 { name: 'phone', label: 'Phone (Optional)', type: 'text', placeholder: '9876543210' },
               ].map((field) => (
                 <div key={field.name}>
@@ -356,6 +443,12 @@ export default function UserManagement() {
                   />
                 </div>
               ))}
+
+              {form.role === 'doctor' && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  A secure temporary password will be generated automatically for this doctor account.
+                </div>
+              )}
 
               <div>
                 <label className="mb-1 block text-sm font-medium">Date of Birth</label>
@@ -381,7 +474,28 @@ export default function UserManagement() {
                 <label className="mb-1 block text-sm font-medium">Role</label>
                 <select
                   value={form.role}
-                  onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      role: event.target.value,
+                      ...(event.target.value === 'doctor'
+                        ? {}
+                        : {
+                            departmentId: '',
+                            specializationIds: [],
+                            hospitalLocations: [],
+                            qualifications: '',
+                            experienceYears: '',
+                            consultationFee: '',
+                            about: '',
+                            expertise: '',
+                            profileImage: '',
+                            isPublished: false,
+                            isFeatured: false,
+                            featureOrder: '',
+                          }),
+                    }))
+                  }
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none"
                   required
                 >
@@ -393,6 +507,145 @@ export default function UserManagement() {
                   ))}
                 </select>
               </div>
+
+              {form.role === 'doctor' && (
+                <>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Doctor Title</label>
+                    <input
+                      type="text"
+                      value={form.title}
+                      onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      placeholder="Consultant"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Department</label>
+                    <select
+                      value={form.departmentId}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          departmentId: event.target.value,
+                          specializationIds: [],
+                        }))
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none"
+                      required
+                    >
+                      <option value="">Select department...</option>
+                      {departments.map((department) => (
+                        <option key={department._id} value={department._id}>
+                          {department.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Experience (years)</label>
+                    <input
+                      type="number"
+                      value={form.experienceYears}
+                      onChange={(event) => setForm((current) => ({ ...current, experienceYears: event.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Consultation Fee</label>
+                    <input
+                      type="number"
+                      value={form.consultationFee}
+                      onChange={(event) => setForm((current) => ({ ...current, consultationFee: event.target.value }))}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">Qualifications</label>
+                    <input
+                      type="text"
+                      value={form.qualifications}
+                      onChange={(event) => setForm((current) => ({ ...current, qualifications: event.target.value }))}
+                      placeholder="MBBS, MD"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">Expertise</label>
+                    <input
+                      type="text"
+                      value={form.expertise}
+                      onChange={(event) => setForm((current) => ({ ...current, expertise: event.target.value }))}
+                      placeholder="Cardiac imaging, preventive cardiology"
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">About</label>
+                    <textarea
+                      value={form.about}
+                      onChange={(event) => setForm((current) => ({ ...current, about: event.target.value }))}
+                      className="min-h-[80px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">Specializations</label>
+                    <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm">
+                      {specializations.length === 0 ? (
+                        <p className="text-muted-foreground">Select a department to load specializations.</p>
+                      ) : (
+                        specializations.map((item) => (
+                          <label key={item._id} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={form.specializationIds.includes(item._id)}
+                              onChange={() =>
+                                setForm((current) => ({
+                                  ...current,
+                                  specializationIds: current.specializationIds.includes(item._id)
+                                    ? current.specializationIds.filter((id) => id !== item._id)
+                                    : [...current.specializationIds, item._id],
+                                }))
+                              }
+                            />
+                            {item.name}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-1 block text-sm font-medium">Hospital Locations</label>
+                    <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm">
+                      {locations.map((item) => (
+                        <label key={item._id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={form.hospitalLocations.includes(item._id)}
+                            onChange={() =>
+                              setForm((current) => ({
+                                ...current,
+                                hospitalLocations: current.hospitalLocations.includes(item._id)
+                                  ? current.hospitalLocations.filter((id) => id !== item._id)
+                                  : [...current.hospitalLocations, item._id],
+                              }))
+                            }
+                          />
+                          {item.name} {item.city ? `(${item.city})` : ''}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="mb-1 block text-sm font-medium">Gender (Optional)</label>

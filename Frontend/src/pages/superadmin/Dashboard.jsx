@@ -10,13 +10,16 @@ export default function SuperAdminDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const data = await adminApi.getDashboardStats();
         setStats(data);
+        setError('');
       } catch (err) {
+        setError(err.response?.data?.message || 'Failed to load super admin dashboard.');
         console.error("Failed to load superadmin stats", err);
       } finally {
         setLoading(false);
@@ -56,6 +59,12 @@ export default function SuperAdminDashboard() {
           <span className="font-mono text-sm font-bold text-primary">{user?.employeeId || 'EMP-000001'}</span>
         </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

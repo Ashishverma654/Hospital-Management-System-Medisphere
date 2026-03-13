@@ -1,8 +1,28 @@
 import mongoose from "mongoose";
 import { LAB_ORDER_STATUSES, LAB_ORDER_URGENCY, ORDER_PAYMENT_STATUSES } from "../constants/modelEnums.js";
 
+const structuredScheduleSchema = new mongoose.Schema(
+  {
+    date: String,
+    time: String,
+    scheduledAt: Date,
+    notes: String,
+    scheduledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    updatedAt: Date,
+  },
+  { _id: false }
+);
+
 const labOrderSchema = new mongoose.Schema(
   {
+    orderNumber: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Patient",
@@ -23,7 +43,7 @@ const labOrderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: LAB_ORDER_STATUSES,
-      default: "pending",
+      default: "ordered",
     },
     paymentStatus: {
       type: String,
@@ -35,11 +55,24 @@ const labOrderSchema = new mongoose.Schema(
       enum: LAB_ORDER_URGENCY,
       default: "routine",
     },
+    sampleCollectionSchedule: structuredScheduleSchema,
+    reportPickupSchedule: structuredScheduleSchema,
     sampleCollectionAt: Date,
+    sampleCollectedAt: Date,
+    processingStartedAt: Date,
+    reportReadyAt: Date,
     reportPickupAt: Date,
+    reportReleasedAt: Date,
+    completedAt: Date,
+    cancelledAt: Date,
+    paymentCompletedAt: Date,
     releasedToPortal: {
       type: Boolean,
       default: false,
+    },
+    invoiceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Invoice",
     },
     totalAmount: {
       type: Number,
@@ -49,5 +82,22 @@ const labOrderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+labOrderSchema.pre("save", function assignOrderNumber(next) {
+  if (!this.orderNumber) {
+    const stamp = Date.now().toString().slice(-8);
+    this.orderNumber = `LAB-${stamp}`;
+  }
+
+  if (this.sampleCollectionSchedule?.scheduledAt) {
+    this.sampleCollectionAt = this.sampleCollectionSchedule.scheduledAt;
+  }
+
+  if (this.reportPickupSchedule?.scheduledAt) {
+    this.reportPickupAt = this.reportPickupSchedule.scheduledAt;
+  }
+
+  next();
+});
 
 export default mongoose.model("LabOrder", labOrderSchema);

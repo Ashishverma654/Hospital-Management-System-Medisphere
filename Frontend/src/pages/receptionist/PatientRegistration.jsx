@@ -1,145 +1,180 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { FormDialog, LoadingSkeleton, ErrorState } from '../../components';
-import { patientApi } from '../../services/apiServices';
+import { receptionistApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { Plus, UserPlus } from 'lucide-react';
+import { Search } from 'lucide-react';
 
-export default function ReceptionistPatientRegistration() {
-  const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(false);
+const initialForm = {
+  name: '',
+  email: '',
+  phone: '',
+  dateOfBirth: '',
+  gender: 'unknown',
+  address: '',
+  bloodGroup: '',
+  allergies: '',
+  chronicDiseases: '',
+  insuranceProvider: '',
+  insuranceNumber: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+  emergencyContactRelation: '',
+};
 
-  const formFields = [
-    {
-      name: 'firstName',
-      label: 'First Name',
-      type: 'text',
-      required: true,
-      placeholder: 'John',
-    },
-    {
-      name: 'lastName',
-      label: 'Last Name',
-      type: 'text',
-      required: true,
-      placeholder: 'Doe',
-    },
-    {
-      name: 'email',
-      label: 'Email',
-      type: 'email',
-      required: true,
-      placeholder: 'john@example.com',
-    },
-    {
-      name: 'phone',
-      label: 'Phone',
-      type: 'tel',
-      required: true,
-      placeholder: '+91 9876543210',
-    },
-    {
-      name: 'dateOfBirth',
-      label: 'Date of Birth',
-      type: 'date',
-      required: true,
-    },
-    {
-      name: 'gender',
-      label: 'Gender',
-      type: 'select',
-      required: true,
-      options: ['Male', 'Female', 'Other'],
-    },
-    {
-      name: 'bloodGroup',
-      label: 'Blood Group',
-      type: 'select',
-      options: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
-    },
-    {
-      name: 'address',
-      label: 'Address',
-      type: 'text',
-      placeholder: '123 Main Street',
-    },
-    {
-      name: 'city',
-      label: 'City',
-      type: 'text',
-      placeholder: 'New York',
-    },
-    {
-      name: 'state',
-      label: 'State',
-      type: 'text',
-      placeholder: 'NY',
-    },
-    {
-      name: 'medicalHistory',
-      label: 'Medical History',
-      type: 'textarea',
-      placeholder: 'Any previous medical conditions...',
-    },
-  ];
+export default function PatientRegistration() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [matches, setMatches] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(initialForm);
+  const [credential, setCredential] = useState(null);
 
-  const handleSubmit = async (formData) => {
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (!query.trim()) {
+        setMatches([]);
+        return;
+      }
+
+      setLoadingSearch(true);
+      try {
+        const response = await receptionistApi.searchPatients(query);
+        setMatches(response.patients || []);
+      } catch {
+        setMatches([]);
+      } finally {
+        setLoadingSearch(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+
     try {
-      setLoading(true);
-      const submitData = {
-        ...formData,
-        name: `${formData.firstName} ${formData.lastName}`,
-      };
-      await patientApi.create(submitData);
-      toast.success('Patient registered successfully');
-      setShowForm(false);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to register patient');
+      const response = await receptionistApi.registerPatient({
+        ...form,
+        allergies: form.allergies,
+        chronicDiseases: form.chronicDiseases,
+        emergencyContact: {
+          name: form.emergencyContactName,
+          phone: form.emergencyContactPhone,
+          relation: form.emergencyContactRelation,
+        },
+      });
+      setCredential(response.temporaryCredential || null);
+      toast.success('Patient registered successfully.');
+      setForm(initialForm);
+      setQuery('');
+      setMatches([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to register patient.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Patient Registration</h2>
-          <p className="text-muted-foreground">Register new patients at the front desk</p>
-        </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="shadow-md shadow-primary/20"
-        >
-          <Plus className="h-4 w-4 mr-2" /> Register Patient
-        </Button>
+    <section className="space-y-6">
+      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Receptionist Workflow</p>
+        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Register Patient</h2>
+        <p className="mt-2 max-w-3xl text-slate-600">
+          Search existing patients before creating a new record, then create the patient&apos;s auth identity and linked profile together from one front-desk workflow.
+        </p>
       </div>
 
-      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" /> New Registration
-          </CardTitle>
-          <CardDescription>
-            Fill in the patient's information to create a new record in the system
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center py-8 text-muted-foreground">
-          <p>Click the "Register Patient" button above to begin registration.</p>
-        </CardContent>
-      </Card>
+      <article className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search existing patients by name, patient ID, phone, or email"
+            className="w-full rounded-2xl border border-slate-200 py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
+          />
+        </div>
 
-      <FormDialog
-        isOpen={showForm}
-        onClose={() => setShowForm(false)}
-        onSubmit={handleSubmit}
-        title="Register New Patient"
-        description="Enter the patient's information"
-        fields={formFields}
-      />
+        <div className="mt-4 space-y-3">
+          {loadingSearch && <p className="text-sm text-slate-500">Searching existing patients...</p>}
+          {matches.map((patient) => (
+            <article key={patient.id} className="flex flex-col gap-3 rounded-[1.25rem] border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-slate-900">{patient.name}</p>
+                <p className="mt-1 text-sm text-slate-600">{patient.patientId} • {patient.phone} • {patient.email}</p>
+              </div>
+              <Button variant="outline" asChild>
+                <Link to={`/employee/receptionist/appointments?patientId=${patient.id}`}>Book Appointment</Link>
+              </Button>
+            </article>
+          ))}
+          {query.trim() && !loadingSearch && matches.length === 0 && (
+            <p className="text-sm text-slate-500">No existing patient matched. You can register a new patient below.</p>
+          )}
+        </div>
+      </article>
+
+      {credential && (
+        <article className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-semibold text-amber-900">Temporary patient credential generated</p>
+          <p className="mt-2 text-sm text-amber-800">
+            Patient ID: <strong>{credential.patientId}</strong> | Email: <strong>{credential.email}</strong> | Temporary Password: <strong>{credential.temporaryPassword}</strong>
+          </p>
+          <p className="mt-2 text-xs text-amber-700">Share this securely with the patient for their first portal login.</p>
+        </article>
+      )}
+
+      <form onSubmit={handleSubmit} className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Full Name"><input type="text" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
+          <Field label="Email"><input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
+          <Field label="Phone"><input type="text" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
+          <Field label="Date of Birth"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
+          <Field label="Gender">
+            <select value={form.gender} onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+              <option value="unknown">Unknown</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </Field>
+          <Field label="Blood Group"><input type="text" value={form.bloodGroup} onChange={(event) => setForm((current) => ({ ...current, bloodGroup: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+        </div>
+
+        <Field label="Address" className="mt-4"><textarea value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} className="min-h-[100px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+        <Field label="Allergies (comma separated)" className="mt-4"><input type="text" value={form.allergies} onChange={(event) => setForm((current) => ({ ...current, allergies: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+        <Field label="Chronic Diseases (comma separated)" className="mt-4"><input type="text" value={form.chronicDiseases} onChange={(event) => setForm((current) => ({ ...current, chronicDiseases: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Field label="Insurance Provider"><input type="text" value={form.insuranceProvider} onChange={(event) => setForm((current) => ({ ...current, insuranceProvider: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+          <Field label="Insurance Number"><input type="text" value={form.insuranceNumber} onChange={(event) => setForm((current) => ({ ...current, insuranceNumber: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+          <Field label="Emergency Contact Name"><input type="text" value={form.emergencyContactName} onChange={(event) => setForm((current) => ({ ...current, emergencyContactName: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+          <Field label="Emergency Contact Phone"><input type="text" value={form.emergencyContactPhone} onChange={(event) => setForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+          <Field label="Emergency Relation"><input type="text" value={form.emergencyContactRelation} onChange={(event) => setForm((current) => ({ ...current, emergencyContactRelation: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <Button type="button" variant="outline" onClick={() => navigate('/employee/receptionist')}>
+            Back to Dashboard
+          </Button>
+          <Button type="submit" disabled={saving}>{saving ? 'Registering...' : 'Register Patient'}</Button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function Field({ children, className = '', label }) {
+  return (
+    <div className={className}>
+      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      {children}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 
 export default function DashboardLayout({ allowedRoles }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

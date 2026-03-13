@@ -8,7 +8,7 @@ import upload from "../middlewares/uploadMiddleware.js";
 
 const router = express.Router();
 
-router.post("/upload", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist", "patient"), upload.single("reportFile"), uploadLabReport);
+router.post("/upload", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist", "patient", "labTechnician"), upload.single("reportFile"), uploadLabReport);
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getPatientReports);
 

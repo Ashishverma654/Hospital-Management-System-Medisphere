@@ -7,7 +7,18 @@ import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/pat
 
 export const createPrescription = async (req, res) => {
   try {
-    const { appointmentId, diagnosis, medicines, notes } = req.body;
+    const {
+      appointmentId,
+      diagnosis,
+      clinicalNotes,
+      advice,
+      medicines,
+      notes,
+      followUpDate,
+      revisitRecommended,
+      admissionRecommended,
+      admissionRecommendationNotes,
+    } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
       return res.status(400).json({ message: "Invalid appointment ID format" });
@@ -37,13 +48,21 @@ export const createPrescription = async (req, res) => {
       patientId: patient._id,
       patientUserId: user._id,
       diagnosis,
+      clinicalNotes,
+      advice,
       medicines,
       notes,
+      followUpDate,
+      revisitRecommended,
+      admissionRecommended,
+      admissionRecommendationNotes,
     });
 
-    // Update appointment status to completed
-    appointment.status = "completed";
-    await appointment.save();
+    // Update appointment status to completed only if not already in a terminal state
+    if (!["completed", "cancelled"].includes(appointment.status)) {
+      appointment.status = "completed";
+      await appointment.save();
+    }
 
     res.status(201).json({ message: "Prescription created.", prescription });
   } catch (error) {

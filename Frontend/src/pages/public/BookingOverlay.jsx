@@ -46,10 +46,10 @@ export default function BookingOverlay({ isOpen, onClose }) {
     setIsLoading(true);
     try {
       const depts = await getDepartments();
-      setDepartments(Array.isArray(depts) ? depts : depts?.data || []);
+      setDepartments(Array.isArray(depts) ? depts : []);
       
       const docs = await getDoctors();
-      setDoctors(Array.isArray(docs) ? docs : docs?.data || []);
+      setDoctors(Array.isArray(docs) ? docs : []);
     } catch (err) {
       console.error("Failed to load booking data:", err);
     } finally {

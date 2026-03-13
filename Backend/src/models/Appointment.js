@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { APPOINTMENT_STATUSES } from "../constants/modelEnums.js";
+import { APPOINTMENT_STATUSES, VISIT_TYPES } from "../constants/modelEnums.js";
 
 const appointmentSchema = new mongoose.Schema(
   {
@@ -54,6 +54,37 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       enum: ["in-person", "video", "phone"],
       default: "in-person",
+    },
+
+    visitType: {
+      type: String,
+      enum: VISIT_TYPES,
+      default: "newConsultation",
+    },
+
+    bookingSource: {
+      type: String,
+      enum: ["patientPortal", "receptionDesk", "admin"],
+      default: "patientPortal",
+    },
+
+    checkInAt: {
+      type: Date,
+    },
+
+    checkedInBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    cancellationReason: {
+      type: String,
+    },
+
+    rescheduledFrom: {
+      date: String,
+      slot: String,
+      rescheduledAt: Date,
     },
 
     notes: {

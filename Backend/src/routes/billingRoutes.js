@@ -1,5 +1,12 @@
 import express from "express";
-import { createInvoice, getPatientInvoice, getMyInvoices, payInvoice, getAllInvoices } from "../controllers/billingController.js";
+import {
+  createInvoice,
+  getPatientInvoice,
+  getMyInvoices,
+  payInvoice,
+  getAllInvoices,
+  initiateConsultationBilling,
+} from "../controllers/billingController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -9,6 +16,7 @@ router.get("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), getA
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getMyInvoices);
 router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("admin", "receptionist", "doctor"), getPatientInvoice);
+router.post("/appointments/:appointmentId/initiate", verifyAccessToken, authorizeRoles("admin", "receptionist"), initiateConsultationBilling);
 
 router.put("/pay/:id", verifyAccessToken, authorizeRoles("admin", "receptionist"), payInvoice);
 

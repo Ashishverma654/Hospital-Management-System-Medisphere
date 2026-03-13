@@ -33,8 +33,8 @@ export default function DoctorReports() {
         patientApi.getAll(),
         reportApi.getMy(),
       ]);
-      setPatients(Array.isArray(patientsData?.data) ? patientsData.data : Array.isArray(patientsData) ? patientsData : []);
-      setReports(Array.isArray(reportsData?.data) ? reportsData.data : Array.isArray(reportsData) ? reportsData : []);
+      setPatients(Array.isArray(patientsData) ? patientsData : []);
+      setReports(Array.isArray(reportsData) ? reportsData : []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load data');
     } finally {

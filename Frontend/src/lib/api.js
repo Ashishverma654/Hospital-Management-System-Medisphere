@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const LOCAL_API_FALLBACK = 'http://localhost:3500/api';
+
 const normalizeApiBase = (rawBase) => {
-  const fallback = 'http://localhost:3500/api';
+  const fallback = import.meta.env.DEV ? '/api' : LOCAL_API_FALLBACK;
 
   if (!rawBase) {
     return fallback;
@@ -17,10 +19,14 @@ const normalizeApiBase = (rawBase) => {
 };
 
 const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
+const isLocalBrowser = () =>
+  typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+const isRelativeApiBase = (base = '') => typeof base === 'string' && base.startsWith('/');
 
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
+  timeout: 15000,
 });
 
 api.interceptors.request.use((config) => {
@@ -44,6 +50,21 @@ api.interceptors.response.use(
     return res.data !== undefined ? res.data : res;
   },
   (err) => {
+    const shouldRetryAgainstLocalBackend =
+      err.code === 'ERR_NETWORK' &&
+      err.config &&
+      !err.config.__localRetry &&
+      isLocalBrowser() &&
+      isRelativeApiBase(err.config.baseURL || API_BASE);
+
+    if (shouldRetryAgainstLocalBackend) {
+      return api.request({
+        ...err.config,
+        __localRetry: true,
+        baseURL: LOCAL_API_FALLBACK,
+      });
+    }
+
     if (err.response?.status === 401) {
       const auth = localStorage.getItem('mediflow_auth');
       let sessionType = null;

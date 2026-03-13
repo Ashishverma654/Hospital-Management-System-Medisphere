@@ -47,9 +47,8 @@ export default function DoctorPrescriptions() {
   const fetchMedicines = async () => {
     try {
       const data = await pharmacyApi.getAll();
-      setMedicines(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to fetch medicines');
+      setMedicines(Array.isArray(data) ? data : []);
+    } catch (_err) {
     }
   };
 

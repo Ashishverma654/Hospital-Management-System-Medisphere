@@ -153,21 +153,27 @@ router.get("/awards", async (req, res) => {
 // GET homepage content bundle
 router.get("/homepage", async (req, res) => {
   try {
-    const [featuredDepartments, featuredDoctors, locations, awards, specializations] = await Promise.all([
+    const [featuredDepartments, fallbackDepartments, featuredDoctors, fallbackDoctors, locations, fallbackLocations, awards, specializations] = await Promise.all([
       Department.find({ isActive: true, isFeatured: true }).sort({ featureOrder: 1, name: 1 }).limit(6),
+      Department.find({ isActive: true }).sort({ displayOrder: 1, name: 1 }).limit(6),
       Doctor.find({ isActive: true, isPublished: true, isFeatured: true })
         .populate(publicDoctorPopulate)
         .sort({ featureOrder: 1, createdAt: -1 })
         .limit(6),
+      Doctor.find({ isActive: true, isPublished: true })
+        .populate(publicDoctorPopulate)
+        .sort({ isFeatured: -1, featureOrder: 1, createdAt: -1 })
+        .limit(6),
       HospitalLocation.find({ isActive: true, isPublished: true }).sort({ name: 1 }).limit(6),
+      HospitalLocation.find({ isActive: true }).sort({ name: 1 }).limit(6),
       Award.find({ type: "hospital", isActive: true }).sort({ year: -1, createdAt: -1 }).limit(6),
       Specialization.find({ isActive: true }).sort({ name: 1 }).limit(12).populate("departmentId", "name"),
     ]);
 
     res.json({
-      featuredDepartments,
-      featuredDoctors: featuredDoctors.map((doctor) => mapPublicDoctor(doctor)),
-      locations,
+      featuredDepartments: featuredDepartments.length ? featuredDepartments : fallbackDepartments,
+      featuredDoctors: (featuredDoctors.length ? featuredDoctors : fallbackDoctors).map((doctor) => mapPublicDoctor(doctor)),
+      locations: locations.length ? locations : fallbackLocations,
       awards,
       specializations,
     });

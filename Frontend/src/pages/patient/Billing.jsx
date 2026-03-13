@@ -21,7 +21,7 @@ export default function PatientBilling() {
       setLoading(true);
       setError(null);
       const data = await billingApi.getMy();
-      setInvoices(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
+      setInvoices(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch invoices');
       toast.error('Failed to load invoices');

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Plus, AlertTriangle, Archive, Loader2 } from 'lucide-react';
@@ -58,7 +58,7 @@ export default function Pharmacy() {
       toast.success('Medicine added successfully!');
       setShowForm(false);
       fetchInventory();
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to add medicine');
     }
   };

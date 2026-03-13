@@ -2,8 +2,7 @@ import api from '../lib/api.js';
 
 // Authentication
 export const loginUser = async (email, password) => {
-  const { data } = await api.post('/auth/patient/login', { email, password });
-  return data;
+  return api.post('/auth/patient/login', { email, password });
 };
 
 export const departmentApi = {
@@ -42,6 +41,7 @@ export const doctorApi = {
     api.put(`/doctors/admin/${id}/profile-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  getDashboard: () => api.get('/doctors/dashboard'),
 };
 
 export const awardApi = {
@@ -52,7 +52,7 @@ export const awardApi = {
 };
 
 export const slotApi = {
-  getByDoctor: (doctorId) => api.get(`/slots/${doctorId}/slots`),
+  getByDoctor: (doctorId, date) => api.get(`/slots/${doctorId}/slots`, { params: { date } }),
 };
 
 export const availabilityApi = {
@@ -62,12 +62,17 @@ export const availabilityApi = {
 
 export const appointmentApi = {
   book: (body) => api.post('/appointments', body),
-  getAll: () => api.get('/appointments'),
-  cancel: (id) => api.put(`/appointments/${id}/cancel`),
+  getAll: (params) => api.get('/appointments', { params }),
+  cancel: (id, body) => api.put(`/appointments/${id}/cancel`, body),
+  getQueueToday: (params) => api.get('/appointments/queue/today', { params }),
+  arrive: (id) => api.put(`/appointments/${id}/arrive`),
+  reschedule: (id, body) => api.put(`/appointments/${id}/reschedule`, body),
   getDoctorToday: () => api.get('/appointments/doctor/today'),
   getDoctorAll: () => api.get('/appointments/doctor/all'),
   complete: (id) => api.put(`/appointments/${id}/complete`),
   getPatientHistory: (patientId) => api.get(`/appointments/patient-history/${patientId}`),
+  startConsultation: (appointmentId) => api.post(`/appointments/${appointmentId}/start-consultation`),
+  getPatientSummary: (patientId) => api.get(`/appointments/patient/${patientId}/summary`),
 };
 
 export const patientApi = {
@@ -86,6 +91,7 @@ export const billingApi = {
   create: (body) => api.post('/billing', body),
   getMy: () => api.get('/billing/my'),
   getByPatient: (patientId) => api.get(`/billing/patient/${patientId}`),
+  initiateForAppointment: (appointmentId) => api.post(`/billing/appointments/${appointmentId}/initiate`),
   pay: (id, body) => api.put(`/billing/pay/${id}`, body),
 };
 
@@ -101,6 +107,31 @@ export const labReportApi = {
   getMy: () => api.get('/lab-reports/my'),
   getByPatient: (patientId) => api.get(`/lab-reports/patient/${patientId}`),
   upload: (formData) => api.post('/lab-reports/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+};
+
+export const labOrderApi = {
+  create: (body) => api.post('/lab-orders', body),
+  getByDoctor: (params) => api.get('/lab-orders/doctor', { params }),
+  getMy: () => api.get('/lab-orders/my'),
+  getById: (id) => api.get(`/lab-orders/${id}`),
+  downloadPdf: (id) => api.get(`/lab-orders/${id}/pdf`, { responseType: 'blob' }),
+  updateStatus: (id, body) => api.put(`/lab-orders/${id}/status`, body),
+};
+
+export const labTechApi = {
+  getDashboard: () => api.get('/lab-techs/dashboard'),
+  getOrders: (params) => api.get('/lab-techs/orders', { params }),
+  getOrder: (id) => api.get(`/lab-techs/orders/${id}`),
+  scheduleSampleCollection: (id, body) => api.patch(`/lab-techs/orders/${id}/sample-schedule`, body),
+  scheduleReportPickup: (id, body) => api.patch(`/lab-techs/orders/${id}/report-pickup`, body),
+  markSampleCollected: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/sample-collected`, body),
+  markInProcessing: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/processing`, body),
+  markReportReady: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/report-ready`, body),
+  uploadReport: (id, formData) =>
+    api.post(`/lab-techs/orders/${id}/report-upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  releaseReport: (id) => api.patch(`/lab-techs/orders/${id}/release`),
 };
 
 export const prescriptionApi = {
@@ -119,8 +150,7 @@ export const bedApi = {
 };
 
 export const resetPassword = async (email, otp, newPassword, newPin) => {
-  const { data } = await api.post('/auth/reset-password', { email, otp, newPassword, newPin });
-  return data;
+  return api.post('/auth/password/reset', { email, otp, newPassword, newPin });
 };
 
 // Dynamic Data
@@ -160,4 +190,11 @@ export const userApi = {
   uploadProfileImage: (formData) => api.put('/users/profile-image', formData, { 
     headers: { 'Content-Type': 'multipart/form-data' } 
   }),
+};
+
+export const receptionistApi = {
+  getDashboard: () => api.get('/receptionists/dashboard'),
+  registerPatient: (body) => api.post('/receptionists/patients', body),
+  searchPatients: (query) => api.get('/receptionists/patients/search', { params: { query } }),
+  getBookingOptions: (params) => api.get('/receptionists/booking-options', { params }),
 };
