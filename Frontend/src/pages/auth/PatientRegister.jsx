@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { loginSuccess } from '../../store/authSlice.js';
 import { registerPatient } from '../../services/authService.js';
+import { getEmployeeHomeRoute } from '../../auth/constants.js';
 
 const initialForm = {
   name: '',
@@ -17,12 +18,21 @@ const initialForm = {
 export default function PatientRegister() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { isAuthenticated, sessionType, user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState(initialForm);
   const [isLoading, setIsLoading] = useState(false);
 
   const updateField = (field, value) => {
     setFormData((current) => ({ ...current, [field]: value }));
   };
+
+  if (isAuthenticated) {
+    if (sessionType === 'patient' && user?.role === 'patient') {
+      return <Navigate to="/patient/dashboard" replace />;
+    }
+
+    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
+  }
 
   const handleRegister = async (event) => {
     event.preventDefault();
@@ -54,6 +64,9 @@ export default function PatientRegister() {
           <h1 className="text-3xl font-semibold text-slate-900">Create your patient account</h1>
           <p className="mt-2 text-sm text-slate-600">
             Staff access is managed separately through the employee system.
+          </p>
+          <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Create a patient account to access appointments, bills, prescriptions, lab reports, and future portal tools.
           </p>
         </div>
 

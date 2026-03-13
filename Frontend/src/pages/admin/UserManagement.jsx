@@ -18,9 +18,11 @@ export default function UserManagement() {
   const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [departments, setDepartments] = useState([]);
+  const [manageableRoles, setManageableRoles] = useState([]);
 
   const [form, setForm] = useState({ 
     name: '', email: '', password: '', role: '', phone: '', gender: '', dob: '', address: '',
@@ -42,15 +44,17 @@ export default function UserManagement() {
       const params = { page, limit: 15 };
       if (filterRole) params.role = filterRole;
       if (search) params.search = search;
+      if (filterStatus) params.isActive = filterStatus;
       const res = await adminApi.getAllUsers(params);
       setUsers(res.users || []);
       setPagination(res.pagination || {});
+      setManageableRoles(res.manageableRoles || []);
     } catch (err) {
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
-  }, [page, filterRole, search]);
+  }, [page, filterRole, filterStatus, search]);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
@@ -60,6 +64,7 @@ export default function UserManagement() {
         // Interceptor returns res.data directly
         const roles = res.allowedRoles || (Array.isArray(res) ? res : []);
         setCreatableRoles(roles);
+        setManageableRoles(res.manageableRoles || []);
       })
       .catch(() => {});
     
@@ -167,6 +172,15 @@ export default function UserManagement() {
             <option key={val} value={val}>{label}</option>
           ))}
         </select>
+        <select
+          value={filterStatus}
+          onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
+          className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="true">Active</option>
+          <option value="false">Inactive</option>
+        </select>
         <Button variant="outline" size="sm" onClick={loadUsers}>
           <RefreshCw className="w-4 h-4" />
         </Button>
@@ -184,14 +198,15 @@ export default function UserManagement() {
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Employee ID</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Created By</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Onboarding</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">Loading users…</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">Loading users…</td></tr>
               ) : users.filter((user) => user.role !== 'patient').length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-muted-foreground">No users found</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-muted-foreground">No users found</td></tr>
               ) : (
                 users.filter((user) => user.role !== 'patient').map(u => (
                   <tr key={u._id} className={`border-b border-border hover:bg-muted/30 transition-colors ${!u.isActive ? 'opacity-50' : ''}`}>
@@ -216,8 +231,9 @@ export default function UserManagement() {
                         {u.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground capitalize">{u.onboardingStatus || 'active'}</td>
                     <td className="px-4 py-3">
-                      {u.role !== 'superadmin' && (
+                      {u.role !== 'superadmin' && manageableRoles.includes(u.role) && (
                         <Button
                           size="sm"
                           variant={u.isActive ? 'destructive' : 'outline'}
@@ -226,6 +242,9 @@ export default function UserManagement() {
                         >
                           {u.isActive ? <><UserX className="w-3 h-3 mr-1" />Deactivate</> : <><UserCheck className="w-3 h-3 mr-1" />Activate</>}
                         </Button>
+                      )}
+                      {u.role !== 'superadmin' && !manageableRoles.includes(u.role) && (
+                        <span className="text-xs text-muted-foreground">Restricted</span>
                       )}
                     </td>
                   </tr>

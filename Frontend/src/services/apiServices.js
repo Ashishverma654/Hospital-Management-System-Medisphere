@@ -110,9 +110,14 @@ export const adminApi = {
   getHistory: () => api.get('/admin/history'),
   getCreatableRoles: () => api.get('/admin/creatable-roles'),
   toggleActiveUser: (id) => api.put(`/admin/users/${id}/toggle-active`),
+  getAuditHistory: (params) => api.get('/admin/audit', { params }),
+  getSettings: () => api.get('/admin/settings'),
+  updateSettings: (body) => api.put('/admin/settings', body),
 };
 
 export const userApi = {
+  getMe: () => api.get('/users/me'),
+  updateMe: (body) => api.put('/users/me', body),
   uploadProfileImage: (formData) => api.put('/users/profile-image', formData, { 
     headers: { 'Content-Type': 'multipart/form-data' } 
   }),

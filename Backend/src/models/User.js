@@ -68,6 +68,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    onboardingStatus: {
+      type: String,
+      enum: ["invited", "active", "suspended"],
+      default: "active",
+    },
   },
   { timestamps: true },
 );

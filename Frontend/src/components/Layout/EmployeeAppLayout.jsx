@@ -15,6 +15,7 @@ export default function EmployeeAppLayout() {
   const user = useSelector((state) => state.auth.user);
   const homeRoute = getEmployeeHomeRoute(user?.role);
   const canManageUsers = STAFF_MANAGEMENT_ROLES.includes(user?.role);
+  const canAccessGovernance = ['superadmin', 'admin'].includes(user?.role);
   const navigationItems = [
     { to: homeRoute, label: `${getRoleLabel(user?.role || 'employee')} Dashboard` },
     ...(canManageUsers
@@ -23,8 +24,13 @@ export default function EmployeeAppLayout() {
           { to: '/employee/patients', label: 'Patients' },
         ]
       : []),
+    ...(canAccessGovernance
+      ? [
+          { to: '/employee/audit', label: 'Audit History' },
+          { to: '/employee/settings', label: 'Hospital Settings' },
+        ]
+      : []),
     { to: '/employee/profile', label: 'Profile' },
-    { to: '/employee/settings', label: 'Settings' },
   ];
 
   const handleLogout = () => {
@@ -69,12 +75,14 @@ export default function EmployeeAppLayout() {
               >
                 Profile
               </NavLink>
-              <NavLink
-                to="/employee/settings"
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Settings
-              </NavLink>
+              {canAccessGovernance && (
+                <NavLink
+                  to="/employee/settings"
+                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Settings
+                </NavLink>
+              )}
               <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium capitalize text-slate-700">
                 {getRoleLabel(user?.role || 'employee')}
               </div>

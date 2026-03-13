@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { Navigate } from 'react-router-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
@@ -13,6 +15,7 @@ import {
 } from '../../services/authService.js';
 import { loginSuccess } from '../../store/authSlice.js';
 import logoImg from '../../assets/logo.png';
+import { getEmployeeHomeRoute } from '../../auth/constants.js';
 
 const initialResetState = {
   phone: '',
@@ -33,6 +36,7 @@ export default function PatientLogin() {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
+  const { isAuthenticated, sessionType, user } = useSelector((state) => state.auth);
   const [view, setView] = useState('phone');
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState(initialResetState);
@@ -40,6 +44,14 @@ export default function PatientLogin() {
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
+
+  if (isAuthenticated) {
+    if (sessionType === 'patient' && user?.role === 'patient') {
+      return <Navigate to="/patient/dashboard" replace />;
+    }
+
+    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
+  }
 
   const completeLogin = ({ user, token, sessionType }) => {
     dispatch(loginSuccess({ user, token, sessionType }));
@@ -174,6 +186,9 @@ export default function PatientLogin() {
             <p className="text-sm text-slate-500">Patient access</p>
             <h1 className="text-2xl font-semibold text-slate-900">Sign in to your portal</h1>
           </div>
+        </div>
+        <div className="mb-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+          This sign-in is for patients only. Hospital employees should use the separate employee system.
         </div>
 
         {view === 'phone' && (

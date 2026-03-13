@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { getEmployeeHomeRoute } from '../../auth/constants.js';
 
 export default function PatientRoute() {
   const location = useLocation();
@@ -10,7 +11,7 @@ export default function PatientRoute() {
   }
 
   if (sessionType !== 'patient' || user?.role !== 'patient') {
-    return <Navigate to="/employee/dashboard" replace />;
+    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace state={{ from: location }} />;
   }
 
   return <Outlet />;
