@@ -6,6 +6,7 @@ const doctorSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      unique: true,
     },
 
     departmentId: {
@@ -104,8 +105,8 @@ const doctorSchema = mongoose.Schema(
 
     onboardingStatus: {
       type: String,
-      enum: ["draft", "pending", "active", "suspended"],
-      default: "pending",
+      enum: ["created", "invited", "profileIncomplete", "active", "published", "suspended"],
+      default: "created",
     },
   },
   { timestamps: true },

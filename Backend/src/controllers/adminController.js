@@ -1,5 +1,4 @@
 import Patient from "../models/Patient.js";
-import Doctor from "../models/Doctor.js";
 import Appointment from "../models/Appointment.js";
 import Invoice from "../models/Invoice.js";
 import Bed from "../models/Bed.js";
@@ -166,6 +165,12 @@ export const createStaffUser = async (req, res) => {
       });
     }
 
+    if (normalizedTargetRole === "doctor") {
+      return res.status(400).json({
+        message: "Doctors must be created from the Doctor Administration module so the employee account and professional profile stay in sync.",
+      });
+    }
+
     // Check email uniqueness
     const exists = await User.findOne({ email });
     if (exists) {
@@ -192,36 +197,6 @@ export const createStaffUser = async (req, res) => {
       createdBy: creatorId,
       onboardingStatus: "active",
     });
-
-    // If role is doctor, create the Doctor record
-    if (normalizedTargetRole === 'doctor') {
-      const { 
-        departmentId, 
-        title, 
-        qualifications, 
-        experienceYears, 
-        consultationFee, 
-        about, 
-        expertise,
-        articles,
-        media,
-        specialization // Fallback or extra field
-      } = req.body;
-
-      await Doctor.create({
-        userId: user._id,
-        departmentId,
-        title: title || "Consultant",
-        qualifications: qualifications || [],
-        experienceYears: experienceYears || 5,
-        consultationFee: consultationFee || 500,
-        about: about || "",
-        expertise: expertise || [],
-        articles: articles || [],
-        media: media || [],
-        specialization: specialization || ""
-      });
-    }
 
     // Log the creation
     const creator = await User.findById(creatorId).select("name role");
@@ -428,7 +403,7 @@ export const deactivateUser = async (req, res) => {
 // 6. Get allowed roles the current user can create
 export const getCreatableRoles = async (req, res) => {
   try {
-    const allowed = getCreatableRolesForRole(req.user.role);
+    const allowed = getCreatableRolesForRole(req.user.role).filter((role) => role !== "doctor");
     res.json({
       allowedRoles: allowed,
       manageableRoles: getManageableRolesForRole(req.user.role),

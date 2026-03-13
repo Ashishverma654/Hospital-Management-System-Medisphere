@@ -30,6 +30,10 @@ const sanitizeUser = (user) => ({
   role: normalizeRole(user.role),
   patientId: user.patientId,
   employeeId: user.employeeId,
+  profileImage: user.profileImage,
+  isActive: user.isActive,
+  onboardingStatus: user.onboardingStatus,
+  mustResetPassword: user.mustResetPassword,
 });
 
 const buildAuthResponse = (user) => ({
@@ -198,7 +202,7 @@ export const loginEmployee = async (req, res) => {
 
     const user = await findUserByIdentifier(loginIdentifier, ["email", "employeeId"]);
 
-    if (!user || !user.password || normalizeRole(user.role) === PATIENT_ROLE) {
+    if (!user || !user.password || normalizeRole(user.role) === PATIENT_ROLE || !user.isActive) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 

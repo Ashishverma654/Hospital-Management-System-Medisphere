@@ -71,8 +71,13 @@ const userSchema = new mongoose.Schema(
 
     onboardingStatus: {
       type: String,
-      enum: ["invited", "active", "suspended"],
+      enum: ["invited", "active", "suspended", "passwordResetPending", "profileIncomplete"],
       default: "active",
+    },
+
+    mustResetPassword: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },

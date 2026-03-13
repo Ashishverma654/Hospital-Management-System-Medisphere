@@ -32,6 +32,16 @@ export const doctorApi = {
   getById: (id) => api.get(`/doctors/${id}`),
   getSlots: (doctorId) => api.get(`/doctors/${doctorId}/slots`),
   create: (body) => api.post('/doctors', body),
+  getAdminAll: (params) => api.get('/doctors/admin', { params }),
+  getAdminById: (id) => api.get(`/doctors/admin/${id}`),
+  createAdminDoctor: (body) => api.post('/doctors/admin', body),
+  updateAdminDoctor: (id, body) => api.put(`/doctors/admin/${id}`, body),
+  toggleActive: (id) => api.put(`/doctors/admin/${id}/toggle-active`),
+  togglePublished: (id) => api.put(`/doctors/admin/${id}/toggle-published`),
+  uploadProfileImage: (id, formData) =>
+    api.put(`/doctors/admin/${id}/profile-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
 };
 
 export const slotApi = {
