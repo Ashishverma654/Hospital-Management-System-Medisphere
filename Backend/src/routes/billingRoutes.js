@@ -1,6 +1,8 @@
 import express from "express";
 import {
   createInvoice,
+  getInvoiceById,
+  getInvoicesByContext,
   getPatientInvoice,
   getMyInvoices,
   payInvoice,
@@ -13,11 +15,13 @@ const router = express.Router();
 
 router.post("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), createInvoice);
 router.get("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), getAllInvoices);
+router.get("/context", verifyAccessToken, authorizeRoles("admin", "receptionist"), getInvoicesByContext);
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getMyInvoices);
-router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("admin", "receptionist", "doctor"), getPatientInvoice);
+router.get("/:id", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), getInvoiceById);
+router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("admin", "receptionist"), getPatientInvoice);
 router.post("/appointments/:appointmentId/initiate", verifyAccessToken, authorizeRoles("admin", "receptionist"), initiateConsultationBilling);
 
-router.put("/pay/:id", verifyAccessToken, authorizeRoles("admin", "receptionist"), payInvoice);
+router.put("/pay/:id", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), payInvoice);
 
 export default router;

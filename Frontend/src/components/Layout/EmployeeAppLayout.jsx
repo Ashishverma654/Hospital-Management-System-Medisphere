@@ -29,6 +29,7 @@ export default function EmployeeAppLayout() {
           { to: '/employee/receptionist/appointments', label: 'Book Appointment' },
           { to: '/employee/receptionist/queue', label: 'Today Queue' },
           { to: '/employee/receptionist/patients', label: 'Search Patients' },
+          { to: '/employee/billing', label: 'Billing' },
         ]
       : []),
     ...(isLabTechnician
@@ -68,6 +69,7 @@ export default function EmployeeAppLayout() {
     ...(canAccessGovernance
       ? [
           { to: '/employee/patients', label: 'Patients' },
+          { to: '/employee/billing', label: 'Billing' },
           { to: '/employee/wards', label: 'Wards' },
           { to: '/employee/beds', label: 'Beds' },
           { to: '/employee/admissions', label: 'Admissions' },

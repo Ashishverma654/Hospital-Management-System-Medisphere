@@ -1,198 +1,575 @@
-import Invoice from "../models/Invoice.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
+import Invoice from "../models/Invoice.js";
 import LabOrder from "../models/LabOrder.js";
 import PharmacyOrder from "../models/PharmacyOrder.js";
-import { sendEmail } from "../utils/sendEmail.js";
+import Bed from "../models/Bed.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 import { getOrderStatusForPayment } from "../utils/labWorkflow.js";
 import { getOrderStatusForPayment as getPharmacyStatusForPayment } from "../utils/pharmacyWorkflow.js";
 
-export const createInvoice = async (req, res) => {
-    try {
-        const { patientId, appointmentId, doctorFee, labCharges, medicineCharges, otherCharges, daysConsulted, medicinesBreakdown, labReportsBreakdown } = req.body;
+const INVOICE_POPULATE = [
+  { path: "patientId", populate: { path: "userId", select: "name email phone patientId" } },
+  { path: "patientUserId", select: "name email phone patientId" },
+  { path: "appointmentId", populate: { path: "doctorId", populate: { path: "userId", select: "name email employeeId" } } },
+  { path: "labOrderId", select: "orderNumber status paymentStatus urgency totalAmount appointmentId createdAt" },
+  { path: "pharmacyOrderId", select: "status paymentStatus total items createdAt completedAt prescriptionId" },
+  { path: "bedId", select: "bedNumber status admittedAt dischargedAt" },
+  { path: "wardId", select: "name wardNumber wardType defaultPrice" },
+];
 
-        const totalAmount = (doctorFee || 0) + (labCharges || 0) + (medicineCharges || 0) + (otherCharges || 0);
-
-        const { patient, user } = await resolvePatientContext(patientId);
-
-        const invoice = new Invoice({
-            patientId: patient._id,
-            patientUserId: user._id,
-            appointmentId,
-            doctorFee,
-            labCharges,
-            medicineCharges,
-            otherCharges,
-            totalAmount,
-            daysConsulted,
-            medicinesBreakdown,
-            labReportsBreakdown,
-            createdBy: req.user.id,
-        });
-
-        await invoice.save();
-
-        await sendEmail(
-            user.email,
-            "Hospital Invoice Generated",
-            `Your hospital bill of ₹${totalAmount} has been generated.`
-        );
-
-        res.status(201).json({
-            success: true,
-            message: "Invoice Created",
-            data: invoice
-        });
-
-    } catch (error) {
-
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-
-    }
+const asOptionalObjectId = (value) => (value ? value : undefined);
+const asOptionalNumber = (value) => {
+  if (value === undefined || value === null || value === "") return 0;
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
 };
 
+const normalizeLineItem = (item = {}) => {
+  const quantity = Number(item.quantity || 1);
+  const unitPrice = Number(item.unitPrice || 0);
+  return {
+    label: item.label,
+    category: item.category,
+    referenceType: item.referenceType,
+    referenceId: asOptionalObjectId(item.referenceId),
+    quantity,
+    unitPrice,
+    lineTotal: Number(item.lineTotal ?? quantity * unitPrice),
+    notes: item.notes,
+  };
+};
 
-export const getMyInvoices = async (req, res) => {
-    try {
-        const { patient } = await ensurePatientProfileForUser(req.user.id);
-        const invoices = await Invoice.find({ patientId: patient._id }).populate("appointmentId");
-        res.status(200).json({ success: true, data: invoices });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+const buildLegacyLineItems = (payload) => {
+  const lineItems = [];
+
+  if (asOptionalNumber(payload.doctorFee) > 0) {
+    lineItems.push({
+      label: "Consultation Fee",
+      category: "consultation",
+      referenceType: payload.appointmentId ? "appointment" : "manual",
+      referenceId: asOptionalObjectId(payload.appointmentId),
+      quantity: Number(payload.daysConsulted || 1),
+      unitPrice: Number(payload.doctorFee || 0) / Math.max(1, Number(payload.daysConsulted || 1)),
+      lineTotal: Number(payload.doctorFee || 0),
+    });
+  }
+
+  (payload.labReportsBreakdown || []).forEach((item) => {
+    lineItems.push({
+      label: item.reportName || item.label || "Lab Charge",
+      category: "lab",
+      referenceType: payload.labOrderId ? "labOrder" : "manual",
+      referenceId: asOptionalObjectId(payload.labOrderId),
+      quantity: 1,
+      unitPrice: Number(item.price || 0),
+      lineTotal: Number(item.price || 0),
+    });
+  });
+
+  (payload.medicinesBreakdown || []).forEach((item) => {
+    lineItems.push({
+      label: item.name || item.label || "Medicine",
+      category: "medicine",
+      referenceType: payload.pharmacyOrderId ? "pharmacyOrder" : "manual",
+      referenceId: asOptionalObjectId(payload.pharmacyOrderId),
+      quantity: Number(item.quantity || 1),
+      unitPrice: Number(item.price || item.unitPrice || 0),
+      lineTotal: Number(item.lineTotal || Number(item.quantity || 1) * Number(item.price || item.unitPrice || 0)),
+    });
+  });
+
+  if (asOptionalNumber(payload.labCharges) > 0 && !(payload.labReportsBreakdown || []).length) {
+    lineItems.push({
+      label: "Lab Charges",
+      category: "lab",
+      referenceType: payload.labOrderId ? "labOrder" : "manual",
+      referenceId: asOptionalObjectId(payload.labOrderId),
+      quantity: 1,
+      unitPrice: Number(payload.labCharges || 0),
+      lineTotal: Number(payload.labCharges || 0),
+    });
+  }
+
+  if (asOptionalNumber(payload.medicineCharges) > 0 && !(payload.medicinesBreakdown || []).length) {
+    lineItems.push({
+      label: "Medicine Charges",
+      category: "medicine",
+      referenceType: payload.pharmacyOrderId ? "pharmacyOrder" : "manual",
+      referenceId: asOptionalObjectId(payload.pharmacyOrderId),
+      quantity: 1,
+      unitPrice: Number(payload.medicineCharges || 0),
+      lineTotal: Number(payload.medicineCharges || 0),
+    });
+  }
+
+  if (asOptionalNumber(payload.otherCharges) > 0) {
+    lineItems.push({
+      label: "Other Charges",
+      category: "other",
+      referenceType: "manual",
+      quantity: 1,
+      unitPrice: Number(payload.otherCharges || 0),
+      lineTotal: Number(payload.otherCharges || 0),
+    });
+  }
+
+  return lineItems;
+};
+
+const mapInvoice = (invoice) => {
+  const patientUser = invoice.patientId?.userId || invoice.patientUserId;
+  return {
+    id: invoice._id,
+    _id: invoice._id,
+    invoiceNumber: invoice.invoiceNumber,
+    billType: invoice.billType,
+    paymentStatus: invoice.paymentStatus,
+    paymentMethod: invoice.paymentMethod || null,
+    paidAt: invoice.paidAt,
+    createdAt: invoice.createdAt,
+    updatedAt: invoice.updatedAt,
+    subtotal: invoice.subtotal || invoice.totalAmount || 0,
+    totalAmount: invoice.totalAmount || 0,
+    notes: invoice.notes || "",
+    patient: patientUser
+      ? {
+          id: invoice.patientId?._id,
+          userId: patientUser._id,
+          name: patientUser.name,
+          email: patientUser.email,
+          phone: patientUser.phone,
+          patientId: patientUser.patientId,
+        }
+      : null,
+    context: {
+      appointment: invoice.appointmentId
+        ? {
+            id: invoice.appointmentId._id,
+            date: invoice.appointmentId.date,
+            slot: invoice.appointmentId.slot,
+            status: invoice.appointmentId.status,
+            doctorName: invoice.appointmentId.doctorId?.userId?.name,
+          }
+        : null,
+      labOrder: invoice.labOrderId
+        ? {
+            id: invoice.labOrderId._id,
+            orderNumber: invoice.labOrderId.orderNumber,
+            status: invoice.labOrderId.status,
+            paymentStatus: invoice.labOrderId.paymentStatus,
+            urgency: invoice.labOrderId.urgency,
+          }
+        : null,
+      pharmacyOrder: invoice.pharmacyOrderId
+        ? {
+            id: invoice.pharmacyOrderId._id,
+            status: invoice.pharmacyOrderId.status,
+            paymentStatus: invoice.pharmacyOrderId.paymentStatus,
+            total: invoice.pharmacyOrderId.total,
+          }
+        : null,
+      ward: invoice.wardId
+        ? {
+            id: invoice.wardId._id,
+            name: invoice.wardId.name,
+            wardNumber: invoice.wardId.wardNumber,
+            wardType: invoice.wardId.wardType,
+          }
+        : null,
+      bed: invoice.bedId
+        ? {
+            id: invoice.bedId._id,
+            bedNumber: invoice.bedId.bedNumber,
+            status: invoice.bedId.status,
+          }
+        : null,
+    },
+    lineItems: (invoice.lineItems || []).map((item, index) => ({
+      id: `${invoice._id}-${index}`,
+      label: item.label,
+      category: item.category,
+      referenceType: item.referenceType,
+      referenceId: item.referenceId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.lineTotal || Number(item.quantity || 0) * Number(item.unitPrice || 0),
+      notes: item.notes,
+    })),
+  };
+};
+
+const syncInvoicePaymentState = async (invoice) => {
+  const paidAt = invoice.paidAt || new Date();
+
+  if (invoice.labOrderId) {
+    const labOrder = await LabOrder.findById(invoice.labOrderId);
+    if (labOrder) {
+      labOrder.paymentStatus = invoice.paymentStatus;
+      if (invoice.paymentStatus === "paid") {
+        labOrder.paymentCompletedAt = paidAt;
+      }
+      labOrder.status = getOrderStatusForPayment({
+        currentStatus: labOrder.status,
+        paymentStatus: invoice.paymentStatus,
+      });
+      labOrder.invoiceId = invoice._id;
+      await labOrder.save();
     }
+  }
+
+  if (invoice.pharmacyOrderId) {
+    const pharmacyOrder = await PharmacyOrder.findById(invoice.pharmacyOrderId);
+    if (pharmacyOrder) {
+      pharmacyOrder.paymentStatus = invoice.paymentStatus;
+      pharmacyOrder.status = getPharmacyStatusForPayment({
+        currentStatus: pharmacyOrder.status,
+        paymentStatus: invoice.paymentStatus,
+      });
+      pharmacyOrder.invoiceId = invoice._id;
+      await pharmacyOrder.save();
+    }
+  }
+};
+
+const ensureInvoiceAccess = async (req, invoice) => {
+  if (["admin", "superadmin", "receptionist"].includes(req.user.role)) {
+    return true;
+  }
+
+  if (req.user.role === "patient") {
+    const { patient } = await ensurePatientProfileForUser(req.user.id);
+    return String(invoice.patientId?._id || invoice.patientId) === String(patient._id);
+  }
+
+  return false;
+};
+
+const resolveInvoicePatientContext = async ({ patientId, appointmentId, labOrderId, pharmacyOrderId, bedId }) => {
+  if (patientId) {
+    return resolvePatientContext(patientId);
+  }
+
+  if (appointmentId) {
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) throw new Error("Appointment not found.");
+    return resolvePatientContext(appointment.patientProfileId || appointment.patientId);
+  }
+
+  if (labOrderId) {
+    const labOrder = await LabOrder.findById(labOrderId);
+    if (!labOrder) throw new Error("Lab order not found.");
+    return resolvePatientContext(labOrder.patientId);
+  }
+
+  if (pharmacyOrderId) {
+    const pharmacyOrder = await PharmacyOrder.findById(pharmacyOrderId);
+    if (!pharmacyOrder) throw new Error("Pharmacy order not found.");
+    return resolvePatientContext(pharmacyOrder.patientId);
+  }
+
+  if (bedId) {
+    const bed = await Bed.findById(bedId);
+    if (!bed) throw new Error("Bed not found.");
+    return resolvePatientContext(bed.patientProfileId || bed.patientId);
+  }
+
+  throw new Error("Patient reference is required.");
+};
+
+export const createInvoice = async (req, res) => {
+  try {
+    const {
+      patientId,
+      appointmentId,
+      labOrderId,
+      pharmacyOrderId,
+      bedId,
+      wardId,
+      billType = "mixed",
+      paymentStatus = "pending",
+      paymentMethod,
+      notes,
+    } = req.body;
+
+    const { patient, user } = await resolveInvoicePatientContext({
+      patientId,
+      appointmentId,
+      labOrderId,
+      pharmacyOrderId,
+      bedId,
+    });
+
+    if (appointmentId) {
+      const existing = await Invoice.findOne({ appointmentId });
+      if (existing) {
+        return res.status(400).json({ message: "An invoice already exists for this appointment." });
+      }
+    }
+
+    if (labOrderId) {
+      const existing = await Invoice.findOne({ labOrderId });
+      if (existing) {
+        return res.status(400).json({ message: "An invoice already exists for this lab order." });
+      }
+    }
+
+    if (pharmacyOrderId) {
+      const existing = await Invoice.findOne({ pharmacyOrderId });
+      if (existing) {
+        return res.status(400).json({ message: "An invoice already exists for this pharmacy order." });
+      }
+    }
+
+    const providedLineItems = Array.isArray(req.body.lineItems) ? req.body.lineItems.map(normalizeLineItem) : [];
+    const legacyLineItems = buildLegacyLineItems(req.body);
+    const lineItems = providedLineItems.length ? providedLineItems : legacyLineItems;
+
+    if (!lineItems.length) {
+      return res.status(400).json({ message: "At least one bill line item is required." });
+    }
+
+    const invoice = await Invoice.create({
+      patientId: patient._id,
+      patientUserId: user._id,
+      appointmentId: asOptionalObjectId(appointmentId),
+      labOrderId: asOptionalObjectId(labOrderId),
+      pharmacyOrderId: asOptionalObjectId(pharmacyOrderId),
+      bedId: asOptionalObjectId(bedId),
+      wardId: asOptionalObjectId(wardId),
+      billType,
+      lineItems,
+      daysConsulted: Number(req.body.daysConsulted || 1),
+      medicinesBreakdown: req.body.medicinesBreakdown || [],
+      labReportsBreakdown: req.body.labReportsBreakdown || [],
+      doctorFee: asOptionalNumber(req.body.doctorFee),
+      labCharges: asOptionalNumber(req.body.labCharges),
+      medicineCharges: asOptionalNumber(req.body.medicineCharges),
+      otherCharges: asOptionalNumber(req.body.otherCharges),
+      paymentStatus,
+      paymentMethod,
+      paidAt: paymentStatus === "paid" ? new Date() : undefined,
+      notes,
+      createdBy: req.user.id,
+      updatedBy: req.user.id,
+    });
+
+    await syncInvoicePaymentState(invoice);
+    const populated = await Invoice.findById(invoice._id).populate(INVOICE_POPULATE);
+
+    return res.status(201).json({
+      message: "Invoice created successfully.",
+      invoice: mapInvoice(populated),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 export const getAllInvoices = async (req, res) => {
-    try {
-        const invoices = await Invoice.find()
-            .populate({ path: "patientId", populate: { path: "userId", select: "name email patientId" } })
-            .populate("patientUserId", "name email patientId")
-            .populate("appointmentId");
-        res.status(200).json({ success: true, data: invoices });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+  try {
+    const {
+      search = "",
+      billType,
+      paymentStatus,
+      date,
+      patientId,
+      appointmentId,
+      labOrderId,
+      pharmacyOrderId,
+    } = req.query;
+
+    const filter = {};
+    if (billType) filter.billType = billType;
+    if (paymentStatus) filter.paymentStatus = paymentStatus;
+    if (patientId) filter.patientId = patientId;
+    if (appointmentId) filter.appointmentId = appointmentId;
+    if (labOrderId) filter.labOrderId = labOrderId;
+    if (pharmacyOrderId) filter.pharmacyOrderId = pharmacyOrderId;
+    if (date) {
+      const start = new Date(date);
+      const end = new Date(date);
+      end.setDate(end.getDate() + 1);
+      filter.createdAt = { $gte: start, $lt: end };
     }
+
+    let invoices = await Invoice.find(filter)
+      .populate(INVOICE_POPULATE)
+      .sort({ createdAt: -1 });
+
+    if (search.trim()) {
+      const query = search.trim().toLowerCase();
+      invoices = invoices.filter((invoice) => {
+        const patientUser = invoice.patientId?.userId || invoice.patientUserId;
+        const text = [
+          invoice.invoiceNumber,
+          invoice.billType,
+          patientUser?.name,
+          patientUser?.patientId,
+          invoice.appointmentId?._id,
+          invoice.labOrderId?.orderNumber,
+          invoice.pharmacyOrderId?._id,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return text.includes(query);
+      });
+    }
+
+    return res.json(invoices.map(mapInvoice));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getInvoiceById = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate(INVOICE_POPULATE);
+    if (!invoice) {
+      return res.status(404).json({ message: "Invoice not found." });
+    }
+
+    if (!(await ensureInvoiceAccess(req, invoice))) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    return res.json(mapInvoice(invoice));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getMyInvoices = async (req, res) => {
+  try {
+    const { patient } = await ensurePatientProfileForUser(req.user.id);
+    const filter = { patientId: patient._id };
+    if (req.query.billType) filter.billType = req.query.billType;
+    if (req.query.paymentStatus) filter.paymentStatus = req.query.paymentStatus;
+    if (req.query.date) {
+      const start = new Date(req.query.date);
+      const end = new Date(req.query.date);
+      end.setDate(end.getDate() + 1);
+      filter.createdAt = { $gte: start, $lt: end };
+    }
+
+    const invoices = await Invoice.find(filter)
+      .populate(INVOICE_POPULATE)
+      .sort({ createdAt: -1 });
+
+    return res.json(invoices.map(mapInvoice));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 export const getPatientInvoice = async (req, res) => {
-    try {
-        const { patient } = await resolvePatientContext(req.params.patientId);
-        const invoices = await Invoice.find({
-            patientId: patient._id
-        }).populate("appointmentId");
+  try {
+    const { patient } = await resolvePatientContext(req.params.patientId);
+    const invoices = await Invoice.find({ patientId: patient._id })
+      .populate(INVOICE_POPULATE)
+      .sort({ createdAt: -1 });
 
-        res.status(200).json({
-            success: true,
-            data: invoices
-        });
+    return res.json(invoices.map(mapInvoice));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
+export const getInvoicesByContext = async (req, res) => {
+  try {
+    const filter = {};
+    if (req.query.appointmentId) filter.appointmentId = req.query.appointmentId;
+    if (req.query.labOrderId) filter.labOrderId = req.query.labOrderId;
+    if (req.query.pharmacyOrderId) filter.pharmacyOrderId = req.query.pharmacyOrderId;
+    if (req.query.bedId) filter.bedId = req.query.bedId;
+    if (req.query.wardId) filter.wardId = req.query.wardId;
+
+    const invoices = await Invoice.find(filter)
+      .populate(INVOICE_POPULATE)
+      .sort({ createdAt: -1 });
+
+    return res.json(invoices.map(mapInvoice));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 export const payInvoice = async (req, res) => {
-    try {
-        const paidAt = new Date();
-        const invoice = await Invoice.findByIdAndUpdate(req.params.id, {
-            paymentStatus: "paid",
-            paymentMethod: req.body.paymentMethod,
-            paidAt
-        },
-            { new: true }
-        );
-
-        if (invoice?.labOrderId) {
-            const labOrder = await LabOrder.findById(invoice.labOrderId);
-            if (labOrder) {
-                labOrder.paymentStatus = "paid";
-                labOrder.paymentCompletedAt = paidAt;
-                labOrder.status = getOrderStatusForPayment({
-                    currentStatus: labOrder.status,
-                    paymentStatus: "paid",
-                });
-                labOrder.invoiceId = invoice._id;
-                await labOrder.save();
-            }
-        }
-
-        if (invoice?.pharmacyOrderId) {
-            const pharmacyOrder = await PharmacyOrder.findById(invoice.pharmacyOrderId);
-            if (pharmacyOrder) {
-                pharmacyOrder.paymentStatus = "paid";
-                pharmacyOrder.status = getPharmacyStatusForPayment({
-                    currentStatus: pharmacyOrder.status,
-                    paymentStatus: "paid",
-                });
-                pharmacyOrder.invoiceId = invoice._id;
-                await pharmacyOrder.save();
-            }
-        }
-
-        res.status(200).json({
-            success: true,
-            message: "Payment Completed.",
-            data: invoice
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate(INVOICE_POPULATE);
+    if (!invoice) {
+      return res.status(404).json({ message: "Invoice not found." });
     }
+
+    if (!(await ensureInvoiceAccess(req, invoice))) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    invoice.paymentStatus = "paid";
+    invoice.paymentMethod = req.body.paymentMethod || invoice.paymentMethod;
+    invoice.paidAt = new Date();
+    invoice.updatedBy = req.user.id;
+    await invoice.save();
+    await syncInvoicePaymentState(invoice);
+
+    const refreshed = await Invoice.findById(invoice._id).populate(INVOICE_POPULATE);
+
+    return res.json({
+      message: "Payment completed successfully.",
+      invoice: mapInvoice(refreshed),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 export const initiateConsultationBilling = async (req, res) => {
-    try {
-        const appointment = await Appointment.findById(req.params.appointmentId);
+  try {
+    const appointment = await Appointment.findById(req.params.appointmentId);
 
-        if (!appointment) {
-            return res.status(404).json({ success: false, message: "Appointment not found." });
-        }
-
-        const existingInvoice = await Invoice.findOne({ appointmentId: appointment._id });
-        if (existingInvoice) {
-            return res.status(400).json({ success: false, message: "Billing already initiated for this appointment." });
-        }
-
-        const doctor = await Doctor.findById(appointment.doctorId);
-        const { patient, user } = await resolvePatientContext(appointment.patientProfileId || appointment.patientId);
-        const doctorFee = doctor?.consultationFee || 0;
-
-        const invoice = await Invoice.create({
-            patientId: patient._id,
-            patientUserId: user._id,
-            appointmentId: appointment._id,
-            billType: "consultation",
-            doctorFee,
-            lineItems: [
-                {
-                    label: "Consultation Fee",
-                    category: "consultation",
-                    referenceType: "appointment",
-                    referenceId: appointment._id,
-                    quantity: 1,
-                    unitPrice: doctorFee,
-                    lineTotal: doctorFee,
-                },
-            ],
-            createdBy: req.user.id,
-        });
-
-        return res.status(201).json({
-            success: true,
-            message: "Consultation billing initiated successfully.",
-            data: invoice,
-        });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
     }
+
+    const existingInvoice = await Invoice.findOne({ appointmentId: appointment._id });
+    if (existingInvoice) {
+      const populated = await Invoice.findById(existingInvoice._id).populate(INVOICE_POPULATE);
+      return res.status(400).json({ message: "Billing already initiated for this appointment.", invoice: mapInvoice(populated) });
+    }
+
+    const doctor = await Doctor.findById(appointment.doctorId);
+    const { patient, user } = await resolvePatientContext(appointment.patientProfileId || appointment.patientId);
+    const doctorFee = doctor?.consultationFee || 0;
+
+    const invoice = await Invoice.create({
+      patientId: patient._id,
+      patientUserId: user._id,
+      appointmentId: appointment._id,
+      billType: "consultation",
+      doctorFee,
+      lineItems: [
+        {
+          label: "Consultation Fee",
+          category: "consultation",
+          referenceType: "appointment",
+          referenceId: appointment._id,
+          quantity: 1,
+          unitPrice: doctorFee,
+          lineTotal: doctorFee,
+        },
+      ],
+      createdBy: req.user.id,
+      updatedBy: req.user.id,
+    });
+
+    const populated = await Invoice.findById(invoice._id).populate(INVOICE_POPULATE);
+
+    return res.status(201).json({
+      message: "Consultation invoice initiated successfully.",
+      invoice: mapInvoice(populated),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };

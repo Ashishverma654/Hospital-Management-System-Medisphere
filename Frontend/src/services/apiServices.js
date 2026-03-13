@@ -96,10 +96,12 @@ export const patientApi = {
 };
 
 export const billingApi = {
-  getAll: () => api.get('/billing'),
+  getAll: (params) => api.get('/billing', { params }),
   create: (body) => api.post('/billing', body),
-  getMy: () => api.get('/billing/my'),
+  getMy: (params) => api.get('/billing/my', { params }),
+  getById: (id) => api.get(`/billing/${id}`),
   getByPatient: (patientId) => api.get(`/billing/patient/${patientId}`),
+  getByContext: (params) => api.get('/billing/context', { params }),
   initiateForAppointment: (appointmentId) => api.post(`/billing/appointments/${appointmentId}/initiate`),
   pay: (id, body) => api.put(`/billing/pay/${id}`, body),
 };

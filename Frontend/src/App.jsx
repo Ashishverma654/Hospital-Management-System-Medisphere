@@ -24,6 +24,7 @@ import EmployeeRoleDashboard from './pages/employee/EmployeeRoleDashboard.jsx';
 import AdminProfilePage from './pages/employee/AdminProfilePage.jsx';
 import AuditHistoryPage from './pages/employee/AuditHistoryPage.jsx';
 import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
+import BillingManagement from './pages/employee/BillingManagement.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
 import WardManagement from './pages/admin/WardManagement.jsx';
 import BedManagement from './pages/admin/BedManagement.jsx';
@@ -213,6 +214,9 @@ function App() {
               <Route path="/employee/pharmacist/history" element={<PharmacistHistory />} />
             </Route>
             <Route path="/employee/profile" element={<AdminProfilePage />} />
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'receptionist']} />}>
+              <Route path="/employee/billing" element={<BillingManagement />} />
+            </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/doctors" element={<DoctorManagement />} />
             </Route>

@@ -39,6 +39,12 @@ const invoiceLineItemSchema = new mongoose.Schema(
 );
 
 const invoiceSchema = new mongoose.Schema({
+    invoiceNumber: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Patient",
@@ -142,6 +148,10 @@ const invoiceSchema = new mongoose.Schema({
         type: Date
     },
 
+    notes: {
+        type: String
+    },
+
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
@@ -156,6 +166,12 @@ const invoiceSchema = new mongoose.Schema({
 );
 
 invoiceSchema.pre("save", function computeTotals(next) {
+    if (!this.invoiceNumber) {
+        const stamp = Date.now().toString().slice(-8);
+        const suffix = Math.floor(100 + Math.random() * 900);
+        this.invoiceNumber = `INV-${stamp}-${suffix}`;
+    }
+
     const legacySubtotal = (this.doctorFee || 0) + (this.labCharges || 0) + (this.medicineCharges || 0) + (this.otherCharges || 0);
     const lineItemSubtotal = Array.isArray(this.lineItems)
         ? this.lineItems.reduce((sum, item) => sum + (item.lineTotal || (item.quantity || 0) * (item.unitPrice || 0)), 0)

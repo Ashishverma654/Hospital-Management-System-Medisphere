@@ -84,7 +84,7 @@ export default function PatientDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Link to="/patient/billing">
+        <Link to="/patient/bills">
           <Card className="bg-gradient-to-br from-rose-500/5 to-pink-500/5 border-rose-200/50 hover:border-rose-300 hover:shadow-lg transition-all duration-300 cursor-pointer group">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Pending Bills</CardTitle>
