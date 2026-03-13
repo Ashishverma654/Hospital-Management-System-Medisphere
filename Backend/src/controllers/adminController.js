@@ -5,6 +5,7 @@ import Bed from "../models/Bed.js";
 import Doctor from "../models/Doctor.js";
 import User from "../models/User.js";
 import CreationLog from "../models/CreationLog.js";
+import AuditLog from "../models/AuditLog.js";
 import bcrypt from "bcryptjs";
 import {
   CREATION_PERMISSIONS,
@@ -13,6 +14,7 @@ import {
   normalizeSystemRole,
 } from "../constants/roles.js";
 import HospitalSettings from "../models/HospitalSettings.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const MANAGEABLE_ROLE_OVERRIDES = {
   superadmin: ["admin", "subadmin", "doctor", "nurse", "receptionist", "labTechnician", "pharmacist", "patient"],
@@ -206,6 +208,14 @@ export const createStaffUser = async (req, res) => {
       action: "created",
     });
 
+    await logAudit({
+      actor: { id: creatorId, name: creator?.name, role: creatorRole },
+      action: "user_created",
+      entityType: "User",
+      entityId: user._id,
+      details: { role: user.role, email: user.email },
+    });
+
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,
       user: {
@@ -323,24 +333,46 @@ export const getAuditHistory = async (req, res) => {
       filter.creatorId = req.user.id;
     }
 
-    const logs = await CreationLog.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * Number(limit))
-      .limit(Number(limit));
+    const [creationLogs, auditLogs] = await Promise.all([
+      CreationLog.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(Number(limit)),
+      AuditLog.find(requesterRole === "subadmin" ? { actorId: req.user.id } : {})
+        .sort({ createdAt: -1 })
+        .limit(Number(limit)),
+    ]);
+
+    const normalizedCreation = creationLogs.map((log) => ({
+      ...log.toObject(),
+      creatorRole: normalizeSystemRole(log.creatorRole),
+      createdUserRole: normalizeSystemRole(log.createdUserRole),
+    }));
+
+    const normalizedAudit = auditLogs.map((log) => ({
+      _id: log._id,
+      action: log.action,
+      creatorName: log.actorName,
+      creatorRole: normalizeSystemRole(log.actorRole),
+      createdUserName: `${log.entityType}${log.entityId ? ` ${String(log.entityId).slice(-6)}` : ""}`,
+      createdUserRole: "system",
+      createdAt: log.createdAt,
+      details: log.details,
+    }));
+
+    const combined = [...normalizedCreation, ...normalizedAudit]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, Number(limit));
 
     const total = await CreationLog.countDocuments(filter);
+    const auditTotal = await AuditLog.countDocuments(requesterRole === "subadmin" ? { actorId: req.user.id } : {});
 
     res.json({
-      logs: logs.map((log) => ({
-        ...log.toObject(),
-        creatorRole: normalizeSystemRole(log.creatorRole),
-        createdUserRole: normalizeSystemRole(log.createdUserRole),
-      })),
+      logs: combined,
       pagination: {
-        total,
+        total: total + auditTotal,
         page: Number(page),
         limit: Number(limit),
-        totalPages: Math.ceil(total / Number(limit)),
+        totalPages: Math.ceil((total + auditTotal) / Number(limit)),
       },
     });
   } catch (error) {
@@ -384,6 +416,14 @@ export const deactivateUser = async (req, res) => {
       createdUserEmail: user.email,
       createdUserRole: normalizeSystemRole(user.role),
       action: user.isActive ? "reactivated" : "deactivated",
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: creator?.name, role: normalizeSystemRole(req.user.role) },
+      action: user.isActive ? "user_reactivated" : "user_deactivated",
+      entityType: "User",
+      entityId: user._id,
+      details: { isActive: user.isActive },
     });
 
     res.json({

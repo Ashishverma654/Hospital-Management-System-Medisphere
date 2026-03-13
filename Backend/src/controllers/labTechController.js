@@ -14,6 +14,7 @@ import {
 } from "./labOrderController.js";
 import { toStructuredSchedule } from "../utils/labWorkflow.js";
 import { notifyPatient } from "../services/notificationService.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const hydrateOrder = async (orderId) => {
   await syncLabOrderPaymentState(orderId);
@@ -176,6 +177,14 @@ export const scheduleSampleCollection = async (req, res) => {
       sourceType: "labOrder",
       sourceId: order._id,
       metadata: { date, time, status: order.status },
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "lab_sample_scheduled",
+      entityType: "LabOrder",
+      entityId: order._id,
+      details: { date, time },
     });
 
     res.json({
@@ -369,6 +378,14 @@ export const releaseReportToPortal = async (req, res) => {
       sourceType: "labOrder",
       sourceId: order._id,
       metadata: { status: order.status, releasedAt },
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "lab_report_released",
+      entityType: "LabOrder",
+      entityId: order._id,
+      details: { releasedAt },
     });
 
     res.json({

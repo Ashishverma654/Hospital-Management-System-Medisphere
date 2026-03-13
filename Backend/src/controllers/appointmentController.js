@@ -10,6 +10,7 @@ import { generateSlots } from "../utils/generateSlots.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
 import { notifyPatient } from "../services/notificationService.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const OCCUPIED_SLOT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed"];
 
@@ -161,6 +162,14 @@ export const bookAppointment = async (req, res) => {
       metadata: { date: appointment.date, slot: appointment.slot, status: appointment.status },
     });
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "appointment_booked",
+      entityType: "Appointment",
+      entityId: appointment._id,
+      details: { date: appointment.date, slot: appointment.slot, doctorId: appointment.doctorId },
+    });
+
     await sendEmail(
       patientUser.email,
       "Appointment Confirmed",
@@ -266,6 +275,14 @@ export const cancelAppointment = async (req, res) => {
     appointment.cancellationReason = reason || appointment.cancellationReason;
 
     await appointment.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "appointment_cancelled",
+      entityType: "Appointment",
+      entityId: appointment._id,
+      details: { reason: appointment.cancellationReason },
+    });
 
     res.json({ message: "Appointment cancelled Successfully." });
   } catch (error) {
@@ -516,6 +533,14 @@ export const rescheduleAppointment = async (req, res) => {
     appointment.checkInAt = undefined;
     appointment.checkedInBy = undefined;
     await appointment.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "appointment_rescheduled",
+      entityType: "Appointment",
+      entityId: appointment._id,
+      details: { date, slot },
+    });
 
     return res.json({
       message: "Appointment rescheduled successfully.",

@@ -8,6 +8,7 @@ import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/pat
 import { getOrderStatusForPayment } from "../utils/labWorkflow.js";
 import { getOrderStatusForPayment as getPharmacyStatusForPayment } from "../utils/pharmacyWorkflow.js";
 import { notifyPatient } from "../services/notificationService.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const INVOICE_POPULATE = [
   { path: "patientId", populate: { path: "userId", select: "name email phone patientId" } },
@@ -372,6 +373,14 @@ export const createInvoice = async (req, res) => {
       });
     }
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "invoice_created",
+      entityType: "Invoice",
+      entityId: invoice._id,
+      details: { billType: invoice.billType, totalAmount: invoice.totalAmount },
+    });
+
     return res.status(201).json({
       message: "Invoice created successfully.",
       invoice: mapInvoice(populated),
@@ -521,12 +530,24 @@ export const payInvoice = async (req, res) => {
       return res.status(403).json({ message: "Access forbidden." });
     }
 
+    if (invoice.paymentStatus === "paid") {
+      return res.status(400).json({ message: "Invoice is already paid." });
+    }
+
     invoice.paymentStatus = "paid";
     invoice.paymentMethod = req.body.paymentMethod || invoice.paymentMethod;
     invoice.paidAt = new Date();
     invoice.updatedBy = req.user.id;
     await invoice.save();
     await syncInvoicePaymentState(invoice);
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "invoice_paid",
+      entityType: "Invoice",
+      entityId: invoice._id,
+      details: { paymentMethod: invoice.paymentMethod },
+    });
 
     const refreshed = await Invoice.findById(invoice._id).populate(INVOICE_POPULATE);
 

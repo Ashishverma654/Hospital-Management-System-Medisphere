@@ -8,6 +8,7 @@ import LabReport from "../models/LabReport.js";
 import { generateLabOrderPDF } from "../utils/generateLabOrderPDF.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
 import { notifyRole } from "../services/notificationService.js";
+import { logAudit } from "../services/auditLogService.js";
 import {
   getOrderStatusForPayment,
   getPublicReportVisibility,
@@ -271,6 +272,14 @@ export const createLabOrder = async (req, res) => {
         metadata: { urgency, totalAmount: labOrder.totalAmount },
       });
     }
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "lab_order_created",
+      entityType: "LabOrder",
+      entityId: labOrder._id,
+      details: { urgency, totalAmount, testCount: normalizedTests.length },
+    });
 
     res.status(201).json({
       success: true,

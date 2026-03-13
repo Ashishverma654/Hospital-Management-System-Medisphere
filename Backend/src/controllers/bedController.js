@@ -5,6 +5,7 @@ import Prescription from "../models/Prescription.js";
 import User from "../models/User.js";
 import Ward from "../models/Ward.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const asOptionalObjectId = (value) => (value ? value : undefined);
 const asOptionalNumber = (value) => {
@@ -185,6 +186,14 @@ export const updateBed = async (req, res) => {
     }
 
     await bed.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "patient_admitted",
+      entityType: "Bed",
+      entityId: bed._id,
+      details: { wardId: bed.wardId?._id, patientId: user._id },
+    });
 
     const populated = await Bed.findById(bed._id)
       .populate("wardId", "name wardNumber wardType defaultPrice")
@@ -401,6 +410,14 @@ export const assignBed = async (req, res) => {
     });
 
     await bed.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "patient_discharged",
+      entityType: "Bed",
+      entityId: bed._id,
+      details: { dischargedAt: bed.dischargedAt },
+    });
 
     const populated = await Bed.findById(bed._id)
       .populate("wardId", "name wardNumber wardType defaultPrice")

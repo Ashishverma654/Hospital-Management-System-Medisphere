@@ -14,6 +14,7 @@ import {
   PATIENT_ROLE,
 } from "../constants/roles.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
+import { logAudit } from "../services/auditLogService.js";
 
 // Helper to generate a 6-digit OTP
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -126,6 +127,14 @@ export const register = async (req, res) => {
         dateOfBirth: dob,
       });
     }
+
+    await logAudit({
+      actor: { id: user._id, name: user.name, role: user.role },
+      action: "user_registered",
+      entityType: "User",
+      entityId: user._id,
+      details: { role: user.role, email: user.email },
+    });
 
     const accessToken = generateAccessToken(user);
 

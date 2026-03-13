@@ -10,6 +10,7 @@ import {
 } from "../utils/pharmacyWorkflow.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 import { notifyPatient } from "../services/notificationService.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const ORDER_POPULATE = [
   { path: "patientId", populate: { path: "userId", select: "name email patientId phone" } },
@@ -386,6 +387,14 @@ export const acceptPharmacyOrder = async (req, res) => {
     await order.save();
     await syncInvoiceForOrder(order);
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "pharmacy_order_accepted",
+      entityType: "PharmacyOrder",
+      entityId: order._id,
+      details: { status: order.status },
+    });
+
     const populatedOrder = await PharmacyOrder.findById(order._id).populate(ORDER_POPULATE);
     return res.json({
       message: "Pharmacy order accepted.",
@@ -460,6 +469,14 @@ export const markOrderReady = async (req, res) => {
       metadata: { status: order.status, paymentStatus: order.paymentStatus },
     });
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "pharmacy_order_ready",
+      entityType: "PharmacyOrder",
+      entityId: order._id,
+      details: { status: order.status },
+    });
+
     const populatedOrder = await PharmacyOrder.findById(order._id).populate(ORDER_POPULATE);
     return res.json({
       message: "Pharmacy order marked ready for pickup.",
@@ -507,6 +524,14 @@ export const completePharmacyOrder = async (req, res) => {
       : PHARMACY_STATUS.COMPLETED;
     order.completedAt = new Date();
     await order.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "pharmacy_order_completed",
+      entityType: "PharmacyOrder",
+      entityId: order._id,
+      details: { status: order.status },
+    });
 
     if (order.prescriptionId) {
       await Prescription.findByIdAndUpdate(order.prescriptionId, {
