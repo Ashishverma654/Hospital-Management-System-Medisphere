@@ -7,6 +7,7 @@ import LabOrderItem from "../models/LabOrderItem.js";
 import LabReport from "../models/LabReport.js";
 import { generateLabOrderPDF } from "../utils/generateLabOrderPDF.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
+import { notifyRole } from "../services/notificationService.js";
 import {
   getOrderStatusForPayment,
   getPublicReportVisibility,
@@ -256,6 +257,20 @@ export const createLabOrder = async (req, res) => {
     });
 
     const populatedOrder = await LabOrder.findById(labOrder._id).populate(orderPopulate);
+
+    if (["urgent", "stat"].includes(urgency)) {
+      await notifyRole({
+        role: "labTechnician",
+        key: `lab:${labOrder._id}:urgent`,
+        type: "lab",
+        title: "Urgent lab order",
+        message: `Urgent lab order ${labOrder.orderNumber || labOrder._id} requires attention.`,
+        priority: "urgent",
+        sourceType: "labOrder",
+        sourceId: labOrder._id,
+        metadata: { urgency, totalAmount: labOrder.totalAmount },
+      });
+    }
 
     res.status(201).json({
       success: true,

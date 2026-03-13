@@ -2,10 +2,21 @@ import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema(
   {
+    recipientType: {
+      type: String,
+      enum: ["patient", "employee"],
+      required: true,
+    },
+    recipientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    roleTarget: {
+      type: String,
+    },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,10 +38,19 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    priority: {
+      type: String,
+      enum: ["normal", "urgent"],
+      default: "normal",
+    },
     status: {
       type: String,
       enum: ["unread", "read"],
       default: "unread",
+    },
+    read: {
+      type: Boolean,
+      default: false,
     },
     readAt: {
       type: Date,
@@ -49,6 +69,9 @@ const notificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-notificationSchema.index({ userId: 1, key: 1 }, { unique: true });
+notificationSchema.index(
+  { recipientType: 1, recipientId: 1, roleTarget: 1, key: 1 },
+  { unique: true, sparse: true }
+);
 
 export default mongoose.model("Notification", notificationSchema);

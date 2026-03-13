@@ -1,4 +1,5 @@
 import Medicine from "../models/Medicine.js";
+import { notifyRole } from "../services/notificationService.js";
 
 const buildMedicineFilters = (query = {}) => {
   const { search, status, stockState } = query;
@@ -66,6 +67,21 @@ export const addMedicine = async (req, res) => {
       stock: Number(req.body.stock || 0),
     });
 
+    if (medicine.stock <= 0 || medicine.stock <= (medicine.lowStockThreshold ?? 10)) {
+      const stockState = medicine.stock <= 0 ? "outOfStock" : "lowStock";
+      await notifyRole({
+        role: "pharmacist",
+        key: `stock:${medicine._id}:${stockState}`,
+        type: "stock",
+        title: stockState === "outOfStock" ? "Medicine out of stock" : "Low stock alert",
+        message: `${medicine.name} is ${stockState === "outOfStock" ? "out of stock" : "running low"}.`,
+        priority: stockState === "outOfStock" ? "urgent" : "normal",
+        sourceType: "medicine",
+        sourceId: medicine._id,
+        metadata: { stock: medicine.stock, lowStockThreshold: medicine.lowStockThreshold },
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Medicine added successfully.",
@@ -124,6 +140,21 @@ export const updateMedicine = async (req, res) => {
 
     if (!medicine) {
       return res.status(404).json({ success: false, message: "Medicine not found." });
+    }
+
+    if (medicine.stock <= 0 || medicine.stock <= (medicine.lowStockThreshold ?? 10)) {
+      const stockState = medicine.stock <= 0 ? "outOfStock" : "lowStock";
+      await notifyRole({
+        role: "pharmacist",
+        key: `stock:${medicine._id}:${stockState}`,
+        type: "stock",
+        title: stockState === "outOfStock" ? "Medicine out of stock" : "Low stock alert",
+        message: `${medicine.name} is ${stockState === "outOfStock" ? "out of stock" : "running low"}.`,
+        priority: stockState === "outOfStock" ? "urgent" : "normal",
+        sourceType: "medicine",
+        sourceId: medicine._id,
+        metadata: { stock: medicine.stock, lowStockThreshold: medicine.lowStockThreshold },
+      });
     }
 
     res.status(200).json({

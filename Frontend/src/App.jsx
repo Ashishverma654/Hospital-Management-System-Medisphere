@@ -29,6 +29,7 @@ import AdminProfilePage from './pages/employee/AdminProfilePage.jsx';
 import AuditHistoryPage from './pages/employee/AuditHistoryPage.jsx';
 import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
 import BillingManagement from './pages/employee/BillingManagement.jsx';
+import EmployeeNotifications from './pages/employee/Notifications.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
 import WardManagement from './pages/admin/WardManagement.jsx';
 import BedManagement from './pages/admin/BedManagement.jsx';
@@ -153,10 +154,11 @@ function App() {
         <Route path="/employee/login" element={<EmployeeLogin />} />
         <Route path="/employee/unauthorized" element={<Unauthorized />} />
 
-        <Route element={<EmployeeRoute allowedRoles={EMPLOYEE_ROLES} />}>
-          <Route element={<EmployeeAppLayout />}>
-            <Route path="/employee" element={<EmployeeHomeRedirect />} />
-            <Route path="/employee/dashboard" element={<EmployeeHomeRedirect />} />
+            <Route element={<EmployeeRoute allowedRoles={EMPLOYEE_ROLES} />}>
+              <Route element={<EmployeeAppLayout />}>
+                <Route path="/employee" element={<EmployeeHomeRedirect />} />
+                <Route path="/employee/dashboard" element={<EmployeeHomeRedirect />} />
+                <Route path="/employee/notifications" element={<EmployeeNotifications />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.superadmin} element={<GovernanceDashboard />} />
             </Route>

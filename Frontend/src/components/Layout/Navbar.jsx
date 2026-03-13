@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../../store/authSlice';
 import {
@@ -13,17 +14,41 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { FiMenu, FiBell, FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
 import logoImg from '../../assets/logo.png';
+import { notificationsApi } from '../../services/apiServices.js';
 
 export default function Navbar({ toggleSidebar }) {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = () => {
     localStorage.removeItem('mediflow_auth');
     dispatch(logout());
     navigate('/login');
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const loadNotifications = async () => {
+      try {
+        const isPatient = user?.role === 'patient';
+        const data = isPatient
+          ? await notificationsApi.getMy()
+          : await notificationsApi.getMyEmployee();
+        setNotifications(Array.isArray(data) ? data.slice(0, 5) : []);
+        const count = isPatient
+          ? await notificationsApi.getUnreadCount()
+          : await notificationsApi.getEmployeeUnreadCount();
+        setUnreadCount(count?.unreadCount || 0);
+      } catch {
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    };
+    loadNotifications();
+  }, [isAuthenticated, user?.role]);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 sm:px-6">
@@ -48,26 +73,32 @@ export default function Navbar({ toggleSidebar }) {
             <DropdownMenu>
               <DropdownMenuTrigger className="relative flex items-center justify-center p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-accent-foreground mr-1 outline-none">
                   <FiBell className="h-5 w-5" />
-                  <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-destructive"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-destructive"></span>
+                  )}
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-72" align="end">
                 <div className="px-2 py-1.5 text-sm font-semibold border-b border-border pb-2 mb-1">
                   Notifications
                 </div>
                 <div className="max-h-[300px] overflow-y-auto">
-                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                    <span className="text-sm font-medium">New Lab Report Available</span>
-                    <span className="text-xs text-muted-foreground">Patient David Wilson's results are ready.</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="flex flex-col items-start gap-1 p-3 cursor-pointer">
-                    <span className="text-sm font-medium text-primary">Appointment Reminder</span>
-                    <span className="text-xs text-muted-foreground">Meeting with Dr. Smith in 30 mins.</span>
-                  </DropdownMenuItem>
+                  {notifications.map((notification) => (
+                    <DropdownMenuItem key={notification.id} className="flex flex-col items-start gap-1 p-3 cursor-pointer">
+                      <span className="text-sm font-medium">{notification.title}</span>
+                      <span className="text-xs text-muted-foreground">{notification.message}</span>
+                    </DropdownMenuItem>
+                  ))}
+                  {notifications.length === 0 && (
+                    <DropdownMenuItem className="text-xs text-muted-foreground">
+                      No notifications yet.
+                    </DropdownMenuItem>
+                  )}
                 </div>
                 <div className="p-2 pt-1 border-t border-border mt-1">
                   <Button variant="ghost" className="w-full text-xs text-primary justify-center h-8" asChild>
-                    <NavLink to={`/${user?.role || 'patient'}/notifications`}>View All Notifications</NavLink>
+                    <NavLink to={user?.role === 'patient' ? '/patient/notifications' : '/employee/notifications'}>
+                      View All Notifications
+                    </NavLink>
                   </Button>
                 </div>
               </DropdownMenuContent>

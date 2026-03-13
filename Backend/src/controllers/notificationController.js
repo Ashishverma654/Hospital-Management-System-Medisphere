@@ -6,29 +6,15 @@ import PharmacyOrder from "../models/PharmacyOrder.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 import { normalizeLabOrderStatus } from "../utils/labWorkflow.js";
 import { normalizePharmacyStatus, PHARMACY_STATUS } from "../utils/pharmacyWorkflow.js";
+import { EMPLOYEE_ROLES, normalizeSystemRole } from "../constants/roles.js";
+import {
+  countUnreadForRecipient,
+  markAllReadForRecipient,
+  markNotificationRead as markNotificationReadRecord,
+  notifyPatient,
+} from "../services/notificationService.js";
 
 const buildKey = (parts = []) => parts.filter(Boolean).join(":");
-
-const upsertNotification = async ({ userId, patientId, key, type, title, message, sourceType, sourceId, metadata }) => {
-  if (!key) return null;
-  return Notification.findOneAndUpdate(
-    { userId, key },
-    {
-      $setOnInsert: {
-        userId,
-        patientId,
-        key,
-        type,
-        title,
-        message,
-        sourceType,
-        sourceId,
-        metadata,
-      },
-    },
-    { new: true, upsert: true }
-  );
-};
 
 const hydrateNotifications = async ({ userId, patientId }) => {
   const now = new Date();
@@ -50,7 +36,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
     const title = "Upcoming appointment";
     const message = `${appointment.date} at ${appointment.slot}`;
     tasks.push(
-      upsertNotification({
+      notifyPatient({
         userId,
         patientId,
         key,
@@ -69,7 +55,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
     if (status === "reportReady" && order.paymentStatus !== "paid") {
       const key = buildKey(["lab", order._id, "paymentPending"]);
       tasks.push(
-        upsertNotification({
+        notifyPatient({
           userId,
           patientId,
           key,
@@ -85,7 +71,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
     if (status === "reportReleasedToPortal" || order.releasedToPortal) {
       const key = buildKey(["lab", order._id, "released"]);
       tasks.push(
-        upsertNotification({
+        notifyPatient({
           userId,
           patientId,
           key,
@@ -105,7 +91,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
     if (status === PHARMACY_STATUS.READY_FOR_PICKUP) {
       const key = buildKey(["pharmacy", order._id, "ready"]);
       tasks.push(
-        upsertNotification({
+        notifyPatient({
           userId,
           patientId,
           key,
@@ -121,7 +107,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
     if (order.paymentStatus === "pending" && [PHARMACY_STATUS.ORDER_PLACED, PHARMACY_STATUS.ORDER_ACCEPTED, PHARMACY_STATUS.PREPARING].includes(status)) {
       const key = buildKey(["pharmacy", order._id, "paymentPending"]);
       tasks.push(
-        upsertNotification({
+        notifyPatient({
           userId,
           patientId,
           key,
@@ -139,7 +125,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
   invoices.forEach((invoice) => {
     const key = buildKey(["invoice", invoice._id, invoice.paymentStatus]);
     tasks.push(
-      upsertNotification({
+      notifyPatient({
         userId,
         patientId,
         key,
@@ -161,7 +147,12 @@ export const getMyNotifications = async (req, res) => {
     const { patient, user } = await ensurePatientProfileForUser(req.user.id);
     await hydrateNotifications({ userId: user._id, patientId: patient._id });
 
-    const notifications = await Notification.find({ userId: user._id })
+    const notifications = await Notification.find({
+      $or: [
+        { recipientType: "patient", recipientId: user._id },
+        { userId: user._id },
+      ],
+    })
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -176,6 +167,7 @@ export const getMyNotifications = async (req, res) => {
         createdAt: notification.createdAt,
         sourceType: notification.sourceType,
         sourceId: notification.sourceId,
+        priority: notification.priority,
         metadata: notification.metadata || {},
       }))
     );
@@ -191,13 +183,14 @@ export const markNotificationRead = async (req, res) => {
       return res.status(404).json({ message: "Notification not found." });
     }
 
-    if (String(notification.userId) !== String(req.user.id)) {
+    if (
+      String(notification.recipientId || notification.userId || "") !== String(req.user.id)
+      && notification.recipientType !== "patient"
+    ) {
       return res.status(403).json({ message: "Access forbidden." });
     }
 
-    notification.status = "read";
-    notification.readAt = new Date();
-    await notification.save();
+    await markNotificationReadRecord(notification);
 
     return res.json({ message: "Notification marked as read." });
   } catch (error) {
@@ -207,12 +200,107 @@ export const markNotificationRead = async (req, res) => {
 
 export const markAllNotificationsRead = async (req, res) => {
   try {
-    await Notification.updateMany(
-      { userId: req.user.id, status: "unread" },
-      { $set: { status: "read", readAt: new Date() } }
-    );
+    await markAllReadForRecipient({
+      $or: [
+        { recipientType: "patient", recipientId: req.user.id },
+        { userId: req.user.id },
+      ],
+    });
 
     return res.json({ message: "All notifications marked as read." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getUnreadCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      $or: [
+        { recipientType: "patient", recipientId: req.user.id, status: "unread" },
+        { userId: req.user.id, status: "unread" },
+      ],
+    });
+    return res.json({ unreadCount: count });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+const employeeNotificationFilter = (user) => ({
+  $or: [
+    { recipientType: "employee", recipientId: user._id },
+    { recipientType: "employee", roleTarget: normalizeSystemRole(user.role) },
+    { userId: user._id },
+  ],
+});
+
+export const getMyEmployeeNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find(employeeNotificationFilter(req.user))
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json(
+      notifications.map((notification) => ({
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        status: notification.status,
+        readAt: notification.readAt,
+        createdAt: notification.createdAt,
+        sourceType: notification.sourceType,
+        sourceId: notification.sourceId,
+        priority: notification.priority,
+        metadata: notification.metadata || {},
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const markEmployeeNotificationRead = async (req, res) => {
+  try {
+    const notification = await Notification.findById(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found." });
+    }
+
+    if (
+      notification.recipientType !== "employee"
+      || (
+        String(notification.recipientId || "") !== String(req.user.id)
+        && normalizeSystemRole(notification.roleTarget || "") !== normalizeSystemRole(req.user.role)
+      )
+    ) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    await markNotificationReadRecord(notification);
+    return res.json({ message: "Notification marked as read." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const markAllEmployeeNotificationsRead = async (req, res) => {
+  try {
+    await markAllReadForRecipient(employeeNotificationFilter(req.user));
+    return res.json({ message: "All notifications marked as read." });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getEmployeeUnreadCount = async (req, res) => {
+  try {
+    const count = await Notification.countDocuments({
+      ...employeeNotificationFilter(req.user),
+      status: "unread",
+    });
+    return res.json({ unreadCount: count });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

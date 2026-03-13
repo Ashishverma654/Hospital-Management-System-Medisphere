@@ -9,6 +9,7 @@ import {
   PHARMACY_STATUS,
 } from "../utils/pharmacyWorkflow.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
+import { notifyPatient } from "../services/notificationService.js";
 
 const ORDER_POPULATE = [
   { path: "patientId", populate: { path: "userId", select: "name email patientId phone" } },
@@ -446,6 +447,18 @@ export const markOrderReady = async (req, res) => {
     order.readyAt = new Date();
     await order.save();
     await syncInvoiceForOrder(order);
+
+    await notifyPatient({
+      userId: order.patientUserId,
+      patientId: order.patientId,
+      key: `pharmacy:${order._id}:ready`,
+      type: "pharmacy",
+      title: "Medicine ready for pickup",
+      message: "Your medicine order is ready for pickup.",
+      sourceType: "pharmacyOrder",
+      sourceId: order._id,
+      metadata: { status: order.status, paymentStatus: order.paymentStatus },
+    });
 
     const populatedOrder = await PharmacyOrder.findById(order._id).populate(ORDER_POPULATE);
     return res.json({

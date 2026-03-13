@@ -13,6 +13,7 @@ import {
   validateLabItemSelection,
 } from "./labOrderController.js";
 import { toStructuredSchedule } from "../utils/labWorkflow.js";
+import { notifyPatient } from "../services/notificationService.js";
 
 const hydrateOrder = async (orderId) => {
   await syncLabOrderPaymentState(orderId);
@@ -164,6 +165,18 @@ export const scheduleSampleCollection = async (req, res) => {
       },
       { $set: { status: "sampleScheduled" } }
     );
+
+    await notifyPatient({
+      userId: order.patientUserId,
+      patientId: order.patientId,
+      key: `lab:${order._id}:sampleScheduled`,
+      type: "lab",
+      title: "Sample collection scheduled",
+      message: `Sample collection scheduled for ${date} at ${time}.`,
+      sourceType: "labOrder",
+      sourceId: order._id,
+      metadata: { date, time, status: order.status },
+    });
 
     res.json({
       success: true,
@@ -345,6 +358,18 @@ export const releaseReportToPortal = async (req, res) => {
     order.reportReleasedAt = releasedAt;
     await order.save();
     await completeLabOrderIfReleased(order._id);
+
+    await notifyPatient({
+      userId: order.patientUserId,
+      patientId: order.patientId,
+      key: `lab:${order._id}:reportReleased`,
+      type: "lab",
+      title: "Lab report released",
+      message: `${order.orderNumber || "Lab order"} report is now available in your portal.`,
+      sourceType: "labOrder",
+      sourceId: order._id,
+      metadata: { status: order.status, releasedAt },
+    });
 
     res.json({
       success: true,

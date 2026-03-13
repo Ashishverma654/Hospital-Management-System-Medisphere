@@ -9,6 +9,7 @@ import LabReport from "../models/LabReport.js";
 import { generateSlots } from "../utils/generateSlots.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
+import { notifyPatient } from "../services/notificationService.js";
 
 const OCCUPIED_SLOT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed"];
 
@@ -146,6 +147,18 @@ export const bookAppointment = async (req, res) => {
     res.status(201).json({
       message: "Appointment booked successfully.",
       appointment,
+    });
+
+    await notifyPatient({
+      userId: patientUser._id,
+      patientId: patientProfile._id,
+      key: `appointment:${appointment._id}:booked`,
+      type: "appointment",
+      title: "Appointment booked",
+      message: `Your appointment is scheduled for ${appointment.date} at ${appointment.slot}.`,
+      sourceType: "appointment",
+      sourceId: appointment._id,
+      metadata: { date: appointment.date, slot: appointment.slot, status: appointment.status },
     });
 
     await sendEmail(

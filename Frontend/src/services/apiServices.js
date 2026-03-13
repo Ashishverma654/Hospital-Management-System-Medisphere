@@ -259,6 +259,11 @@ export const nurseApi = {
 
 export const notificationsApi = {
   getMy: () => api.get('/notifications/my'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllRead: () => api.patch('/notifications/read-all'),
+  getMyEmployee: () => api.get('/notifications/employee/my'),
+  getEmployeeUnreadCount: () => api.get('/notifications/employee/unread-count'),
+  markReadEmployee: (id) => api.patch(`/notifications/employee/${id}/read`),
+  markAllReadEmployee: () => api.patch('/notifications/employee/read-all'),
 };

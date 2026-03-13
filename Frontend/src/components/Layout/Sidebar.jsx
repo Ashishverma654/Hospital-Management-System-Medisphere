@@ -86,17 +86,17 @@ export default function Sidebar({ isOpen }) {
     nurse: [
       { name: 'Dashboard', path: '/nurse', icon: FiGrid },
       { name: 'Profile', path: '/nurse/profile', icon: FiSettings },
-      { name: 'Notifications', path: '/nurse/notifications', icon: FiActivity },
+      { name: 'Notifications', path: '/employee/notifications', icon: FiActivity },
     ],
     pharmacist: [
       { name: 'Dashboard', path: '/pharmacist', icon: FiGrid },
       { name: 'Profile', path: '/pharmacist/profile', icon: FiSettings },
-      { name: 'Notifications', path: '/pharmacist/notifications', icon: FiActivity },
+      { name: 'Notifications', path: '/employee/notifications', icon: FiActivity },
     ],
     labTechnician: [
       { name: 'Dashboard', path: '/labTechnician', icon: FiGrid },
       { name: 'Profile', path: '/labTechnician/profile', icon: FiSettings },
-      { name: 'Notifications', path: '/labTechnician/notifications', icon: FiActivity },
+      { name: 'Notifications', path: '/employee/notifications', icon: FiActivity },
     ],
   };
 

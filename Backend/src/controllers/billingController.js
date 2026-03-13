@@ -7,6 +7,7 @@ import Bed from "../models/Bed.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 import { getOrderStatusForPayment } from "../utils/labWorkflow.js";
 import { getOrderStatusForPayment as getPharmacyStatusForPayment } from "../utils/pharmacyWorkflow.js";
+import { notifyPatient } from "../services/notificationService.js";
 
 const INVOICE_POPULATE = [
   { path: "patientId", populate: { path: "userId", select: "name email phone patientId" } },
@@ -356,6 +357,20 @@ export const createInvoice = async (req, res) => {
 
     await syncInvoicePaymentState(invoice);
     const populated = await Invoice.findById(invoice._id).populate(INVOICE_POPULATE);
+
+    if (invoice.paymentStatus !== "paid") {
+      await notifyPatient({
+        userId: user._id,
+        patientId: patient._id,
+        key: `invoice:${invoice._id}:pending`,
+        type: "billing",
+        title: "Payment pending",
+        message: `${invoice.billType} bill awaiting payment.`,
+        sourceType: "invoice",
+        sourceId: invoice._id,
+        metadata: { billType: invoice.billType, totalAmount: invoice.totalAmount },
+      });
+    }
 
     return res.status(201).json({
       message: "Invoice created successfully.",
