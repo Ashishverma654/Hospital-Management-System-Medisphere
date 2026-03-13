@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ALL_ROLES } from "../constants/roles.js";
 
 const creationLogSchema = new mongoose.Schema(
   {
@@ -13,6 +14,7 @@ const creationLogSchema = new mongoose.Schema(
     },
     creatorRole: {
       type: String,
+      enum: ALL_ROLES,
       required: true,
     },
     createdUserId: {
@@ -30,6 +32,7 @@ const creationLogSchema = new mongoose.Schema(
     },
     createdUserRole: {
       type: String,
+      enum: ALL_ROLES,
       required: true,
     },
     action: {

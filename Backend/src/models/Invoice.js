@@ -1,4 +1,42 @@
 import mongoose from "mongoose";
+import { BILL_TYPES, PAYMENT_METHODS, PAYMENT_STATUSES } from "../constants/modelEnums.js";
+
+const invoiceLineItemSchema = new mongoose.Schema(
+  {
+    label: {
+      type: String,
+      required: true,
+    },
+    category: {
+      type: String,
+    },
+    referenceType: {
+      type: String,
+    },
+    referenceId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 0,
+    },
+    unitPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    lineTotal: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    notes: {
+      type: String,
+    },
+  },
+  { _id: false }
+);
 
 const invoiceSchema = new mongoose.Schema({
     patientId: {
@@ -7,10 +45,43 @@ const invoiceSchema = new mongoose.Schema({
         required: true
     },
 
+    patientUserId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+
     appointmentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Appointment"
     },
+
+    labOrderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LabOrder"
+    },
+
+    pharmacyOrderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "PharmacyOrder"
+    },
+
+    bedId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Bed"
+    },
+
+    wardId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ward"
+    },
+
+    billType: {
+        type: String,
+        enum: BILL_TYPES,
+        default: "mixed"
+    },
+
+    lineItems: [invoiceLineItemSchema],
 
     daysConsulted: {
         type: Number,
@@ -51,22 +122,48 @@ const invoiceSchema = new mongoose.Schema({
         type: Number
     },
 
+    subtotal: {
+        type: Number,
+        default: 0
+    },
+
     paymentStatus: {
         type: String,
-        enum: ["pending", "paid"],
+        enum: PAYMENT_STATUSES,
         default: "pending",
     },
 
     paymentMethod: {
         type: String,
-        enum: ["cash", "card", "upi"]
+        enum: PAYMENT_METHODS
     },
 
     paidAt: {
         type: Date
+    },
+
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     }
 },
     { timestamps: true }
 );
+
+invoiceSchema.pre("save", function computeTotals(next) {
+    const legacySubtotal = (this.doctorFee || 0) + (this.labCharges || 0) + (this.medicineCharges || 0) + (this.otherCharges || 0);
+    const lineItemSubtotal = Array.isArray(this.lineItems)
+        ? this.lineItems.reduce((sum, item) => sum + (item.lineTotal || (item.quantity || 0) * (item.unitPrice || 0)), 0)
+        : 0;
+
+    this.subtotal = lineItemSubtotal || legacySubtotal;
+    this.totalAmount = this.subtotal;
+    next();
+});
 
 export default mongoose.model("Invoice", invoiceSchema);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { EMPLOYEE_ROLE_OPTIONS, getEmployeeHomeRoute } from '../../auth/constants.js';
 import { loginEmployee } from '../../services/authService.js';
@@ -10,12 +10,17 @@ export default function EmployeeLogin() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, sessionType, user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     identifier: '',
     password: '',
     role: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  if (isAuthenticated && sessionType === 'employee') {
+    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
+  }
 
   const updateField = (field, value) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -55,6 +60,9 @@ export default function EmployeeLogin() {
           <p className="mt-2 text-sm text-slate-400">
             Use your work email or employee ID, password, and selected role to enter the employee app.
           </p>
+          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-300">
+            This sign-in is for hospital staff only. Patients and public visitors should use the patient portal.
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

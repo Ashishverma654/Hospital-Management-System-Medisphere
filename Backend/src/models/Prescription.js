@@ -45,6 +45,11 @@ const prescriptionSchema = new mongoose.Schema(
       required: true,
     },
 
+    patientUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
     diagnosis: {
       type: String,
     },
@@ -53,6 +58,22 @@ const prescriptionSchema = new mongoose.Schema(
 
     notes: {
       type: String,
+    },
+
+    status: {
+      type: String,
+      enum: ["draft", "active", "dispensed", "cancelled"],
+      default: "active",
+    },
+
+    pharmacyOrderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PharmacyOrder",
+    },
+
+    issuedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
 

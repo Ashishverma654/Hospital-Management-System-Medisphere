@@ -1,6 +1,12 @@
 import mongoose from "mongoose";
 
 const departmentSchema = mongoose.Schema({
+    code: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+
     name : {
         type: String,
         required: true,
@@ -14,6 +20,21 @@ const departmentSchema = mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+
+    displayOrder: {
+        type: Number,
+        default: 0
+    },
+
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     }
 },
 

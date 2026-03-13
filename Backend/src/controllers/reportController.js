@@ -1,5 +1,6 @@
 import Report from "../models/Report.js";
 import Doctor from "../models/Doctor.js";
+import { resolvePatientContext } from "../utils/patientContext.js";
 
 export const uploadReport = async (req, res) => {
   try {
@@ -10,8 +11,11 @@ export const uploadReport = async (req, res) => {
       return res.status(404).json({ message: "Doctor profile not found." });
     }
 
+    const { patient, user } = await resolvePatientContext(patientId);
+
     const report = await Report.create({
-      patientId,
+      patientId: user._id,
+      patientProfileId: patient._id,
       appointmentId,
       doctorId: doctor._id,
       reportUrl: req.file.path,

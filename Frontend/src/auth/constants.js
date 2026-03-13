@@ -13,6 +13,17 @@ export const EMPLOYEE_ROLE_OPTIONS = [
 
 export const EMPLOYEE_ROLES = EMPLOYEE_ROLE_OPTIONS.map((role) => role.value);
 
+export const EMPLOYEE_ROLE_PATHS = {
+  superadmin: '/employee/superadmin',
+  admin: '/employee/admin',
+  subadmin: '/employee/subadmin',
+  doctor: '/employee/doctor',
+  nurse: '/employee/nurse',
+  receptionist: '/employee/receptionist',
+  labTechnician: '/employee/lab-technician',
+  pharmacist: '/employee/pharmacist',
+};
+
 export const ROLE_LABELS = {
   superadmin: 'Super Admin',
   admin: 'Admin',
@@ -41,17 +52,62 @@ export const STAFF_MANAGEMENT_ROLES = ['superadmin', 'admin', 'subadmin'];
 export const BILLING_STAFF_ROLES = ['superadmin', 'admin', 'subadmin', 'receptionist'];
 export const SUBADMIN_ONLY_ROLES = ['subadmin'];
 
+export const EMPLOYEE_DASHBOARD_META = {
+  superadmin: {
+    eyebrow: 'System Control Center',
+    title: 'Superadmin dashboard',
+    description: 'Platform-wide hospital operations, governance, and future cross-department controls will attach here.',
+    highlights: ['System oversight', 'Role governance', 'Global administration'],
+  },
+  admin: {
+    eyebrow: 'Hospital Administration',
+    title: 'Admin dashboard',
+    description: 'Administrative coordination, staff operations, and hospital master-data workflows will expand from this hub.',
+    highlights: ['Staff operations', 'Operational oversight', 'Administrative tools'],
+  },
+  subadmin: {
+    eyebrow: 'Delegated Operations',
+    title: 'Subadmin dashboard',
+    description: 'Delegated staff-management and day-to-day operational tools for subadmins will be added here in later modules.',
+    highlights: ['Delegated access', 'Ward support', 'Staff coordination'],
+  },
+  doctor: {
+    eyebrow: 'Clinical Workspace',
+    title: 'Doctor dashboard',
+    description: 'Consultation, schedules, appointments, and treatment workflows will connect to this doctor workspace later.',
+    highlights: ['Consultations', 'Appointments', 'Clinical notes'],
+  },
+  nurse: {
+    eyebrow: 'Nursing Station',
+    title: 'Nurse dashboard',
+    description: 'Patient monitoring, handovers, nursing tasks, and vitals workflows will plug into this nursing shell later.',
+    highlights: ['Ward care', 'Vitals', 'Shift handovers'],
+  },
+  receptionist: {
+    eyebrow: 'Front Desk',
+    title: 'Receptionist dashboard',
+    description: 'Front-desk scheduling, registration support, and patient coordination workflows will be added here later.',
+    highlights: ['Registration desk', 'Appointments', 'Patient coordination'],
+  },
+  labTechnician: {
+    eyebrow: 'Diagnostics Desk',
+    title: 'Lab technician dashboard',
+    description: 'Sample handling, diagnostic orders, and report-processing workflows will attach to this lab workspace later.',
+    highlights: ['Lab orders', 'Samples', 'Reports'],
+  },
+  pharmacist: {
+    eyebrow: 'Pharmacy Counter',
+    title: 'Pharmacist dashboard',
+    description: 'Prescription fulfillment, medicine issue, and stock-linked workflows will be layered onto this pharmacy shell later.',
+    highlights: ['Pharmacy orders', 'Prescriptions', 'Dispensing'],
+  },
+};
+
 export const isEmployeeRole = (role) => EMPLOYEE_ROLES.includes(role);
 
 export const getRoleLabel = (role) => ROLE_LABELS[role] || role;
 
-export const getEmployeeHomeRoute = (role) => {
-  if (role === 'subadmin') {
-    return '/employee/subadmin';
-  }
-
-  return '/employee/dashboard';
-};
+export const getEmployeeHomeRoute = (role) => EMPLOYEE_ROLE_PATHS[role] || '/employee/login';
 
 export const getSessionTypeForRole = (role) => (role === PATIENT_ROLE ? 'patient' : 'employee');
 

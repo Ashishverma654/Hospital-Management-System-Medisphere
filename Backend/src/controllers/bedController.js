@@ -1,4 +1,5 @@
 import Bed from "../models/Bed.js";
+import { resolvePatientContext } from "../utils/patientContext.js";
 
 export const addBed = async (req, res) => {
     try {
@@ -29,7 +30,7 @@ export const addBed = async (req, res) => {
 export const getBeds = async (req, res) => {
     try {
 
-        const beds = await Bed.find().populate("patientId");
+        const beds = await Bed.find().populate("patientId").populate({ path: "patientProfileId", populate: { path: "userId", select: "name email patientId" } });
 
         res.status(200).json({
             success: true,
@@ -68,8 +69,11 @@ export const assignBed = async (req, res) => {
             });
         }
 
+        const { patient, user } = await resolvePatientContext(req.body.patientId);
+
         bed.status = "occupied";
-        bed.patientId = req.body.patientId;
+        bed.patientId = user._id;
+        bed.patientProfileId = patient._id;
         bed.admittedAt = new Date();
 
         await bed.save();
@@ -107,6 +111,7 @@ export const dischargePatient = async (req, res) => {
 
         bed.status = "available";
         bed.patientId = null;
+        bed.patientProfileId = null;
         bed.dischargedAt = new Date();
 
         await bed.save();

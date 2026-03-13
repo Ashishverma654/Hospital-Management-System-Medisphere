@@ -1,10 +1,15 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 const reportSchema = new mongoose.Schema(
   {
     patientId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+
+    patientProfileId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Patient",
     },
 
     doctorId: {
@@ -23,6 +28,12 @@ const reportSchema = new mongoose.Schema(
     },
 
     reportName: String,
+
+    status: {
+      type: String,
+      enum: ["uploaded", "reviewed", "released", "archived"],
+      default: "uploaded",
+    },
   },
   { timestamps: true },
 );

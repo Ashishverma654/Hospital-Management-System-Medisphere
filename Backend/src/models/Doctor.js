@@ -14,6 +14,13 @@ const doctorSchema = mongoose.Schema(
       required: true,
     },
 
+    specializationIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Specialization",
+      },
+    ],
+
     title: {
       type: String, // e.g., Director, Senior Consultant
       default: "Consultant"
@@ -64,6 +71,17 @@ const doctorSchema = mongoose.Schema(
       },
     ],
 
+    awardIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Award",
+      },
+    ],
+
+    profileImage: {
+      type: String,
+    },
+
     rating: {
       type: Number,
       default: 0,
@@ -77,6 +95,17 @@ const doctorSchema = mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    isPublished: {
+      type: Boolean,
+      default: false,
+    },
+
+    onboardingStatus: {
+      type: String,
+      enum: ["draft", "pending", "active", "suspended"],
+      default: "pending",
     },
   },
   { timestamps: true },

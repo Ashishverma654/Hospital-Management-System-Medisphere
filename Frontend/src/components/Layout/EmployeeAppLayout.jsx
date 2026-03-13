@@ -15,6 +15,17 @@ export default function EmployeeAppLayout() {
   const user = useSelector((state) => state.auth.user);
   const homeRoute = getEmployeeHomeRoute(user?.role);
   const canManageUsers = STAFF_MANAGEMENT_ROLES.includes(user?.role);
+  const navigationItems = [
+    { to: homeRoute, label: `${getRoleLabel(user?.role || 'employee')} Dashboard` },
+    ...(canManageUsers
+      ? [
+          { to: '/employee/manage-roles', label: 'Manage Roles' },
+          { to: '/employee/patients', label: 'Patients' },
+        ]
+      : []),
+    { to: '/employee/profile', label: 'Profile' },
+    { to: '/employee/settings', label: 'Settings' },
+  ];
 
   const handleLogout = () => {
     dispatch(logout());
@@ -26,25 +37,17 @@ export default function EmployeeAppLayout() {
     <div className="flex min-h-screen bg-slate-100">
       <aside className="hidden w-72 border-r border-slate-200 bg-slate-950 px-6 py-8 text-white lg:block">
         <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Hospital System</p>
-        <h1 className="mt-3 text-2xl font-semibold">Employee App</h1>
+        <h1 className="mt-3 text-2xl font-semibold">Staff Workspace</h1>
         <p className="mt-3 text-sm text-slate-300">
-          Sidebar shell ready for future modules. Navigation stays isolated from the patient-facing app.
+          Internal hospital navigation stays isolated from the patient-facing app and adapts to each employee role.
         </p>
 
         <nav className="mt-8 flex flex-col gap-2">
-          <NavLink to={homeRoute} className={navClass}>
-            {user?.role === 'subadmin' ? 'Subadmin Dashboard' : 'Dashboard'}
-          </NavLink>
-          {canManageUsers && (
-            <>
-              <NavLink to="/employee/manage-roles" className={navClass}>
-                Manage Roles
-              </NavLink>
-              <NavLink to="/employee/patients" className={navClass}>
-                Patients
-              </NavLink>
-            </>
-          )}
+          {navigationItems.map((item) => (
+            <NavLink key={item.to} to={item.to} className={navClass}>
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
       </aside>
 
@@ -54,9 +57,24 @@ export default function EmployeeAppLayout() {
             <div>
               <p className="text-sm text-slate-500">Employee Session</p>
               <h2 className="text-xl font-semibold text-slate-900">{user?.name || 'Hospital Employee'}</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Signed in to the internal hospital system as {getRoleLabel(user?.role || 'employee')}.
+              </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <NavLink
+                to="/employee/profile"
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Profile
+              </NavLink>
+              <NavLink
+                to="/employee/settings"
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Settings
+              </NavLink>
               <div className="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium capitalize text-slate-700">
                 {getRoleLabel(user?.role || 'employee')}
               </div>

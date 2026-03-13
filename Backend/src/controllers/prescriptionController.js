@@ -2,8 +2,8 @@ import mongoose from "mongoose";
 import Prescription from "../models/Prescription.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
-import Patient from "../models/Patient.js";
 import { generatePrescriptionPDF } from "../utils/generatePrescriptionPDF.js";
+import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 
 export const createPrescription = async (req, res) => {
   try {
@@ -29,10 +29,13 @@ export const createPrescription = async (req, res) => {
       return res.status(400).json({ message: "Cannot create prescription for a cancelled appointment." });
     }
 
+    const { patient, user } = await resolvePatientContext(appointment.patientId);
+
     const prescription = await Prescription.create({
       appointmentId,
       doctorId: appointment.doctorId,
-      patientId: appointment.patientId,
+      patientId: patient._id,
+      patientUserId: user._id,
       diagnosis,
       medicines,
       notes,
@@ -50,8 +53,9 @@ export const createPrescription = async (req, res) => {
 
 export const getPatientPrescriptions = async (req, res) => {
   try {
+    const { patient } = await ensurePatientProfileForUser(req.user.id);
     const prescriptions = await Prescription.find({
-      patientId: req.user.id
+      patientId: patient._id
     }).populate({ path: "doctorId", populate: { path: "userId", select: "name" } }).populate("appointmentId");
 
     res.status(200).json({
@@ -72,7 +76,7 @@ export const getPrescriptionByAppointment = async (req, res) => {
   try {
     const prescription = await Prescription.findOne({
       appointmentId: req.params.appointmentId
-    }).populate("doctorId").populate("patientId");
+    }).populate("doctorId").populate({ path: "patientId", populate: { path: "userId", select: "name email patientId" } }).populate("patientUserId", "name email patientId");
 
     res.status(200).json({
       success: true,
@@ -89,8 +93,9 @@ export const getPrescriptionByAppointment = async (req, res) => {
 
 export const getPrescriptionByPatient = async (req, res) => {
   try {
+    const { patient } = await resolvePatientContext(req.params.patientId);
     const prescriptions = await Prescription.find({
-      patientId: req.params.patientId
+      patientId: patient._id
     }).populate("doctorId").populate("appointmentId");
 
     res.status(200).json({

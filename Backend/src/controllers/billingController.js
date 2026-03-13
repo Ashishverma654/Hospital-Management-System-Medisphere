@@ -1,6 +1,6 @@
 import Invoice from "../models/Invoice.js";
-import Patient from "../models/Patient.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 
 export const createInvoice = async (req, res) => {
     try {
@@ -8,8 +8,11 @@ export const createInvoice = async (req, res) => {
 
         const totalAmount = (doctorFee || 0) + (labCharges || 0) + (medicineCharges || 0) + (otherCharges || 0);
 
+        const { patient, user } = await resolvePatientContext(patientId);
+
         const invoice = new Invoice({
-            patientId,
+            patientId: patient._id,
+            patientUserId: user._id,
             appointmentId,
             doctorFee,
             labCharges,
@@ -18,15 +21,14 @@ export const createInvoice = async (req, res) => {
             totalAmount,
             daysConsulted,
             medicinesBreakdown,
-            labReportsBreakdown
+            labReportsBreakdown,
+            createdBy: req.user.id,
         });
 
         await invoice.save();
 
-        const patient = await Patient.findById(patientId).populate("userId");
-
         await sendEmail(
-            patient.userId.email,
+            user.email,
             "Hospital Invoice Generated",
             `Your hospital bill of ₹${totalAmount} has been generated.`
         );
@@ -50,7 +52,8 @@ export const createInvoice = async (req, res) => {
 
 export const getMyInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find({ patientId: req.user.id }).populate("appointmentId");
+        const { patient } = await ensurePatientProfileForUser(req.user.id);
+        const invoices = await Invoice.find({ patientId: patient._id }).populate("appointmentId");
         res.status(200).json({ success: true, data: invoices });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -59,7 +62,10 @@ export const getMyInvoices = async (req, res) => {
 
 export const getAllInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find().populate("patientId").populate("appointmentId");
+        const invoices = await Invoice.find()
+            .populate({ path: "patientId", populate: { path: "userId", select: "name email patientId" } })
+            .populate("patientUserId", "name email patientId")
+            .populate("appointmentId");
         res.status(200).json({ success: true, data: invoices });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -68,8 +74,9 @@ export const getAllInvoices = async (req, res) => {
 
 export const getPatientInvoice = async (req, res) => {
     try {
+        const { patient } = await resolvePatientContext(req.params.patientId);
         const invoices = await Invoice.find({
-            patientId: req.params.patientId
+            patientId: patient._id
         }).populate("appointmentId");
 
         res.status(200).json({

@@ -1,10 +1,15 @@
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 
 const labReportSchema = new mongoose.Schema({
     patientId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Patient",
         required: true
+    },
+
+    patientUserId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
     },
 
     doctorId: {
@@ -34,6 +39,27 @@ const labReportSchema = new mongoose.Schema({
     uploadedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+    },
+
+    labOrderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LabOrder",
+    },
+
+    labOrderItemId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "LabOrderItem",
+    },
+
+    status: {
+        type: String,
+        enum: ["uploaded", "reviewed", "released", "archived"],
+        default: "uploaded"
+    },
+
+    releasedToPortal: {
+        type: Boolean,
+        default: true
     },
 
 },

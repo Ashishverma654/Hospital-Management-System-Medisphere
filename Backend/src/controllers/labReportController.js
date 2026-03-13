@@ -1,23 +1,24 @@
 import User from "../models/User.js";
 import LabReport from "../models/LabReport.js";
-import Patient from "../models/Patient.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 
 export const uploadLabReport = async (req, res) => {
     try {
-        let targetPatientId = req.body.patientId;
-        if (req.user.role === "patient") {
-            targetPatientId = req.user.id;
-        }
+        const targetPatientInput = req.user.role === "patient" ? req.user.id : req.body.patientId;
+        const { patient, user } = await resolvePatientContext(targetPatientInput);
 
         const report = new LabReport({
-            patientId: targetPatientId,
+            patientId: patient._id,
+            patientUserId: user._id,
             doctorId: req.body.doctorId,
             appointmentId: req.body.appointmentId,
             reportName: req.body.reportName,
             reportType: req.body.reportType,
             reportFile: req.file.path,
-            uploadedBy: req.user.id
+            uploadedBy: req.user.id,
+            labOrderId: req.body.labOrderId,
+            labOrderItemId: req.body.labOrderItemId,
         });
         await report.save();
 
@@ -28,15 +29,12 @@ export const uploadLabReport = async (req, res) => {
         });
 
         // Only send email if the uploader is not the patient themselves
-        if (req.user.role !== "patient" && report.patientId) {
-            const uploadedTarget = await User.findById(report.patientId);
-            if (uploadedTarget && uploadedTarget.email) {
+        if (req.user.role !== "patient" && user?.email) {
                 await sendEmail(
-                    uploadedTarget.email,
+                    user.email,
                     "Lab Report Ready",
                     "Your lab report has been uploaded. Please login to view it."
                 );
-            }
         }
 
     } catch (error) {
@@ -53,8 +51,9 @@ export const uploadLabReport = async (req, res) => {
 
 export const getPatientReports = async (req, res) => {
     try {
+        const { patient } = await ensurePatientProfileForUser(req.user.id);
         const reports = await LabReport.find({
-            patientId: req.user.id
+            patientId: patient._id
         }).populate("doctorId").populate("appointmentId");
 
         res.status(200).json({
@@ -73,8 +72,9 @@ export const getPatientReports = async (req, res) => {
 
 export const getReportByPatientId = async (req, res) => {
     try {
+        const { patient } = await resolvePatientContext(req.params.patientId);
         const reports = await LabReport.find({
-            patientId: req.params.patientId
+            patientId: patient._id
         }).populate("doctorId").populate("appointmentId");
 
         res.status(200).json({

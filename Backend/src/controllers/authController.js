@@ -13,6 +13,7 @@ import {
   normalizeSystemRole,
   PATIENT_ROLE,
 } from "../constants/roles.js";
+import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 
 // Helper to generate a 6-digit OTP
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -110,6 +111,12 @@ export const register = async (req, res) => {
       dob,
       patientId
     });
+
+    if (assignedRole === PATIENT_ROLE) {
+      await ensurePatientProfileForUser(user._id, {
+        dateOfBirth: dob,
+      });
+    }
 
     res.status(201).json({
       message: "User registered successfully",

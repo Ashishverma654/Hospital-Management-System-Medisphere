@@ -5,17 +5,20 @@ import Doctor from "../models/Doctor.js";
 import DoctorAvailability from "../models/DoctorAvailability.js";
 import { generateSlots } from "../utils/generateSlots.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { resolvePatientContext } from "../utils/patientContext.js";
 
 export const bookAppointment = async (req, res) => {
   try {
     const { doctorId, date, slot, patientId: providedPatientId } = req.body;
 
     // If user is admin/receptionist, they can provide patientId. Else use current user.
-    const patientId =
+    const patientInput =
       (req.user.role === "admin" || req.user.role === "receptionist") &&
         providedPatientId
         ? providedPatientId
         : req.user.id;
+
+    const { patient: patientProfile, user: patientUser } = await resolvePatientContext(patientInput);
 
     if (!doctorId || !date || !slot) {
       return res.status(400).json({
@@ -100,9 +103,12 @@ export const bookAppointment = async (req, res) => {
 
     const appointment = await Appointment.create({
       doctorId: actualDoctorId,
-      patientId,
+      patientId: patientUser._id,
+      patientProfileId: patientProfile._id,
+      doctorUserId: doctor.userId,
       date,
       slot,
+      createdBy: req.user.id,
     });
 
     res.status(201).json({
@@ -110,10 +116,8 @@ export const bookAppointment = async (req, res) => {
       appointment,
     });
 
-    const patient = await User.findById(req.user.id);
-
     await sendEmail(
-      patient.email,
+      patientUser.email,
       "Appointment Confirmed",
       `Your appointment has been booked successfully for ${appointment.date}.`
     );
@@ -132,7 +136,11 @@ export const getAllAppointments = async (req, res) => {
         path: "doctorId",
         populate: { path: "userId", select: "name email" },
       })
-      .populate("patientId", "name email");
+      .populate("patientId", "name email")
+      .populate({
+        path: "patientProfileId",
+        populate: { path: "userId", select: "name email patientId" },
+      });
     res.json(appointments);
   } catch (error) {
     res.status(500).json({ message: error.message });

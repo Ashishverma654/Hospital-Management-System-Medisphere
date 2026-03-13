@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { BED_STATUSES, WARD_TYPES } from "../constants/modelEnums.js";
 
 const bedSchema = new mongoose.Schema({
     bedNumber: {
@@ -9,22 +10,31 @@ const bedSchema = new mongoose.Schema({
 
     ward: {
         type: String,
-        required: true
+    },
+
+    wardId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ward"
     },
 
     type: {
         type: String,
-        enum: ["general", "semi-private", "private", "icu"],
+        enum: WARD_TYPES,
         default: "general"
     },
 
     status: {
         type: String,
-        enum: ["available", "occupied", "maintenance"],
+        enum: BED_STATUSES,
         default: "available"
     },
 
     patientId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+
+    patientProfileId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Patient"
     },
@@ -35,6 +45,16 @@ const bedSchema = new mongoose.Schema({
 
     dischargedAt: {
         type: Date
+    },
+
+    customPriceOverride: {
+        type: Number,
+        min: 0
+    },
+
+    isActive: {
+        type: Boolean,
+        default: true
     }
 
 },

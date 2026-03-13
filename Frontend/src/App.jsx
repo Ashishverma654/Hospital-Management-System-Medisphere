@@ -11,11 +11,12 @@ import PatientLogin from './pages/auth/PatientLogin.jsx';
 import PatientRegister from './pages/auth/PatientRegister.jsx';
 import EmployeeLogin from './pages/auth/EmployeeLogin.jsx';
 import PortalShell from './pages/patient/PortalShell.jsx';
-import DashboardShell from './pages/employee/DashboardShell.jsx';
-import SubadminDashboard from './pages/employee/SubadminDashboard.jsx';
+import EmployeeRoleDashboard from './pages/employee/EmployeeRoleDashboard.jsx';
+import EmployeeProfileShell from './pages/employee/EmployeeProfileShell.jsx';
+import EmployeeSettingsShell from './pages/employee/EmployeeSettingsShell.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
 import UserManagement from './pages/admin/UserManagement.jsx';
-import { EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, SUBADMIN_ONLY_ROLES, getEmployeeHomeRoute } from './auth/constants.js';
+import { EMPLOYEE_ROLE_PATHS, EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, getEmployeeHomeRoute } from './auth/constants.js';
 
 function Unauthorized() {
   return (
@@ -33,6 +34,10 @@ function Unauthorized() {
 
 function EmployeeHomeRedirect() {
   const role = useSelector((state) => state.auth.user?.role);
+  return <Navigate to={getEmployeeHomeRoute(role)} replace />;
+}
+
+function LegacyRoleRedirect({ role }) {
   return <Navigate to={getEmployeeHomeRoute(role)} replace />;
 }
 
@@ -59,10 +64,33 @@ function App() {
         <Route element={<EmployeeRoute allowedRoles={EMPLOYEE_ROLES} />}>
           <Route element={<EmployeeAppLayout />}>
             <Route path="/employee" element={<EmployeeHomeRedirect />} />
-            <Route path="/employee/dashboard" element={<DashboardShell />} />
-            <Route element={<EmployeeRoute allowedRoles={SUBADMIN_ONLY_ROLES} />}>
-              <Route path="/employee/subadmin" element={<SubadminDashboard />} />
+            <Route path="/employee/dashboard" element={<EmployeeHomeRedirect />} />
+            <Route element={<EmployeeRoute allowedRoles={['superadmin']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.superadmin} element={<EmployeeRoleDashboard role="superadmin" />} />
             </Route>
+            <Route element={<EmployeeRoute allowedRoles={['admin']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.admin} element={<EmployeeRoleDashboard role="admin" />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['subadmin']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.subadmin} element={<EmployeeRoleDashboard role="subadmin" />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['doctor']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.doctor} element={<EmployeeRoleDashboard role="doctor" />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['nurse']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.nurse} element={<EmployeeRoleDashboard role="nurse" />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['receptionist']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.receptionist} element={<EmployeeRoleDashboard role="receptionist" />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['labTechnician']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.labTechnician} element={<EmployeeRoleDashboard role="labTechnician" />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['pharmacist']} />}>
+              <Route path={EMPLOYEE_ROLE_PATHS.pharmacist} element={<EmployeeRoleDashboard role="pharmacist" />} />
+            </Route>
+            <Route path="/employee/profile" element={<EmployeeProfileShell />} />
+            <Route path="/employee/settings" element={<EmployeeSettingsShell />} />
             <Route element={<EmployeeRoute allowedRoles={STAFF_MANAGEMENT_ROLES} />}>
               <Route path="/employee/users" element={<Navigate to="/employee/manage-roles" replace />} />
               <Route path="/employee/manage-roles" element={<UserManagement />} />
@@ -74,14 +102,14 @@ function App() {
         <Route path="/login" element={<Navigate to="/patient/login" replace />} />
         <Route path="/register" element={<Navigate to="/patient/register" replace />} />
         <Route path="/forgot-password" element={<Navigate to="/employee/login" replace />} />
-        <Route path="/superadmin/*" element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="/admin/*" element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="/doctor/*" element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="/receptionist/*" element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="/superreceptionist/*" element={<Navigate to="/employee/subadmin" replace />} />
-        <Route path="/nurse/*" element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="/pharmacist/*" element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="/labTechnician/*" element={<Navigate to="/employee/dashboard" replace />} />
+        <Route path="/superadmin/*" element={<LegacyRoleRedirect role="superadmin" />} />
+        <Route path="/admin/*" element={<LegacyRoleRedirect role="admin" />} />
+        <Route path="/doctor/*" element={<LegacyRoleRedirect role="doctor" />} />
+        <Route path="/receptionist/*" element={<LegacyRoleRedirect role="receptionist" />} />
+        <Route path="/superreceptionist/*" element={<LegacyRoleRedirect role="subadmin" />} />
+        <Route path="/nurse/*" element={<LegacyRoleRedirect role="nurse" />} />
+        <Route path="/pharmacist/*" element={<LegacyRoleRedirect role="pharmacist" />} />
+        <Route path="/labTechnician/*" element={<LegacyRoleRedirect role="labTechnician" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
