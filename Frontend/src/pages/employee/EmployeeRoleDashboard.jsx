@@ -10,6 +10,7 @@ export default function EmployeeRoleDashboard({ role }) {
   const user = useSelector((state) => state.auth.user);
   const metadata = EMPLOYEE_DASHBOARD_META[role] || EMPLOYEE_DASHBOARD_META.doctor;
   const canManageUsers = STAFF_MANAGEMENT_ROLES.includes(role);
+  const canAccessPatientAdmin = ['superadmin', 'admin'].includes(role);
 
   return (
     <section className="space-y-6">
@@ -40,10 +41,10 @@ export default function EmployeeRoleDashboard({ role }) {
       {canManageUsers && (
         <article className="rounded-[2rem] bg-slate-900 p-6 text-white shadow-sm">
           <p className="text-sm uppercase tracking-[0.25em] text-slate-300">Access Management</p>
-          <h3 className="mt-3 text-2xl font-semibold">Role and patient administration</h3>
+          <h3 className="mt-3 text-2xl font-semibold">Administration shortcuts</h3>
           <p className="mt-2 max-w-2xl text-slate-300">
-            Your role can open staff access controls and patient listings from the employee shell without crossing
-            into patient-facing routes.
+            Open the employee-side governance tools your role is allowed to use without crossing into public or
+            patient-facing routes.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
@@ -52,12 +53,14 @@ export default function EmployeeRoleDashboard({ role }) {
             >
               Open Manage Roles
             </Link>
-            <Link
-              to="/employee/patients"
-              className="rounded-full border border-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              View Patients
-            </Link>
+            {canAccessPatientAdmin && (
+              <Link
+                to="/employee/patients"
+                className="rounded-full border border-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              >
+                View Patients
+              </Link>
+            )}
           </div>
         </article>
       )}

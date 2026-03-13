@@ -75,6 +75,10 @@ export const patientApi = {
   getById: (id) => api.get(`/patients/${id}`),
   create: (body) => api.post('/patients', body),
   update: (id, body) => api.put(`/patients/${id}`, body),
+  getAdminList: (params) => api.get('/patients/admin/list', { params }),
+  getAdminById: (id) => api.get(`/patients/admin/${id}`),
+  updateAdmin: (id, body) => api.put(`/patients/admin/${id}`, body),
+  getAdminBoard: (params) => api.get('/patients/admin/board', { params }),
 };
 
 export const billingApi = {

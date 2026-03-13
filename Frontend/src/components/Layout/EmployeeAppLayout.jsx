@@ -21,11 +21,11 @@ export default function EmployeeAppLayout() {
     ...(canManageUsers
       ? [
           { to: '/employee/manage-roles', label: 'Manage Roles' },
-          { to: '/employee/patients', label: 'Patients' },
         ]
       : []),
     ...(canAccessGovernance
       ? [
+          { to: '/employee/patients', label: 'Patients' },
           { to: '/employee/doctors', label: 'Doctors' },
           { to: '/employee/awards', label: 'Awards' },
           { to: '/employee/departments', label: 'Departments' },

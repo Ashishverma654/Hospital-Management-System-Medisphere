@@ -194,6 +194,7 @@ function App() {
             </Route>
             <Route path="/employee/profile" element={<AdminProfilePage />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
+              <Route path="/employee/patients" element={<PatientManagement />} />
               <Route path="/employee/doctors" element={<DoctorManagement />} />
               <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
@@ -205,7 +206,6 @@ function App() {
             <Route element={<EmployeeRoute allowedRoles={STAFF_MANAGEMENT_ROLES} />}>
               <Route path="/employee/users" element={<Navigate to="/employee/manage-roles" replace />} />
               <Route path="/employee/manage-roles" element={<UserManagement />} />
-              <Route path="/employee/patients" element={<PatientManagement />} />
             </Route>
           </Route>
         </Route>
