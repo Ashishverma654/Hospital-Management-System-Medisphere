@@ -12,6 +12,20 @@ router.post("/upload", verifyAccessToken, authorizeRoles("admin", "doctor", "rec
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getPatientReports);
 
-router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("doctor", "admin"), getReportByPatientId);
+router.get(
+  "/patient/:patientId",
+  verifyAccessToken,
+  authorizeRoles(
+    "superadmin",
+    "admin",
+    "subadmin",
+    "doctor",
+    "nurse",
+    "pharmacist",
+    "receptionist",
+    "labTechnician"
+  ),
+  getReportByPatientId
+);
 
 export default router;

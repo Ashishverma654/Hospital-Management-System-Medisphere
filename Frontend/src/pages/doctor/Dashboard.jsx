@@ -7,6 +7,8 @@ import { LoadingSkeleton, ErrorState } from '../../components';
 import { doctorApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { formatDate } from '../../utils/formatters';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function DoctorDashboard() {
   const [dashboardData, setDashboardData] = useState(null);

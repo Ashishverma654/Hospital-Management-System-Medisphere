@@ -4,6 +4,8 @@ import { adminApi } from '../../services/apiServices';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Users, Activity, Calendar, DollarSign, ArrowUpRight, ArrowDownRight, BedDouble, UserPlus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 import { 
   BarChart, 
   Bar, 

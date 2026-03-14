@@ -16,6 +16,8 @@ import { LoadingSkeleton } from '../../components';
 import { labOrderApi, appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Plus, Trash2, Download, Send, AlertCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 // Common lab tests
 const COMMON_TESTS = [

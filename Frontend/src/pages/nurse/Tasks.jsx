@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialTaskForm = {
   patientId: '',
@@ -85,27 +87,27 @@ export default function NurseTasks() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Nursing Workflow</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Task list</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Nursing Workflow</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Task list</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Manage bedside tasks for medicine support, vitals recording, observation rounds, discharge prep, and doctor-round assistance.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         {Object.entries(taskStats).map(([key, value]) => (
-          <article key={key} className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-            <p className="text-sm capitalize text-slate-500">{key}</p>
-            <h3 className="mt-2 text-3xl font-semibold text-slate-900">{value}</h3>
+          <article key={key} className="rounded-xl bg-card p-6 shadow-sm">
+            <p className="text-sm capitalize text-muted-foreground">{key}</p>
+            <h3 className="mt-2 text-3xl font-semibold text-foreground">{value}</h3>
           </article>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Create Task</p>
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Create Task</p>
           <form className="mt-4 space-y-4" onSubmit={createTask}>
             <select
               value={taskForm.patientId}
@@ -117,7 +119,7 @@ export default function NurseTasks() {
                   wardId: patient?.ward?.id || '',
                 }));
               }}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
             >
               <option value="">Select patient</option>
               {patients.map((patient) => (
@@ -129,7 +131,7 @@ export default function NurseTasks() {
             <select
               value={taskForm.taskType}
               onChange={(event) => setTaskForm((current) => ({ ...current, taskType: event.target.value }))}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
             >
               <option value="medicine administration">Medicine administration</option>
               <option value="vitals recording">Vitals recording</option>
@@ -142,17 +144,17 @@ export default function NurseTasks() {
               type="datetime-local"
               value={taskForm.dueAt}
               onChange={(event) => setTaskForm((current) => ({ ...current, dueAt: event.target.value }))}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
             />
             <textarea
               value={taskForm.notes}
               onChange={(event) => setTaskForm((current) => ({ ...current, notes: event.target.value }))}
               placeholder="Task instructions or context"
               rows={4}
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+              className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
             />
             {selectedPatient && (
-              <div className="rounded-[1.25rem] bg-slate-50 p-4 text-sm text-slate-700">
+              <div className="rounded-xl bg-muted/50 p-4 text-sm text-foreground">
                 Creating task for {selectedPatient.name}
                 {selectedPatient.ward?.name ? ` in ${selectedPatient.ward.name}` : ''}.
               </div>
@@ -163,16 +165,16 @@ export default function NurseTasks() {
           </form>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="grid gap-3 md:grid-cols-3">
-            <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+            <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">All statuses</option>
               <option value="pending">Pending</option>
               <option value="inProgress">In progress</option>
               <option value="completed">Completed</option>
               <option value="missed">Missed</option>
             </select>
-            <select value={filters.patientId} onChange={(event) => setFilters((current) => ({ ...current, patientId: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+            <select value={filters.patientId} onChange={(event) => setFilters((current) => ({ ...current, patientId: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">All patients</option>
               {patients.map((patient) => (
                 <option key={patient.id} value={patient.id}>
@@ -180,22 +182,22 @@ export default function NurseTasks() {
                 </option>
               ))}
             </select>
-            <input value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))} placeholder="Filter by task type" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+            <input value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))} placeholder="Filter by task type" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
           </div>
 
           <div className="mt-4 space-y-3">
             {tasks.map((task) => (
-              <article key={task.id} className="rounded-[1.25rem] border border-slate-200 p-4">
+              <article key={task.id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-semibold capitalize text-slate-900">{task.taskType}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold capitalize text-foreground">{task.taskType}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {task.patient?.name || 'No patient'} {task.ward?.name ? `• ${task.ward.name}` : ''}
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Due {task.dueAt ? new Date(task.dueAt).toLocaleString() : 'Not scheduled'}
                     </p>
-                    {task.notes && <p className="mt-2 text-sm text-slate-600">{task.notes}</p>}
+                    {task.notes && <p className="mt-2 text-sm text-muted-foreground">{task.notes}</p>}
                   </div>
                   <StatusBadge status={task.status}>{task.status}</StatusBadge>
                 </div>
@@ -208,13 +210,13 @@ export default function NurseTasks() {
               </article>
             ))}
             {tasks.length === 0 && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 No nursing tasks are available for the current filters.
               </p>
             )}
           </div>
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }

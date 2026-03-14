@@ -15,6 +15,8 @@ import { availabilityApi } from '../../services/apiServices';
 import { useAuth } from '../../hooks';
 import { toast } from 'sonner';
 import { Clock, Plus, Edit2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const DAYS_OF_WEEK = [
   'Sunday',

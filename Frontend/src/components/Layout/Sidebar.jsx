@@ -17,6 +17,7 @@ import {
   FiUser
 } from 'react-icons/fi';
 import { FaPills, FaBed } from 'react-icons/fa';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.jsx';
 
 export default function Sidebar({ isOpen }) {
   const { user } = useSelector(state => state.auth);
@@ -106,11 +107,11 @@ export default function Sidebar({ isOpen }) {
     <motion.aside
       initial={{ width: isOpen ? 250 : 80 }}
       animate={{ width: isOpen ? 250 : 80 }}
-      className="bg-card border-r border-border min-h-screen hidden md:flex flex-col  z-20 transition-all duration-300 relative"
+      className="bg-card border-r border-border min-h-screen hidden md:flex flex-col z-20 transition-all duration-300 relative"
     >
       <div className="flex items-center justify-center h-16 border-b border-border p-4">
         {isOpen ? (
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold text-foreground">
             MediFlow
           </h1>
         ) : (
@@ -119,6 +120,21 @@ export default function Sidebar({ isOpen }) {
           </div>
         )}
       </div>
+
+      {isOpen && (
+        <div className="mx-3 mt-4 rounded-2xl border border-border bg-muted/50 p-4">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10 border border-border">
+              <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'User'}`} />
+              <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-muted-foreground capitalize">{role}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-3">
@@ -130,10 +146,10 @@ export default function Sidebar({ isOpen }) {
                end={link.path.split('/').length === 2}
                to={link.path}
                className={({ isActive }) =>
-                 `flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${
-                   isActive 
-                    ? 'bg-primary/10 text-primary font-medium' 
-                    : 'text-muted-foreground hover:bg-accent/10 hover:text-accent'
+                 `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+                   isActive
+                    ? 'bg-primary text-primary-foreground font-medium shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                  }`
                }
              >

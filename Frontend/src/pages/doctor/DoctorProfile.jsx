@@ -21,6 +21,8 @@ import {
   BookMarked
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function DoctorProfile() {
   const { id } = useParams();
@@ -64,9 +66,9 @@ export default function DoctorProfile() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20">
+    <div className="min-h-screen bg-muted/50/50 pb-20">
       {/* Premium Header Container */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
           <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
             
@@ -74,21 +76,21 @@ export default function DoctorProfile() {
             <div className="flex flex-col items-center gap-4 w-full md:w-auto">
               <button 
                 onClick={() => navigate(-1)}
-                className="self-start mb-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+                className="self-start mb-4 p-2 hover:bg-muted rounded-full transition-colors"
                 aria-label="Go back"
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
               
               <div className="relative">
-                <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white shadow-xl bg-slate-100">
+                <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white shadow-xl bg-muted">
                   <img 
                     src={doctor.userId.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${doctor.userId.name}`} 
                     alt={doctor.userId.name}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-3 py-1 rounded-full shadow-md border border-slate-100 flex items-center gap-1">
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-card px-3 py-1 rounded-full shadow-md border border-slate-100 flex items-center gap-1">
                   <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                   <span className="text-xs font-bold">{doctor.rating || '4.8'}</span>
                 </div>
@@ -98,18 +100,18 @@ export default function DoctorProfile() {
             {/* Middle: Doctor Info */}
             <div className="flex-1 space-y-4">
               <div className="space-y-1">
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                   {doctor.title} {doctor.userId.name}
                 </h1>
-                <p className="text-lg font-medium text-slate-500">
+                <p className="text-lg font-medium text-muted-foreground">
                   {doctor.title} - {doctor.departmentId.name}
                 </p>
-                <p className="text-slate-400 font-medium">Gastro Sciences</p>
+                <p className="text-muted-foreground font-medium">Gastro Sciences</p>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {(doctor.qualifications || []).map((q, i) => (
-                  <span key={i} className="text-sm font-semibold text-slate-600 bg-slate-100 px-3 py-1 rounded-md border border-slate-200">
+                  <span key={i} className="text-sm font-semibold text-muted-foreground bg-muted px-3 py-1 rounded-md border border-border">
                     {q}
                   </span>
                 ))}
@@ -118,14 +120,14 @@ export default function DoctorProfile() {
               <div className="flex gap-8 py-2">
                 {stats.map(s => (
                   <div key={s.label}>
-                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">{s.label}</p>
-                    <p className="text-xl font-bold text-slate-800">{s.value}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{s.label}</p>
+                    <p className="text-xl font-bold text-foreground">{s.value}</p>
                   </div>
                 ))}
               </div>
 
               <div className="flex gap-4 pt-4">
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-sm font-medium">
+                <div className="flex items-center gap-2 bg-muted/50 border border-border px-4 py-2 rounded-xl text-sm font-medium">
                   <Clock className="h-4 w-4 text-primary" />
                   <span>Next Slot: Tomorrow 10:50 AM</span>
                 </div>
@@ -138,18 +140,18 @@ export default function DoctorProfile() {
 
             {/* Right: Booking Widget */}
             <div className="w-full md:w-[380px] shrink-0">
-              <Card className="rounded-2xl overflow-hidden shadow-2xl border-none ring-1 ring-slate-200 bg-white">
-                <div className="flex bg-slate-50 p-1 rounded-t-2xl">
+              <Card className="rounded-2xl overflow-hidden shadow-2xl border-none ring-1 ring-slate-200 bg-card">
+                <div className="flex bg-muted/50 p-1 rounded-t-2xl">
                   <button 
                     onClick={() => setActiveTab('in-hospital')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'in-hospital' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'in-hospital' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <Hospital className="h-4 w-4" />
                     In-Hospital
                   </button>
                   <button 
                     onClick={() => setActiveTab('video')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'video' ? 'bg-primary text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'video' ? 'bg-primary text-white shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}
                   >
                     <Video className="h-4 w-4" />
                     Video
@@ -162,28 +164,28 @@ export default function DoctorProfile() {
                     <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
                       {['Today', 'Tomorrow', '14 Mar\'26'].map((d, i) => (
                         <button key={i} className={`flex flex-col items-center gap-1 min-w-[70px] py-2 rounded-xl border-b-2 transition-all ${i === 1 ? 'border-primary' : 'border-transparent opacity-60'}`}>
-                          <span className={`text-xs font-bold ${i === 1 ? 'text-primary' : 'text-slate-500'}`}>{d}</span>
+                          <span className={`text-xs font-bold ${i === 1 ? 'text-primary' : 'text-muted-foreground'}`}>{d}</span>
                           <span className="text-[10px] font-bold text-green-600">{i === 1 ? '14 Slots' : 'No Slots'}</span>
                         </button>
                       ))}
                     </div>
-                    <button className="p-2 hover:bg-slate-100 rounded-full shrink-0">
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    <button className="p-2 hover:bg-muted rounded-full shrink-0">
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
 
                   {/* Hospital Selection */}
-                  <button className="w-full flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group transition-all hover:bg-slate-100">
+                  <button className="w-full flex items-center justify-between p-4 bg-muted/50 rounded-2xl border border-slate-100 group transition-all hover:bg-muted">
                     <div className="flex items-center gap-4">
-                      <div className="p-2 bg-white rounded-lg shadow-sm">
+                      <div className="p-2 bg-card rounded-lg shadow-sm">
                         <Hospital className="h-5 w-5 text-primary" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-slate-800">Medanta Hospital Lucknow</p>
-                        <p className="text-[11px] font-bold text-slate-500">0 Slots Available Today | <span className="text-primary">₹{doctor.consultationFee}</span></p>
+                        <p className="text-sm font-bold text-foreground">Medanta Hospital Lucknow</p>
+                        <p className="text-[11px] font-bold text-muted-foreground">0 Slots Available Today | <span className="text-primary">₹{doctor.consultationFee}</span></p>
                       </div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400 group-hover:text-primary" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                   </button>
 
                   <Button className="w-full h-14 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20">
@@ -203,8 +205,8 @@ export default function DoctorProfile() {
         <div className="lg:col-span-2 space-y-12">
           
           {/* About Section */}
-          <section className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-900 border-l-4 border-primary pl-4">
+          <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+            <h2 className="text-2xl font-bold text-foreground border-l-4 border-primary pl-4">
               About Dr. {doctor.userId.name.split(' ').pop()}
             </h2>
             
@@ -212,72 +214,72 @@ export default function DoctorProfile() {
               {(doctor.expertise || []).slice(0, 3).map((item, i) => (
                 <div key={i} className="flex gap-3">
                   <div className="shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
-                  <p className="text-sm font-bold text-slate-700">{item}</p>
+                  <p className="text-sm font-bold text-foreground">{item}</p>
                 </div>
               ))}
             </div>
 
-            <p className="text-slate-600 leading-relaxed text-lg italic bg-slate-100/50 p-6 rounded-2xl border border-slate-200">
+            <p className="text-muted-foreground leading-relaxed text-lg italic bg-muted/50 p-6 rounded-2xl border border-border">
               "{doctor.about || "A highly skilled professional dedicated to excellence in patient care and medical advancement."}"
             </p>
-          </section>
+          </motion.section>
 
           {/* Collapsible Sections (Specialization, Articles, Media) */}
           <div className="space-y-4">
             
             {/* Specialization Accordion */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <button className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+              <button className="w-full flex items-center justify-between p-6 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <Award className="h-5 w-5 text-primary" />
-                  <span className="text-xl font-bold text-slate-900">Specialization and Expertise</span>
+                  <span className="text-xl font-bold text-foreground">Specialization and Expertise</span>
                 </div>
-                <ChevronDown className="h-5 w-5 text-slate-400" />
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
               </button>
               <div className="px-6 pb-6 pt-2 divide-y divide-slate-100">
                 {(doctor.expertise || []).map((exp, i) => (
-                  <div key={i} className="py-4 text-slate-600 font-medium">{exp}</div>
+                  <div key={i} className="py-4 text-muted-foreground font-medium">{exp}</div>
                 ))}
               </div>
             </div>
 
             {/* Articles Accordion */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <button className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+              <button className="w-full flex items-center justify-between p-6 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <BookMarked className="h-5 w-5 text-primary" />
-                  <span className="text-xl font-bold text-slate-900">Articles</span>
+                  <span className="text-xl font-bold text-foreground">Articles</span>
                 </div>
-                <ChevronDown className="h-5 w-5 text-slate-400" />
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
               </button>
               <div className="px-6 pb-6 pt-2 space-y-6">
                 {(doctor.articles || []).length > 0 ? (
                   doctor.articles.map((art, i) => (
                     <div key={i} className="flex gap-4 group cursor-pointer">
-                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                      <div className="w-24 h-24 rounded-xl overflow-hidden bg-muted shrink-0">
                         <img src={art.image || "https://images.unsplash.com/photo-1576091160550-217359f41f4a?auto=format&fit=crop&q=80&w=200"} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       </div>
                       <div className="flex-1 space-y-1">
                         <p className="text-xs font-bold text-rose-500">{art.date}</p>
-                        <h4 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors">{art.title}</h4>
-                        <p className="text-sm text-slate-500 font-medium">By Dr. {doctor.userId.name}</p>
+                        <h4 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">{art.title}</h4>
+                        <p className="text-sm text-muted-foreground font-medium">By Dr. {doctor.userId.name}</p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-400 text-sm italic py-4">No articles published yet.</p>
+                  <p className="text-muted-foreground text-sm italic py-4">No articles published yet.</p>
                 )}
               </div>
             </div>
 
             {/* Media Accordion */}
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-              <button className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+            <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+              <button className="w-full flex items-center justify-between p-6 hover:bg-muted/30 transition-colors">
                 <div className="flex items-center gap-3">
                   <Play className="h-5 w-5 text-primary" />
-                  <span className="text-xl font-bold text-slate-900">Media</span>
+                  <span className="text-xl font-bold text-foreground">Media</span>
                 </div>
-                <ChevronDown className="h-5 w-5 text-slate-400" />
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
               </button>
               <div className="px-6 pb-6 pt-2">
                 <div className="aspect-video w-full max-w-2xl bg-slate-900 rounded-2xl overflow-hidden relative group">
@@ -298,8 +300,8 @@ export default function DoctorProfile() {
         <div className="space-y-8">
            <Card className="rounded-2xl border-none ring-1 ring-slate-200 shadow-sm overflow-hidden">
              <div className="p-6 bg-primary/5 border-b border-primary/10">
-                <h3 className="text-lg font-bold text-slate-900">Need Help?</h3>
-                <p className="text-sm text-slate-500 font-medium">Chat with our medical assistant for guidance.</p>
+                <h3 className="text-lg font-bold text-foreground">Need Help?</h3>
+                <p className="text-sm text-muted-foreground font-medium">Chat with our medical assistant for guidance.</p>
              </div>
              <CardContent className="p-6">
                 <Button variant="outline" className="w-full h-12 rounded-xl text-primary font-bold border-primary/20 hover:bg-primary/5">
@@ -312,11 +314,11 @@ export default function DoctorProfile() {
              <div className="relative z-10 space-y-4">
                 <h3 className="text-2xl font-bold leading-tight">Video Consultation from Home</h3>
                 <p className="text-indigo-200 text-sm font-medium">Safe, secure, and convenient medical advice from your favorite doctors.</p>
-                <Button className="bg-white text-indigo-900 hover:bg-slate-100 font-bold border-none shadow-xl">
+                <Button className="bg-card text-indigo-900 hover:bg-muted font-bold border-none shadow-xl">
                   Book Video Slot
                 </Button>
              </div>
-             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl" />
+             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-card/10 rounded-full blur-3xl" />
              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                 <div className="w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent" />
              </div>

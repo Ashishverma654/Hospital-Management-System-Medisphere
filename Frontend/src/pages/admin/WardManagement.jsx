@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { locationApi, wardApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialForm = {
   name: '',
@@ -125,12 +127,12 @@ export default function WardManagement() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Inpatient Master Data</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Ward management</h2>
-          <p className="mt-2 max-w-3xl text-slate-600">
+          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Inpatient Master Data</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Ward management</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
             Manage wards, fixed bed capacity, ward types, floor and block details, and ward-level default bed pricing.
           </p>
         </div>
@@ -142,16 +144,16 @@ export default function WardManagement() {
 
       <div className="flex flex-col gap-3 lg:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search ward name, number, floor, or block"
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
-        <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900">
+        <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All statuses</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
@@ -162,11 +164,11 @@ export default function WardManagement() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr,1fr]">
-        <article className="overflow-hidden rounded-[2rem] bg-white shadow-sm">
+        <article className="overflow-hidden rounded-2xl bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+                <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
                   <th className="px-4 py-3 font-medium">Ward</th>
                   <th className="px-4 py-3 font-medium">Type</th>
                   <th className="px-4 py-3 font-medium">Beds</th>
@@ -178,27 +180,27 @@ export default function WardManagement() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-slate-500">Loading wards...</td>
+                    <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Loading wards...</td>
                   </tr>
                 )}
                 {!loading && wards.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-slate-500">No wards found.</td>
+                    <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No wards found.</td>
                   </tr>
                 )}
                 {wards.map((ward) => (
                   <tr key={ward._id} className="border-b border-slate-100 last:border-b-0">
                     <td className="px-4 py-3">
                       <button type="button" className="text-left" onClick={() => setSelectedWardId(ward._id)}>
-                        <p className="font-medium text-slate-900">{ward.name}</p>
-                        <p className="text-xs text-slate-500">{ward.wardNumber}</p>
+                        <p className="font-medium text-foreground">{ward.name}</p>
+                        <p className="text-xs text-muted-foreground">{ward.wardNumber}</p>
                       </button>
                     </td>
-                    <td className="px-4 py-3 capitalize text-slate-600">{ward.wardType}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 capitalize text-muted-foreground">{ward.wardType}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       {ward.bedSummary?.totalBeds || 0}/{ward.bedCount || 0}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">₹{Number(ward.defaultPrice || 0).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-muted-foreground">₹{Number(ward.defaultPrice || 0).toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${ward.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                         {ward.isActive ? 'Active' : 'Inactive'}
@@ -240,14 +242,14 @@ export default function WardManagement() {
           </div>
         </article>
 
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          {!selectedWardDetail && <div className="py-24 text-center text-slate-500">Select a ward to review its occupancy and bed setup.</div>}
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          {!selectedWardDetail && <div className="py-24 text-center text-muted-foreground">Select a ward to review its occupancy and bed setup.</div>}
           {selectedWardDetail && (
             <div className="space-y-5">
               <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Ward Detail</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedWardDetail.ward.name}</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Ward Detail</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedWardDetail.ward.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   {selectedWardDetail.ward.wardNumber} • {selectedWardDetail.ward.wardType}
                   {selectedWardDetail.ward.floor ? ` • Floor ${selectedWardDetail.ward.floor}` : ''}
                   {selectedWardDetail.ward.block ? ` • Block ${selectedWardDetail.ward.block}` : ''}
@@ -262,21 +264,21 @@ export default function WardManagement() {
               </div>
 
               <div>
-                <p className="font-semibold text-slate-900">Beds in this ward</p>
+                <p className="font-semibold text-foreground">Beds in this ward</p>
                 <div className="mt-3 space-y-3">
                   {(selectedWardDetail.beds || []).map((bed) => (
-                    <div key={bed._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+                    <div key={bed._id} className="rounded-xl border border-border p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
-                          <p className="font-medium text-slate-900">Bed {bed.bedNumber}</p>
-                          <p className="mt-1 text-sm text-slate-600 capitalize">{bed.status}</p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="font-medium text-foreground">Bed {bed.bedNumber}</p>
+                          <p className="mt-1 text-sm text-muted-foreground capitalize">{bed.status}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
                             Price ₹{Number(bed.effectivePrice || 0).toLocaleString()}
                             {bed.patient ? ` • ${bed.patient.name} (${bed.patient.patientId || 'No ID'})` : ''}
                           </p>
                         </div>
                         {bed.admittedAt && (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-xs text-muted-foreground">
                             Admitted {new Date(bed.admittedAt).toLocaleString()}
                           </span>
                         )}
@@ -284,7 +286,7 @@ export default function WardManagement() {
                     </div>
                   ))}
                   {selectedWardDetail.beds?.length === 0 && (
-                    <p className="text-sm text-slate-500">No beds are linked to this ward yet.</p>
+                    <p className="text-sm text-muted-foreground">No beds are linked to this ward yet.</p>
                   )}
                 </div>
               </div>
@@ -295,17 +297,17 @@ export default function WardManagement() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={submit} className="w-full max-w-3xl rounded-[2rem] bg-white p-6 shadow-2xl">
+          <form onSubmit={submit} className="w-full max-w-3xl rounded-2xl bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Ward' : 'Add Ward'}</h3>
-              <button type="button" onClick={resetForm} className="text-slate-500 hover:text-slate-900">✕</button>
+              <h3 className="text-xl font-semibold text-foreground">{editingItem ? 'Edit Ward' : 'Add Ward'}</h3>
+              <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="Ward name"><input type="text" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
-              <Field label="Ward number"><input type="text" value={form.wardNumber} onChange={(e) => setForm((c) => ({ ...c, wardNumber: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
+              <Field label="Ward name"><input type="text" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
+              <Field label="Ward number"><input type="text" value={form.wardNumber} onChange={(e) => setForm((c) => ({ ...c, wardNumber: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
               <Field label="Ward type">
-                <select value={form.wardType} onChange={(e) => setForm((c) => ({ ...c, wardType: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={form.wardType} onChange={(e) => setForm((c) => ({ ...c, wardType: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="general">General</option>
                   <option value="semi-private">Semi-private</option>
                   <option value="private">Private</option>
@@ -318,7 +320,7 @@ export default function WardManagement() {
                 </select>
               </Field>
               <Field label="Location">
-                <select value={form.hospitalLocationId} onChange={(e) => setForm((c) => ({ ...c, hospitalLocationId: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={form.hospitalLocationId} onChange={(e) => setForm((c) => ({ ...c, hospitalLocationId: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="">Select location</option>
                   {locations.map((location) => (
                     <option key={location._id} value={location._id}>
@@ -327,10 +329,10 @@ export default function WardManagement() {
                   ))}
                 </select>
               </Field>
-              <Field label="Floor"><input type="text" value={form.floor} onChange={(e) => setForm((c) => ({ ...c, floor: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
-              <Field label="Block"><input type="text" value={form.block} onChange={(e) => setForm((c) => ({ ...c, block: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" /></Field>
-              <Field label="Fixed bed count"><input type="number" min="0" value={form.bedCount} onChange={(e) => setForm((c) => ({ ...c, bedCount: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
-              <Field label="Default bed price"><input type="number" min="0" value={form.defaultPrice} onChange={(e) => setForm((c) => ({ ...c, defaultPrice: e.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required /></Field>
+              <Field label="Floor"><input type="text" value={form.floor} onChange={(e) => setForm((c) => ({ ...c, floor: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
+              <Field label="Block"><input type="text" value={form.block} onChange={(e) => setForm((c) => ({ ...c, block: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
+              <Field label="Fixed bed count"><input type="number" min="0" value={form.bedCount} onChange={(e) => setForm((c) => ({ ...c, bedCount: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
+              <Field label="Default bed price"><input type="number" min="0" value={form.defaultPrice} onChange={(e) => setForm((c) => ({ ...c, defaultPrice: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
             </div>
 
             <div className="mt-6 flex gap-3">
@@ -340,14 +342,14 @@ export default function WardManagement() {
           </form>
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
 function Field({ children, className = '', label }) {
   return (
     <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );
@@ -355,9 +357,9 @@ function Field({ children, className = '', label }) {
 
 function StatCard({ label, value }) {
   return (
-    <article className="rounded-[1.25rem] border border-slate-200 p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
+    <article className="rounded-xl border border-border p-4">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
     </article>
   );
 }

@@ -4,6 +4,8 @@ import { Button } from '../../components/ui/button';
 import { appointmentApi, billingApi, receptionistApi, slotApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Calendar, RefreshCw, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialBooking = {
   patientId: '',
@@ -189,21 +191,21 @@ export default function AppointmentDesk() {
   }, [queue]);
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Reception Desk</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Appointment Desk</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Reception Desk</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Appointment Desk</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Search existing patients, book new consultations or walk-ins, monitor today&apos;s queue, mark arrivals, reschedule visits, and initiate billing when needed.
         </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-        <form onSubmit={handleBookAppointment} className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <form onSubmit={handleBookAppointment} className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Book Appointment</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900">Patient-first booking flow</h3>
+              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Book Appointment</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Patient-first booking flow</h3>
             </div>
             <Button type="button" variant="outline" onClick={loadOptions}>
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -213,18 +215,18 @@ export default function AppointmentDesk() {
 
           <div className="mt-5 space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 value={patientQuery}
                 onChange={(event) => setPatientQuery(event.target.value)}
                 placeholder="Search patient by name, patient ID, phone, or email"
-                className="w-full rounded-2xl border border-slate-200 py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
+                className="w-full rounded-2xl border border-border py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
               />
             </div>
 
             <Field label="Patient">
-              <select value={booking.patientId} onChange={(event) => setBooking((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required>
+              <select value={booking.patientId} onChange={(event) => setBooking((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                 <option value="">Select patient</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>{patient.name} • {patient.patientId}</option>
@@ -233,15 +235,15 @@ export default function AppointmentDesk() {
             </Field>
 
             {selectedPatient && (
-              <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                <p className="font-semibold text-slate-900">{selectedPatient.name}</p>
-                <p className="mt-1 text-sm text-slate-600">{selectedPatient.patientId} • {selectedPatient.phone} • {selectedPatient.email}</p>
+              <div className="rounded-xl border border-border bg-muted/50 p-4">
+                <p className="font-semibold text-foreground">{selectedPatient.name}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{selectedPatient.patientId} • {selectedPatient.phone} • {selectedPatient.email}</p>
               </div>
             )}
 
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Department">
-                <select value={booking.departmentId} onChange={(event) => setBooking((current) => ({ ...current, departmentId: event.target.value, specializationId: '', doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required>
+                <select value={booking.departmentId} onChange={(event) => setBooking((current) => ({ ...current, departmentId: event.target.value, specializationId: '', doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                   <option value="">Select department</option>
                   {(options.departments || []).map((item) => (
                     <option key={item._id} value={item._id}>{item.name}</option>
@@ -249,7 +251,7 @@ export default function AppointmentDesk() {
                 </select>
               </Field>
               <Field label="Specialization">
-                <select value={booking.specializationId} onChange={(event) => setBooking((current) => ({ ...current, specializationId: event.target.value, doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={booking.specializationId} onChange={(event) => setBooking((current) => ({ ...current, specializationId: event.target.value, doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="">Select specialization</option>
                   {(options.specializations || []).map((item) => (
                     <option key={item._id} value={item._id}>{item.name}</option>
@@ -257,7 +259,7 @@ export default function AppointmentDesk() {
                 </select>
               </Field>
               <Field label="Doctor">
-                <select value={booking.doctorId} onChange={(event) => setBooking((current) => ({ ...current, doctorId: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required>
+                <select value={booking.doctorId} onChange={(event) => setBooking((current) => ({ ...current, doctorId: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                   <option value="">Select doctor</option>
                   {(options.doctors || []).map((item) => (
                     <option key={item._id} value={item._id}>{item.userId?.name} • {item.departmentId?.name}</option>
@@ -265,17 +267,17 @@ export default function AppointmentDesk() {
                 </select>
               </Field>
               <Field label="Date">
-                <input type="date" value={booking.date} onChange={(event) => setBooking((current) => ({ ...current, date: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+                <input type="date" value={booking.date} onChange={(event) => setBooking((current) => ({ ...current, date: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
               </Field>
               <Field label="Visit Type">
-                <select value={booking.visitType} onChange={(event) => setBooking((current) => ({ ...current, visitType: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={booking.visitType} onChange={(event) => setBooking((current) => ({ ...current, visitType: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="newConsultation">New Consultation</option>
                   <option value="followUp">Follow-up</option>
                   <option value="walkIn">Walk-in</option>
                 </select>
               </Field>
               <Field label="Consultation Mode">
-                <select value={booking.consultationMode} onChange={(event) => setBooking((current) => ({ ...current, consultationMode: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={booking.consultationMode} onChange={(event) => setBooking((current) => ({ ...current, consultationMode: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="in-person">In-Person</option>
                   <option value="video">Video</option>
                   <option value="phone">Phone</option>
@@ -284,7 +286,7 @@ export default function AppointmentDesk() {
             </div>
 
             <Field label="Reason for Visit">
-              <textarea value={booking.reasonForVisit} onChange={(event) => setBooking((current) => ({ ...current, reasonForVisit: event.target.value }))} className="min-h-[100px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <textarea value={booking.reasonForVisit} onChange={(event) => setBooking((current) => ({ ...current, reasonForVisit: event.target.value }))} className="min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
             </Field>
 
             <Field label="Available Slots">
@@ -297,14 +299,14 @@ export default function AppointmentDesk() {
                     className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                       booking.slot === slot
                         ? 'bg-slate-900 text-white'
-                        : 'border border-slate-200 bg-white text-slate-700'
+                        : 'border border-border bg-card text-foreground'
                     }`}
                   >
                     {slot}
                   </button>
                 ))}
                 {booking.doctorId && availableSlots.length === 0 && (
-                  <p className="text-sm text-slate-500">No available slots for the selected date.</p>
+                  <p className="text-sm text-muted-foreground">No available slots for the selected date.</p>
                 )}
               </div>
             </Field>
@@ -315,21 +317,21 @@ export default function AppointmentDesk() {
           </div>
         </form>
 
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Today&apos;s Queue</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900">Check-in and queue management</h3>
+              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Today&apos;s Queue</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Check-in and queue management</h3>
             </div>
             <div className="flex flex-wrap gap-3">
-              <input type="date" value={queueDate} onChange={(event) => setQueueDate(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-              <select value={filterDoctor} onChange={(event) => setFilterDoctor(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+              <input type="date" value={queueDate} onChange={(event) => setQueueDate(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+              <select value={filterDoctor} onChange={(event) => setFilterDoctor(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
                 <option value="">All doctors</option>
                 {queueDoctors.map(([id, name]) => (
                   <option key={id} value={id}>{name}</option>
                 ))}
               </select>
-              <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+              <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
                 <option value="">All statuses</option>
                 <option value="booked">Booked</option>
                 <option value="arrived">Arrived</option>
@@ -347,26 +349,26 @@ export default function AppointmentDesk() {
               ['Arrived', queueSummary?.arrived ?? 0],
               ['Cancelled', queueSummary?.cancelled ?? 0],
             ].map(([label, value]) => (
-              <article key={label} className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">{label}</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
+              <article key={label} className="rounded-xl border border-border bg-muted/50 p-4">
+                <p className="text-sm text-muted-foreground">{label}</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
               </article>
             ))}
           </div>
 
           <div className="mt-6 space-y-3">
             {queue.map((appointment) => (
-              <article key={appointment._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+              <article key={appointment._id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{appointment.patientId?.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{appointment.patientId?.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {appointment.patientId?.patientId} • {appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}
                     </p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">{appointment.visitType}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">{appointment.visitType}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
+                    <span className="rounded-full bg-muted px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                       {appointment.status}
                     </span>
                     {appointment.status === 'booked' && (
@@ -385,24 +387,24 @@ export default function AppointmentDesk() {
                 </div>
               </article>
             ))}
-            {queue.length === 0 && <p className="text-sm text-slate-500">No appointments found for the selected filters.</p>}
+            {queue.length === 0 && <p className="text-sm text-muted-foreground">No appointments found for the selected filters.</p>}
           </div>
         </article>
       </div>
 
       {rescheduleTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={handleReschedule} className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+          <form onSubmit={handleReschedule} className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">Reschedule Appointment</h3>
-              <button type="button" onClick={() => setRescheduleTarget(null)} className="text-slate-500 hover:text-slate-900">✕</button>
+              <h3 className="text-xl font-semibold text-foreground">Reschedule Appointment</h3>
+              <button type="button" onClick={() => setRescheduleTarget(null)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
             <div className="mt-5 grid gap-4">
               <Field label="New date">
-                <input type="date" value={rescheduleForm.date} onChange={(event) => setRescheduleForm((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+                <input type="date" value={rescheduleForm.date} onChange={(event) => setRescheduleForm((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
               </Field>
               <Field label="New slot">
-                <input type="text" value={rescheduleForm.slot} onChange={(event) => setRescheduleForm((current) => ({ ...current, slot: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" placeholder="Enter exact slot e.g. 10:00 AM" required />
+                <input type="text" value={rescheduleForm.slot} onChange={(event) => setRescheduleForm((current) => ({ ...current, slot: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" placeholder="Enter exact slot e.g. 10:00 AM" required />
               </Field>
             </div>
             <div className="mt-6 flex gap-3">
@@ -412,14 +414,14 @@ export default function AppointmentDesk() {
           </form>
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
 function Field({ children, className = '', label }) {
   return (
     <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );

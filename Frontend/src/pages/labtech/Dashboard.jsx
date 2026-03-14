@@ -5,6 +5,8 @@ import { labTechApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
 import { Activity, Clock3, FileUp, FlaskConical, ListTodo, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const quickActions = [
   { label: 'Open Pending Lab Orders', to: '/employee/lab-technician/orders' },
@@ -44,37 +46,37 @@ export default function LabTechDashboard() {
   ];
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Diagnostics Desk</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Lab technician workflow dashboard</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Diagnostics Desk</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Lab technician workflow dashboard</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Track pending orders, urgent sample flow, internal report readiness, and patient-safe report release from one
           technician workspace.
         </p>
-        <p className="mt-3 text-sm text-slate-500">
-          Lab section: <span className="font-semibold text-slate-900">{dashboard?.labSection || 'Loading...'}</span>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Lab section: <span className="font-semibold text-foreground">{dashboard?.labSection || 'Loading...'}</span>
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {stats.map((stat) => (
-          <article key={stat.label} className="rounded-[1.75rem] bg-white p-6 shadow-sm">
+          <article key={stat.label} className="rounded-2xl bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">{stat.label}</p>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
               <stat.icon className="h-4 w-4 text-[#ee4c35]" />
             </div>
-            <p className="mt-4 text-3xl font-semibold text-slate-900">{loading ? '...' : stat.value}</p>
+            <p className="mt-4 text-3xl font-semibold text-foreground">{loading ? '...' : stat.value}</p>
           </article>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Quick Actions</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900">Technician shortcuts</h3>
+              <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Quick Actions</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Technician shortcuts</h3>
             </div>
             <Button variant="outline" onClick={loadDashboard}>Refresh</Button>
           </div>
@@ -88,11 +90,11 @@ export default function LabTechDashboard() {
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Priority Queue</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900">Live operational orders</h3>
+              <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Priority Queue</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Live operational orders</h3>
             </div>
             <Button asChild variant="outline">
               <Link to="/employee/lab-technician/orders">Open inbox</Link>
@@ -101,14 +103,14 @@ export default function LabTechDashboard() {
 
           <div className="mt-5 space-y-3">
             {(dashboard?.quickQueue || []).map((order) => (
-              <article key={order._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+              <article key={order._id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{order.patientName}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{order.patientName}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {order.orderNumber} • {order.doctorName} • {order.items?.map((item) => item.testName).join(', ')}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Created {new Date(order.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -125,11 +127,11 @@ export default function LabTechDashboard() {
               </article>
             ))}
             {!loading && (dashboard?.quickQueue || []).length === 0 && (
-              <p className="text-sm text-slate-500">No active lab orders are waiting in the queue right now.</p>
+              <p className="text-sm text-muted-foreground">No active lab orders are waiting in the queue right now.</p>
             )}
           </div>
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { appointmentApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All statuses' },
@@ -52,21 +54,21 @@ export default function PatientAppointments() {
   const selected = appointments.find((item) => (item._id || item.id) === selectedId);
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Appointments</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Appointments and visit history</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Appointments</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Appointments and visit history</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Track upcoming appointments, visit status, and doctor details across all departments.
         </p>
       </div>
 
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="grid gap-3 md:grid-cols-3">
           <select
             value={filters.status}
             onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value || 'all'} value={option.value}>
@@ -78,32 +80,32 @@ export default function PatientAppointments() {
             type="date"
             value={filters.startDate}
             onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
           />
           <input
             type="date"
             value={filters.endDate}
             onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+            className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
           />
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Upcoming</p>
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Upcoming</p>
           <div className="mt-4 space-y-3">
             {upcoming.map((appointment) => (
               <button
                 key={appointment._id}
                 type="button"
                 onClick={() => setSelectedId(appointment._id)}
-                className={`w-full rounded-[1.25rem] border p-4 text-left ${selectedId === appointment._id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`w-full rounded-xl border p-4 text-left ${selectedId === appointment._id ? 'border-slate-900 bg-muted/50' : 'border-border hover:border-border'}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-slate-900">{appointment.doctorId?.userId?.name || 'Doctor'}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{appointment.doctorId?.userId?.name || 'Doctor'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {appointment.doctorId?.departmentId?.name || 'Department'} • {appointment.date} • {appointment.slot}
                     </p>
                   </div>
@@ -112,25 +114,25 @@ export default function PatientAppointments() {
               </button>
             ))}
             {upcoming.length === 0 && !loading && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                 No upcoming appointments.
               </p>
             )}
           </div>
 
-          <p className="mt-6 text-sm uppercase tracking-[0.25em] text-slate-500">Past</p>
+          <p className="mt-6 text-sm uppercase tracking-[0.15em] text-muted-foreground">Past</p>
           <div className="mt-4 space-y-3">
             {past.map((appointment) => (
               <button
                 key={appointment._id}
                 type="button"
                 onClick={() => setSelectedId(appointment._id)}
-                className={`w-full rounded-[1.25rem] border p-4 text-left ${selectedId === appointment._id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`w-full rounded-xl border p-4 text-left ${selectedId === appointment._id ? 'border-slate-900 bg-muted/50' : 'border-border hover:border-border'}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="font-semibold text-slate-900">{appointment.doctorId?.userId?.name || 'Doctor'}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{appointment.doctorId?.userId?.name || 'Doctor'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {appointment.doctorId?.departmentId?.name || 'Department'} • {appointment.date} • {appointment.slot}
                     </p>
                   </div>
@@ -139,30 +141,30 @@ export default function PatientAppointments() {
               </button>
             ))}
             {past.length === 0 && !loading && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
                 No past appointments.
               </p>
             )}
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           {!selected && (
-            <div className="py-24 text-center text-slate-500">Select an appointment to view details.</div>
+            <div className="py-24 text-center text-muted-foreground">Select an appointment to view details.</div>
           )}
           {selected && (
             <div className="space-y-5">
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Appointment Detail</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selected.doctorId?.userId?.name || 'Doctor'}</h3>
-                <p className="mt-1 text-sm text-slate-600">{selected.doctorId?.departmentId?.name || 'Department'}</p>
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Appointment Detail</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{selected.doctorId?.userId?.name || 'Doctor'}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{selected.doctorId?.departmentId?.name || 'Department'}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <StatusBadge status={selected.status}>{selected.status}</StatusBadge>
                   <StatusBadge status={selected.visitType}>{selected.visitType || 'visit'}</StatusBadge>
                 </div>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4 text-sm text-slate-600">
+              <article className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
                 <div className="flex items-center justify-between">
                   <span>Date</span>
                   <span>{selected.date}</span>
@@ -182,8 +184,8 @@ export default function PatientAppointments() {
               </article>
 
               {selected.reasonForVisit && (
-                <article className="rounded-[1.25rem] border border-slate-200 p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-900">Reason for visit</p>
+                <article className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+                  <p className="font-semibold text-foreground">Reason for visit</p>
                   <p className="mt-2">{selected.reasonForVisit}</p>
                 </article>
               )}
@@ -191,6 +193,6 @@ export default function PatientAppointments() {
           )}
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }

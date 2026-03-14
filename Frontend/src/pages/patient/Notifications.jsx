@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { notificationsApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function PatientNotifications() {
   const [notifications, setNotifications] = useState([]);
@@ -50,18 +52,18 @@ export default function PatientNotifications() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Notifications</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Care alerts and updates</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Notifications</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Care alerts and updates</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Stay on top of lab results, medicine readiness, and payment reminders. Unread alerts appear first.
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[2rem] bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-600">
-          Unread alerts: <span className="font-semibold text-slate-900">{unreadCount}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-card p-6 shadow-sm">
+        <p className="text-sm text-muted-foreground">
+          Unread alerts: <span className="font-semibold text-foreground">{unreadCount}</span>
         </p>
         <Button variant="outline" onClick={markAllRead} disabled={notifications.length === 0}>
           Mark all as read
@@ -70,12 +72,12 @@ export default function PatientNotifications() {
 
       <div className="space-y-4">
         {notifications.map((notification) => (
-          <article key={notification.id} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <article key={notification.id} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
-                <p className="font-semibold text-slate-900">{notification.title}</p>
-                <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="font-semibold text-foreground">{notification.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{notification.message}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
                   {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : '—'}
                 </p>
               </div>
@@ -94,11 +96,11 @@ export default function PatientNotifications() {
         ))}
 
         {!loading && notifications.length === 0 && (
-          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
+          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-muted-foreground">
             No notifications yet. You will see lab, pharmacy, and billing updates here.
           </div>
         )}
       </div>
-    </section>
+    </motion.section>
   );
 }

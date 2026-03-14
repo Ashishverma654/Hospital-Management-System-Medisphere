@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { pharmacyOrderApi, prescriptionApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function PatientPrescriptions() {
   const [prescriptions, setPrescriptions] = useState([]);
@@ -57,32 +59,32 @@ export default function PatientPrescriptions() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Pharmacy Link</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Prescriptions</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Pharmacy Link</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Prescriptions</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Review doctor-issued prescriptions and place medicine orders while you are still inside the hospital.
         </p>
       </div>
 
       <div className="space-y-4">
         {prescriptions.map((prescription) => (
-          <article key={prescription._id} className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <article key={prescription._id} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
-                <p className="font-semibold text-slate-900">
+                <p className="font-semibold text-foreground">
                   Prescription {String(prescription._id).slice(-8).toUpperCase()}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Doctor: {prescription.doctorId?.userId?.name || 'Hospital Doctor'}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Issued on {new Date(prescription.issuedAt || prescription.createdAt).toLocaleString()}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
                   {prescription.status || 'active'}
                 </span>
                 {prescription.pharmacyOrderId && (
@@ -95,12 +97,12 @@ export default function PatientPrescriptions() {
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {(prescription.medicines || []).map((medicine, index) => (
-                <div key={`${prescription._id}-${index}`} className="rounded-[1.25rem] bg-slate-50 p-4">
-                  <p className="font-medium text-slate-900">{medicine.name}</p>
-                  <p className="mt-1 text-sm text-slate-600">
+                <div key={`${prescription._id}-${index}`} className="rounded-xl bg-muted/50 p-4">
+                  <p className="font-medium text-foreground">{medicine.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {medicine.dosage || 'Dose not set'} • {medicine.frequency || 'Frequency not set'}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500">{medicine.duration || 'Duration not set'}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{medicine.duration || 'Duration not set'}</p>
                 </div>
               ))}
             </div>
@@ -119,11 +121,11 @@ export default function PatientPrescriptions() {
         ))}
 
         {!loading && prescriptions.length === 0 && (
-          <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white p-12 text-center text-slate-500">
+          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-muted-foreground">
             No prescriptions are available for this patient account yet.
           </div>
         )}
       </div>
-    </section>
+    </motion.section>
   );
 }

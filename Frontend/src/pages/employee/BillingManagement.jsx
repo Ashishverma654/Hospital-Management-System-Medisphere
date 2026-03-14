@@ -4,6 +4,8 @@ import { Button } from '../../components/ui/button';
 import { billingApi, patientApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialForm = {
   patientId: '',
@@ -130,12 +132,12 @@ export default function BillingManagement() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Financial Operations</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Billing and payments</h2>
-          <p className="mt-2 max-w-3xl text-slate-600">
+          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Financial Operations</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Billing and payments</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
             Manage consultation, lab, pharmacy, and future ward-ready invoices with payment state visibility across patient and staff workflows.
           </p>
         </div>
@@ -148,10 +150,10 @@ export default function BillingManagement() {
         <SummaryCard label="Pending" value={`₹${totals.pending.toLocaleString()}`} />
       </div>
 
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="grid gap-3 md:grid-cols-4">
-          <input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search invoice, patient, or context" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <select value={filters.billType} onChange={(event) => setFilters((current) => ({ ...current, billType: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search invoice, patient, or context" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <select value={filters.billType} onChange={(event) => setFilters((current) => ({ ...current, billType: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All bill types</option>
             <option value="consultation">Consultation</option>
             <option value="lab">Lab</option>
@@ -159,27 +161,27 @@ export default function BillingManagement() {
             <option value="ward">Ward</option>
             <option value="mixed">Mixed</option>
           </select>
-          <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All payment states</option>
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <input type="date" value={filters.date} onChange={(event) => setFilters((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+          <input type="date" value={filters.date} onChange={(event) => setFilters((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1fr,1fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Invoice List</p>
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Invoice List</p>
           <div className="mt-4 space-y-3">
             {invoices.map((invoice) => (
-              <button key={invoice.id} type="button" onClick={() => setSelectedInvoiceId(invoice.id)} className={`w-full rounded-[1.25rem] border p-4 text-left ${selectedInvoiceId === invoice.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-300'}`}>
+              <button key={invoice.id} type="button" onClick={() => setSelectedInvoiceId(invoice.id)} className={`w-full rounded-xl border p-4 text-left ${selectedInvoiceId === invoice.id ? 'border-slate-900 bg-muted/50' : 'border-border hover:border-border'}`}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
-                    <p className="mt-1 text-sm text-slate-600">{invoice.patient?.name || 'Patient'} • {invoice.patient?.patientId || 'No ID'}</p>
-                    <p className="mt-1 text-sm text-slate-500">{invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : '—'}</p>
+                    <p className="font-semibold text-foreground">{invoice.invoiceNumber}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{invoice.patient?.name || 'Patient'} • {invoice.patient?.patientId || 'No ID'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : '—'}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <StatusBadge status={invoice.billType}>{invoice.billType}</StatusBadge>
@@ -188,19 +190,19 @@ export default function BillingManagement() {
                 </div>
               </button>
             ))}
-            {invoices.length === 0 && <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">No invoices match the selected filters.</p>}
+            {invoices.length === 0 && <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No invoices match the selected filters.</p>}
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          {!selectedInvoice && <div className="py-24 text-center text-slate-500">Select an invoice to review its itemized detail.</div>}
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          {!selectedInvoice && <div className="py-24 text-center text-muted-foreground">Select an invoice to review its itemized detail.</div>}
           {selectedInvoice && (
             <div className="space-y-5">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Invoice Detail</p>
-                  <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedInvoice.invoiceNumber}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{selectedInvoice.patient?.name || 'Patient'} • {selectedInvoice.patient?.patientId || 'No ID'}</p>
+                  <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Invoice Detail</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedInvoice.invoiceNumber}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{selectedInvoice.patient?.name || 'Patient'} • {selectedInvoice.patient?.patientId || 'No ID'}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge status={selectedInvoice.billType}>{selectedInvoice.billType}</StatusBadge>
@@ -208,9 +210,9 @@ export default function BillingManagement() {
                 </div>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Linked context</p>
-                <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Linked context</p>
+                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   {selectedInvoice.context?.appointment && <p>Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}</p>}
                   {selectedInvoice.context?.labOrder && <p>Lab Order: {selectedInvoice.context.labOrder.orderNumber} • {selectedInvoice.context.labOrder.status}</p>}
                   {selectedInvoice.context?.pharmacyOrder && <p>Pharmacy Order: {selectedInvoice.context.pharmacyOrder.id} • {selectedInvoice.context.pharmacyOrder.status}</p>}
@@ -219,28 +221,28 @@ export default function BillingManagement() {
                 </div>
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Itemized lines</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Itemized lines</p>
                 <div className="mt-3 space-y-3">
                   {(selectedInvoice.lineItems || []).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
+                    <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-muted/50 p-4">
                       <div>
-                        <p className="font-medium text-slate-900">{item.label}</p>
-                        <p className="mt-1 text-sm text-slate-600 capitalize">
+                        <p className="font-medium text-foreground">{item.label}</p>
+                        <p className="mt-1 text-sm text-muted-foreground capitalize">
                           {item.category || 'charge'} • Qty {item.quantity} • Unit ₹{Number(item.unitPrice || 0).toLocaleString()}
                         </p>
-                        {item.notes && <p className="mt-1 text-sm text-slate-500">{item.notes}</p>}
+                        {item.notes && <p className="mt-1 text-sm text-muted-foreground">{item.notes}</p>}
                       </div>
-                      <p className="font-semibold text-slate-900">₹{Number(item.lineTotal || 0).toLocaleString()}</p>
+                      <p className="font-semibold text-foreground">₹{Number(item.lineTotal || 0).toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <div className="space-y-2 text-sm text-slate-600">
+              <article className="rounded-xl border border-border p-4">
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between"><span>Subtotal</span><span>₹{Number(selectedInvoice.subtotal || 0).toLocaleString()}</span></div>
-                  <div className="flex items-center justify-between font-semibold text-slate-900"><span>Total</span><span>₹{Number(selectedInvoice.totalAmount || 0).toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(selectedInvoice.totalAmount || 0).toLocaleString()}</span></div>
                   <div className="flex items-center justify-between"><span>Payment method</span><span>{selectedInvoice.paymentMethod || 'Not recorded'}</span></div>
                   <div className="flex items-center justify-between"><span>Paid at</span><span>{selectedInvoice.paidAt ? new Date(selectedInvoice.paidAt).toLocaleString() : 'Pending'}</span></div>
                   <div className="flex items-center justify-between"><span>Operator</span><span>{user?.name || 'Staff'}</span></div>
@@ -257,15 +259,15 @@ export default function BillingManagement() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={createInvoice} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+          <form onSubmit={createInvoice} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">Create Invoice</h3>
-              <button type="button" onClick={() => setShowCreate(false)} className="text-slate-500 hover:text-slate-900">✕</button>
+              <h3 className="text-xl font-semibold text-foreground">Create Invoice</h3>
+              <button type="button" onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <Field label="Patient">
-                <select value={form.patientId} onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required>
+                <select value={form.patientId} onChange={(event) => setForm((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                   <option value="">Select patient</option>
                   {patients.map((patient) => (
                     <option key={patient.id} value={patient.id}>
@@ -275,7 +277,7 @@ export default function BillingManagement() {
                 </select>
               </Field>
               <Field label="Bill type">
-                <select value={form.billType} onChange={(event) => setForm((current) => ({ ...current, billType: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={form.billType} onChange={(event) => setForm((current) => ({ ...current, billType: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="consultation">Consultation</option>
                   <option value="lab">Lab</option>
                   <option value="pharmacy">Pharmacy</option>
@@ -286,21 +288,21 @@ export default function BillingManagement() {
             </div>
 
             <Field label="Internal note" className="mt-4">
-              <textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-[100px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
             </Field>
 
             <div className="mt-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold text-slate-900">Line items</h4>
+                <h4 className="text-lg font-semibold text-foreground">Line items</h4>
                 <Button type="button" variant="outline" onClick={addLineItem}>Add Line</Button>
               </div>
               {form.lineItems.map((item, index) => (
-                <div key={`line-${index}`} className="grid gap-3 rounded-[1.25rem] border border-slate-200 p-4 md:grid-cols-4">
-                  <input value={item.label} onChange={(event) => updateLineItem(index, { label: event.target.value })} placeholder="Label" className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
-                  <input value={item.category} onChange={(event) => updateLineItem(index, { category: event.target.value })} placeholder="Category" className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
-                  <input type="number" min="1" value={item.quantity} onChange={(event) => updateLineItem(index, { quantity: event.target.value })} placeholder="Quantity" className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
-                  <input type="number" min="0" value={item.unitPrice} onChange={(event) => updateLineItem(index, { unitPrice: event.target.value })} placeholder="Unit price" className="rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
-                  <textarea value={item.notes} onChange={(event) => updateLineItem(index, { notes: event.target.value })} placeholder="Optional notes" className="md:col-span-4 min-h-[80px] rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+                <div key={`line-${index}`} className="grid gap-3 rounded-xl border border-border p-4 md:grid-cols-4">
+                  <input value={item.label} onChange={(event) => updateLineItem(index, { label: event.target.value })} placeholder="Label" className="rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  <input value={item.category} onChange={(event) => updateLineItem(index, { category: event.target.value })} placeholder="Category" className="rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  <input type="number" min="1" value={item.quantity} onChange={(event) => updateLineItem(index, { quantity: event.target.value })} placeholder="Quantity" className="rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  <input type="number" min="0" value={item.unitPrice} onChange={(event) => updateLineItem(index, { unitPrice: event.target.value })} placeholder="Unit price" className="rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  <textarea value={item.notes} onChange={(event) => updateLineItem(index, { notes: event.target.value })} placeholder="Optional notes" className="md:col-span-4 min-h-[80px] rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
                 </div>
               ))}
             </div>
@@ -312,15 +314,15 @@ export default function BillingManagement() {
           </form>
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
 function SummaryCard({ label, value }) {
   return (
-    <article className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-      <p className="text-sm text-slate-500">{label}</p>
-      <h3 className="mt-2 text-3xl font-semibold text-slate-900">{value}</h3>
+    <article className="rounded-xl bg-card p-6 shadow-sm">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <h3 className="mt-2 text-3xl font-semibold text-foreground">{value}</h3>
     </article>
   );
 }
@@ -328,7 +330,7 @@ function SummaryCard({ label, value }) {
 function Field({ children, className = '', label }) {
   return (
     <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );

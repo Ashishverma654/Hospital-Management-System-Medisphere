@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { pharmacyOrderApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialFilters = {
   search: '',
@@ -110,20 +112,20 @@ export default function PharmacistOrders({
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Pharmacy Workflow</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">{title}</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">{description}</p>
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Pharmacy Workflow</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">{title}</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">{description}</p>
       </div>
 
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Search patient, doctor, or order" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <input value={filters.patient} onChange={(e) => setFilters((current) => ({ ...current, patient: e.target.value }))} placeholder="Filter by patient" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <input value={filters.doctor} onChange={(e) => setFilters((current) => ({ ...current, doctor: e.target.value }))} placeholder="Filter by doctor" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <input type="date" value={filters.date} onChange={(e) => setFilters((current) => ({ ...current, date: e.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <select value={filters.status} onChange={(e) => setFilters((current) => ({ ...current, status: e.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Search patient, doctor, or order" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <input value={filters.patient} onChange={(e) => setFilters((current) => ({ ...current, patient: e.target.value }))} placeholder="Filter by patient" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <input value={filters.doctor} onChange={(e) => setFilters((current) => ({ ...current, doctor: e.target.value }))} placeholder="Filter by doctor" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <input type="date" value={filters.date} onChange={(e) => setFilters((current) => ({ ...current, date: e.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <select value={filters.status} onChange={(e) => setFilters((current) => ({ ...current, status: e.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All statuses</option>
             <option value="orderPlaced">Order placed</option>
             <option value="orderAccepted">Order accepted</option>
@@ -135,7 +137,7 @@ export default function PharmacistOrders({
             <option value="partiallyFulfilled">Partially fulfilled</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <select value={filters.paymentStatus} onChange={(e) => setFilters((current) => ({ ...current, paymentStatus: e.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <select value={filters.paymentStatus} onChange={(e) => setFilters((current) => ({ ...current, paymentStatus: e.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All payment states</option>
             <option value="pending">Pending</option>
             <option value="partiallyPaid">Partially paid</option>
@@ -149,18 +151,18 @@ export default function PharmacistOrders({
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Order Inbox</p>
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Order Inbox</p>
           <div className="mt-4 space-y-3">
             {filteredOrders.map((order) => (
-              <button key={order.id} type="button" onClick={() => setSelectedOrderId(order.id)} className={`w-full rounded-[1.25rem] border p-4 text-left ${selectedOrderId === order.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+              <button key={order.id} type="button" onClick={() => setSelectedOrderId(order.id)} className={`w-full rounded-xl border p-4 text-left ${selectedOrderId === order.id ? 'border-slate-900 bg-muted/50' : 'border-border bg-card hover:border-border'}`}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{order.patient?.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{order.patient?.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {order.orderReference} • {order.patient?.patientId} • {order.doctor?.name}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">{order.items.map((item) => item.medicineName).join(', ')}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{order.items.map((item) => item.medicineName).join(', ')}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <StatusBadge status={order.status}>{order.status}</StatusBadge>
@@ -170,21 +172,21 @@ export default function PharmacistOrders({
               </button>
             ))}
             {!loading && filteredOrders.length === 0 && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 No pharmacy orders match the selected filters.
               </p>
             )}
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          {!selectedOrder && <div className="py-24 text-center text-slate-500">Select a pharmacy order to process it.</div>}
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          {!selectedOrder && <div className="py-24 text-center text-muted-foreground">Select a pharmacy order to process it.</div>}
           {selectedOrder && (
             <div className="space-y-5">
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Order Detail</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedOrder.patient?.name}</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Order Detail</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedOrder.patient?.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   {selectedOrder.orderReference} • Prescription {selectedOrder.prescription?.id?.slice(-8).toUpperCase()}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -193,18 +195,18 @@ export default function PharmacistOrders({
                 </div>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Requested medicines</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Requested medicines</p>
                 <div className="mt-3 space-y-3">
                   {selectedOrder.items.map((item, index) => (
-                    <div key={`${selectedOrder.id}-${index}`} className="rounded-xl bg-slate-50 p-4">
+                    <div key={`${selectedOrder.id}-${index}`} className="rounded-xl bg-muted/50 p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div>
-                          <p className="font-medium text-slate-900">{item.medicineName}</p>
-                          <p className="mt-1 text-sm text-slate-600">
+                          <p className="font-medium text-foreground">{item.medicineName}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
                             Requested {item.requestedQuantity} • Stock available {item.stockCurrent ?? item.stockAvailableAtReview ?? 0}
                           </p>
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="mt-1 text-sm text-muted-foreground">
                             Unit ₹{Number(item.unitPrice || 0).toLocaleString()} • Line ₹{Number(item.lineTotal || 0).toLocaleString()}
                           </p>
                         </div>
@@ -212,7 +214,7 @@ export default function PharmacistOrders({
                       </div>
                       {!historyOnly && (
                         <div className="mt-3 flex items-center gap-3">
-                          <label className="text-sm text-slate-600">Fulfilled quantity</label>
+                          <label className="text-sm text-muted-foreground">Fulfilled quantity</label>
                           <input
                             type="number"
                             min="0"
@@ -224,7 +226,7 @@ export default function PharmacistOrders({
                                 [index]: { fulfilledQuantity: event.target.value },
                               }))
                             }
-                            className="w-28 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900"
+                            className="w-28 rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary"
                           />
                         </div>
                       )}
@@ -233,11 +235,11 @@ export default function PharmacistOrders({
                 </div>
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Billing snapshot</p>
-                <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Billing snapshot</p>
+                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between"><span>Subtotal</span><span>₹{Number(selectedOrder.subtotal || 0).toLocaleString()}</span></div>
-                  <div className="flex items-center justify-between font-semibold text-slate-900"><span>Total</span><span>₹{Number(selectedOrder.total || 0).toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(selectedOrder.total || 0).toLocaleString()}</span></div>
                   <div className="flex items-center justify-between"><span>Payment</span><span className="capitalize">{selectedOrder.paymentStatus}</span></div>
                   <div className="flex items-center justify-between"><span>Accepted</span><span>{selectedOrder.acceptedAt ? new Date(selectedOrder.acceptedAt).toLocaleString() : 'Pending'}</span></div>
                   <div className="flex items-center justify-between"><span>Ready</span><span>{selectedOrder.readyAt ? new Date(selectedOrder.readyAt).toLocaleString() : 'Pending'}</span></div>
@@ -246,8 +248,8 @@ export default function PharmacistOrders({
               </article>
 
               {!historyOnly && (
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">Workflow actions</p>
+                <article className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">Workflow actions</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <Button variant="outline" disabled={saving === 'accept'} onClick={() => runAction('accept', () => pharmacyOrderApi.accept(selectedOrder.id, { items: itemPayload() }))}>
                       {saving === 'accept' ? 'Working...' : 'Accept order'}
@@ -274,6 +276,6 @@ export default function PharmacistOrders({
           )}
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }

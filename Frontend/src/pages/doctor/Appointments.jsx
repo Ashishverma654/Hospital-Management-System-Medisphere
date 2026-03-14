@@ -6,6 +6,8 @@ import { StatusBadge, DataTable, LoadingSkeleton, ErrorState } from '../../compo
 import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Calendar, Clock, User, Play, Eye } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function DoctorAppointments() {
   const navigate = useNavigate();

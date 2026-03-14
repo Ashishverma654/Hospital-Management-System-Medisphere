@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { awardApi, doctorApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialForm = {
   type: 'hospital',
@@ -104,12 +106,12 @@ export default function AwardManagement() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Public Content</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Awards</h2>
-          <p className="mt-2 max-w-3xl text-slate-600">
+          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Public Content</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Awards</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
             Manage hospital awards and doctor awards that can appear on the public-facing website.
           </p>
         </div>
@@ -121,19 +123,19 @@ export default function AwardManagement() {
 
       <div className="flex flex-col gap-3 lg:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by title or organization"
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
         <select
           value={filterType}
           onChange={(event) => setFilterType(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
         >
           <option value="">All Types</option>
           <option value="hospital">Hospital</option>
@@ -142,7 +144,7 @@ export default function AwardManagement() {
         <select
           value={filterStatus}
           onChange={(event) => setFilterStatus(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
         >
           <option value="">All Statuses</option>
           <option value="true">Active</option>
@@ -153,11 +155,11 @@ export default function AwardManagement() {
         </Button>
       </div>
 
-      <article className="overflow-hidden rounded-[2rem] bg-white shadow-sm">
+      <article className="overflow-hidden rounded-2xl bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Title</th>
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Doctor</th>
@@ -170,21 +172,21 @@ export default function AwardManagement() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">Loading awards...</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Loading awards...</td>
                 </tr>
               )}
               {!loading && awards.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-slate-500">No awards found.</td>
+                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">No awards found.</td>
                 </tr>
               )}
               {awards.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100 last:border-b-0">
-                  <td className="px-4 py-3 font-medium text-slate-900">{item.title}</td>
-                  <td className="px-4 py-3 capitalize text-slate-600">{item.type}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.doctorId?.userId?.name || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.organization}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.year || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{item.title}</td>
+                  <td className="px-4 py-3 capitalize text-muted-foreground">{item.type}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{item.doctorId?.userId?.name || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{item.organization}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{item.year || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                       {item.isActive ? 'Active' : 'Inactive'}
@@ -228,22 +230,22 @@ export default function AwardManagement() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="w-full max-w-3xl rounded-[2rem] bg-white p-6 shadow-2xl">
+          <form onSubmit={handleSubmit} className="w-full max-w-3xl rounded-2xl bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Award' : 'Add Award'}</h3>
-              <button type="button" onClick={resetForm} className="text-slate-500 hover:text-slate-900">✕</button>
+              <h3 className="text-xl font-semibold text-foreground">{editingItem ? 'Edit Award' : 'Add Award'}</h3>
+              <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <Field label="Type">
-                <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value, doctorId: '' }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900">
+                <select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value, doctorId: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
                   <option value="hospital">Hospital Award</option>
                   <option value="doctor">Doctor Award</option>
                 </select>
               </Field>
               {form.type === 'doctor' && (
                 <Field label="Doctor">
-                  <select value={form.doctorId} onChange={(event) => setForm((current) => ({ ...current, doctorId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required>
+                  <select value={form.doctorId} onChange={(event) => setForm((current) => ({ ...current, doctorId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                     <option value="">Select doctor</option>
                     {doctors.map((doctor) => (
                       <option key={doctor.id} value={doctor.id}>{doctor.userId?.name}</option>
@@ -252,24 +254,24 @@ export default function AwardManagement() {
                 </Field>
               )}
               <Field label="Title">
-                <input type="text" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+                <input type="text" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
               </Field>
               <Field label="Organization">
-                <input type="text" value={form.organization} onChange={(event) => setForm((current) => ({ ...current, organization: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+                <input type="text" value={form.organization} onChange={(event) => setForm((current) => ({ ...current, organization: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
               </Field>
               <Field label="Year">
-                <input type="number" value={form.year} onChange={(event) => setForm((current) => ({ ...current, year: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+                <input type="number" value={form.year} onChange={(event) => setForm((current) => ({ ...current, year: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
               </Field>
               <Field label="Image URL">
-                <input type="text" value={form.image} onChange={(event) => setForm((current) => ({ ...current, image: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+                <input type="text" value={form.image} onChange={(event) => setForm((current) => ({ ...current, image: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
               </Field>
             </div>
 
             <Field label="Description" className="mt-4">
-              <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+              <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
             </Field>
 
-            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm text-foreground">
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} />
               Active for public visibility
             </label>
@@ -281,14 +283,14 @@ export default function AwardManagement() {
           </form>
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
 function Field({ children, className = '', label }) {
   return (
     <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );

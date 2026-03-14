@@ -7,6 +7,8 @@ import { LoadingSkeleton, ErrorState, DataTable } from '../../components';
 import { reportApi, patientApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Upload, FileText, Trash2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function DoctorReports() {
   const [reports, setReports] = useState([]);

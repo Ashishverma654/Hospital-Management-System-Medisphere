@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export default function DashboardLayout({ allowedRoles }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -23,7 +24,7 @@ export default function DashboardLayout({ allowedRoles }) {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden doccure-shell">
       <Sidebar isOpen={isSidebarOpen} />
       
       <div className="flex flex-col flex-1 w-full overflow-hidden">

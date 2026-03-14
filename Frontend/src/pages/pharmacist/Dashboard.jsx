@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { pharmacistApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const cards = [
   ['newOrders', 'New Orders'],
@@ -31,27 +33,27 @@ export default function PharmacistDashboard() {
   }, []);
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Pharmacy Operations</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Pharmacist dashboard</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Pharmacy Operations</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Pharmacist dashboard</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Monitor incoming orders, preparation workload, pickup-ready handovers, and stock pressure from one workspace.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map(([key, label]) => (
-          <article key={key} className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">{label}</p>
-            <h3 className="mt-2 text-3xl font-semibold text-slate-900">{stats?.[key] ?? '—'}</h3>
+          <article key={key} className="rounded-xl bg-card p-6 shadow-sm">
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <h3 className="mt-2 text-3xl font-semibold text-foreground">{stats?.[key] ?? '—'}</h3>
           </article>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Quick Actions</p>
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Quick Actions</p>
           <div className="mt-4 grid gap-3">
             {(stats?.quickActions || []).map((action) => (
               <Button key={action.path} variant="outline" onClick={() => navigate(action.path)}>
@@ -61,16 +63,16 @@ export default function PharmacistDashboard() {
           </div>
         </article>
 
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Inventory Alerts</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Low and out-of-stock medicines</h3>
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Inventory Alerts</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">Low and out-of-stock medicines</h3>
           <div className="mt-4 space-y-3">
             {(stats?.urgentInventory || []).map((medicine) => (
-              <div key={medicine.id} className="rounded-[1.25rem] border border-slate-200 p-4">
+              <div key={medicine.id} className="rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-900">{medicine.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-medium text-foreground">{medicine.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Stock: {medicine.stock} • Threshold: {medicine.lowStockThreshold}
                     </p>
                   </div>
@@ -81,11 +83,11 @@ export default function PharmacistDashboard() {
               </div>
             ))}
             {stats?.urgentInventory?.length === 0 && (
-              <p className="text-sm text-slate-500">No urgent inventory alerts right now.</p>
+              <p className="text-sm text-muted-foreground">No urgent inventory alerts right now.</p>
             )}
           </div>
         </article>
       </div>
-    </section>
+    </motion.section>
   );
 }

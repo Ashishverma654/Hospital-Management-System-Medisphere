@@ -6,6 +6,8 @@ import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { formatDate } from '../../utils/formatters';
 import { Calendar, Clock, User, CheckCircle, XCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function ReceptionistAppointments() {
   const [appointments, setAppointments] = useState([]);

@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { labTechApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const emptyFilters = {
   search: '',
@@ -151,32 +153,32 @@ export default function LabTechOrdersInbox({
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Lab Operations</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">{title}</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">{description}</p>
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Lab Operations</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">{title}</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">{description}</p>
       </div>
 
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search by patient, order ID, or doctor" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <input value={filters.patient} onChange={(event) => setFilters((current) => ({ ...current, patient: event.target.value }))} placeholder="Filter by patient / patient ID" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <input value={filters.doctor} onChange={(event) => setFilters((current) => ({ ...current, doctor: event.target.value }))} placeholder="Filter by doctor" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <input type="date" value={filters.date} onChange={(event) => setFilters((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-          <select value={filters.urgency} onChange={(event) => setFilters((current) => ({ ...current, urgency: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search by patient, order ID, or doctor" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <input value={filters.patient} onChange={(event) => setFilters((current) => ({ ...current, patient: event.target.value }))} placeholder="Filter by patient / patient ID" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <input value={filters.doctor} onChange={(event) => setFilters((current) => ({ ...current, doctor: event.target.value }))} placeholder="Filter by doctor" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <input type="date" value={filters.date} onChange={(event) => setFilters((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+          <select value={filters.urgency} onChange={(event) => setFilters((current) => ({ ...current, urgency: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All urgency</option>
             <option value="routine">Routine</option>
             <option value="urgent">Urgent</option>
             <option value="stat">STAT</option>
           </select>
-          <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All payment states</option>
             <option value="pending">Pending</option>
             <option value="partiallyPaid">Partially paid</option>
             <option value="paid">Paid</option>
           </select>
-          <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All workflow states</option>
             <option value="ordered">Ordered</option>
             <option value="awaitingPayment">Awaiting payment</option>
@@ -198,11 +200,11 @@ export default function LabTechOrdersInbox({
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Inbox</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900">
+              <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Inbox</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">
                 {loading ? 'Loading orders...' : `${filteredOrders.length} matching orders`}
               </h3>
             </div>
@@ -214,25 +216,25 @@ export default function LabTechOrdersInbox({
                 key={order._id}
                 type="button"
                 onClick={() => setSelectedOrderId(order._id)}
-                className={`w-full rounded-[1.25rem] border p-4 text-left transition ${selectedOrderId === order._id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                className={`w-full rounded-xl border p-4 text-left transition ${selectedOrderId === order._id ? 'border-slate-900 bg-muted/50' : 'border-border bg-card hover:border-border'}`}
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-slate-900">{order.patientName}</p>
+                      <p className="font-semibold text-foreground">{order.patientName}</p>
                       {(order.urgency === 'urgent' || order.urgency === 'stat') && (
                         <span className="rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-700">
                           {order.urgency}
                         </span>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {order.orderNumber} • {order.patientIdentifier} • {order.doctorName}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {order.items?.map((item) => item.testName).join(', ')}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       {order.appointmentReference ? `Appointment ${order.appointmentReference} • ` : ''}
                       Created {new Date(order.createdAt).toLocaleString()}
                     </p>
@@ -245,16 +247,16 @@ export default function LabTechOrdersInbox({
               </button>
             ))}
             {!loading && filteredOrders.length === 0 && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 No lab orders match the selected filters.
               </p>
             )}
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           {!selectedOrder && (
-            <div className="flex min-h-[420px] items-center justify-center text-center text-slate-500">
+            <div className="flex min-h-[420px] items-center justify-center text-center text-muted-foreground">
               Select a lab order to schedule collection, update processing, upload reports, or release patient-visible results.
             </div>
           )}
@@ -262,9 +264,9 @@ export default function LabTechOrdersInbox({
           {selectedOrder && (
             <div className="space-y-5">
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Order Detail</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedOrder.patientName}</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Order Detail</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedOrder.patientName}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   {selectedOrder.orderNumber} • {selectedOrder.patientIdentifier} • {selectedOrder.doctorName}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -273,14 +275,14 @@ export default function LabTechOrdersInbox({
                 </div>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Ordered tests</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Ordered tests</p>
                 <div className="mt-3 space-y-2">
                   {(selectedOrder.items || []).map((item) => (
-                    <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-3">
+                    <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-3">
                       <div>
-                        <p className="font-medium text-slate-900">{item.testName}</p>
-                        <p className="text-xs text-slate-500">₹{Number(item.price || 0).toLocaleString()}</p>
+                        <p className="font-medium text-foreground">{item.testName}</p>
+                        <p className="text-xs text-muted-foreground">₹{Number(item.price || 0).toLocaleString()}</p>
                       </div>
                       <StatusBadge status={item.status}>{item.status}</StatusBadge>
                     </div>
@@ -289,13 +291,13 @@ export default function LabTechOrdersInbox({
               </article>
 
               <div className="grid gap-4">
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">Sample collection schedule</p>
+                <article className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">Sample collection schedule</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <input type="date" value={sampleSchedule.date} onChange={(event) => setSampleSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-                    <input type="time" value={sampleSchedule.time} onChange={(event) => setSampleSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+                    <input type="date" value={sampleSchedule.date} onChange={(event) => setSampleSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                    <input type="time" value={sampleSchedule.time} onChange={(event) => setSampleSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                   </div>
-                  <textarea value={sampleSchedule.notes} onChange={(event) => setSampleSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional collection instructions" className="mt-3 min-h-[90px] w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+                  <textarea value={sampleSchedule.notes} onChange={(event) => setSampleSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional collection instructions" className="mt-3 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                   <Button className="mt-3 w-full" disabled={savingAction === 'schedule sample'} onClick={() => runAction('schedule sample', async () => {
                     await labTechApi.scheduleSampleCollection(selectedOrder._id, sampleSchedule);
                     toast.success('Sample collection scheduled.');
@@ -304,13 +306,13 @@ export default function LabTechOrdersInbox({
                   </Button>
                 </article>
 
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">Report pickup / ready schedule</p>
+                <article className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">Report pickup / ready schedule</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <input type="date" value={pickupSchedule.date} onChange={(event) => setPickupSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-                    <input type="time" value={pickupSchedule.time} onChange={(event) => setPickupSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+                    <input type="date" value={pickupSchedule.date} onChange={(event) => setPickupSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                    <input type="time" value={pickupSchedule.time} onChange={(event) => setPickupSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                   </div>
-                  <textarea value={pickupSchedule.notes} onChange={(event) => setPickupSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional pickup notes" className="mt-3 min-h-[90px] w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+                  <textarea value={pickupSchedule.notes} onChange={(event) => setPickupSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional pickup notes" className="mt-3 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                   <Button className="mt-3 w-full" variant="outline" disabled={savingAction === 'schedule pickup'} onClick={() => runAction('schedule pickup', async () => {
                     await labTechApi.scheduleReportPickup(selectedOrder._id, pickupSchedule);
                     toast.success('Report pickup timing saved.');
@@ -320,8 +322,8 @@ export default function LabTechOrdersInbox({
                 </article>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Workflow actions</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Workflow actions</p>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <Button variant="outline" disabled={savingAction === 'mark collected'} onClick={() => runAction('mark collected', async () => {
                     await labTechApi.markSampleCollected(selectedOrder._id);
@@ -355,26 +357,26 @@ export default function LabTechOrdersInbox({
                 )}
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Upload final report</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Upload final report</p>
                 <div className="mt-3 grid gap-3">
-                  <input value={reportMeta.reportName} onChange={(event) => setReportMeta((current) => ({ ...current, reportName: event.target.value }))} placeholder="Report title" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-                  <input value={reportMeta.reportType} onChange={(event) => setReportMeta((current) => ({ ...current, reportType: event.target.value }))} placeholder="Test type / report type" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
-                  <select value={reportMeta.labOrderItemId} onChange={(event) => setReportMeta((current) => ({ ...current, labOrderItemId: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+                  <input value={reportMeta.reportName} onChange={(event) => setReportMeta((current) => ({ ...current, reportName: event.target.value }))} placeholder="Report title" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                  <input value={reportMeta.reportType} onChange={(event) => setReportMeta((current) => ({ ...current, reportType: event.target.value }))} placeholder="Test type / report type" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                  <select value={reportMeta.labOrderItemId} onChange={(event) => setReportMeta((current) => ({ ...current, labOrderItemId: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
                     <option value="">Attach to whole order</option>
                     {(selectedOrder.items || []).map((item) => (
                       <option key={item._id} value={item._id}>{item.testName}</option>
                     ))}
                   </select>
-                  <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" className="rounded-2xl border border-slate-200 px-4 py-3 text-sm" onChange={(event) => handleUpload(event.target.files?.[0])} />
+                  <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" className="rounded-2xl border border-border px-4 py-3 text-sm" onChange={(event) => handleUpload(event.target.files?.[0])} />
                 </div>
                 <div className="mt-4 space-y-2">
                   {(selectedOrder.reports || []).map((report) => (
-                    <div key={report._id} className="rounded-xl bg-slate-50 px-3 py-3">
+                    <div key={report._id} className="rounded-xl bg-muted/50 px-3 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="font-medium text-slate-900">{report.reportName}</p>
-                          <p className="text-xs text-slate-500">{report.reportType || 'Lab report'} • {new Date(report.createdAt).toLocaleString()}</p>
+                          <p className="font-medium text-foreground">{report.reportName}</p>
+                          <p className="text-xs text-muted-foreground">{report.reportType || 'Lab report'} • {new Date(report.createdAt).toLocaleString()}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <StatusBadge status={report.status}>{report.status}</StatusBadge>
@@ -384,7 +386,7 @@ export default function LabTechOrdersInbox({
                     </div>
                   ))}
                   {(!selectedOrder.reports || selectedOrder.reports.length === 0) && (
-                    <p className="text-sm text-slate-500">No report file uploaded yet.</p>
+                    <p className="text-sm text-muted-foreground">No report file uploaded yet.</p>
                   )}
                 </div>
               </article>
@@ -392,6 +394,6 @@ export default function LabTechOrdersInbox({
           )}
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }

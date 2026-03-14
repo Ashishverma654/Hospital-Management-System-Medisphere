@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { billingApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function PatientBilling() {
   const [invoices, setInvoices] = useState([]);
@@ -70,11 +72,11 @@ export default function PatientBilling() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Billing History</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Bills and payments</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Billing History</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Bills and payments</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Review consultation, lab, and pharmacy bills with itemized charges, payment status, and linked appointment or order context.
         </p>
       </div>
@@ -85,9 +87,9 @@ export default function PatientBilling() {
         <SummaryCard label="Pending" value={`₹${totals.pending.toLocaleString()}`} />
       </div>
 
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="grid gap-3 md:grid-cols-3">
-          <select value={filters.billType} onChange={(event) => setFilters((current) => ({ ...current, billType: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <select value={filters.billType} onChange={(event) => setFilters((current) => ({ ...current, billType: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All bill types</option>
             <option value="consultation">Consultation</option>
             <option value="lab">Lab</option>
@@ -95,32 +97,32 @@ export default function PatientBilling() {
             <option value="ward">Ward</option>
             <option value="mixed">Mixed</option>
           </select>
-          <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900">
+          <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All payment states</option>
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <input type="date" value={filters.date} onChange={(event) => setFilters((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900" />
+          <input type="date" value={filters.date} onChange={(event) => setFilters((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Bill History</p>
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Bill History</p>
           <div className="mt-4 space-y-3">
             {invoices.map((invoice) => (
               <button
                 key={invoice.id}
                 type="button"
                 onClick={() => setSelectedInvoiceId(invoice.id)}
-                className={`w-full rounded-[1.25rem] border p-4 text-left ${selectedInvoiceId === invoice.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 hover:border-slate-300'}`}
+                className={`w-full rounded-xl border p-4 text-left ${selectedInvoiceId === invoice.id ? 'border-slate-900 bg-muted/50' : 'border-border hover:border-border'}`}
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
-                    <p className="mt-1 text-sm capitalize text-slate-600">{invoice.billType} bill</p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="font-semibold text-foreground">{invoice.invoiceNumber}</p>
+                    <p className="mt-1 text-sm capitalize text-muted-foreground">{invoice.billType} bill</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       Created {invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : '—'}
                     </p>
                   </div>
@@ -129,33 +131,33 @@ export default function PatientBilling() {
                     <StatusBadge status={invoice.paymentStatus}>{invoice.paymentStatus}</StatusBadge>
                   </div>
                 </div>
-                <p className="mt-3 text-sm font-medium text-slate-900">₹{Number(invoice.totalAmount || 0).toLocaleString()}</p>
+                <p className="mt-3 text-sm font-medium text-foreground">₹{Number(invoice.totalAmount || 0).toLocaleString()}</p>
               </button>
             ))}
             {invoices.length === 0 && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 No bills are available for the selected filters.
               </p>
             )}
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          {!selectedInvoice && <div className="py-24 text-center text-slate-500">Select a bill to review itemized charges.</div>}
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          {!selectedInvoice && <div className="py-24 text-center text-muted-foreground">Select a bill to review itemized charges.</div>}
           {selectedInvoice && (
             <div className="space-y-5">
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Bill Detail</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedInvoice.invoiceNumber}</h3>
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Bill Detail</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedInvoice.invoiceNumber}</h3>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <StatusBadge status={selectedInvoice.billType}>{selectedInvoice.billType}</StatusBadge>
                   <StatusBadge status={selectedInvoice.paymentStatus}>{selectedInvoice.paymentStatus}</StatusBadge>
                 </div>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Linked context</p>
-                <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Linked context</p>
+                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                   {selectedInvoice.context?.appointment && <p>Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}</p>}
                   {selectedInvoice.context?.labOrder && <p>Lab Order: {selectedInvoice.context.labOrder.orderNumber} • {selectedInvoice.context.labOrder.status}</p>}
                   {selectedInvoice.context?.pharmacyOrder && <p>Pharmacy Order: {selectedInvoice.context.pharmacyOrder.id} • {selectedInvoice.context.pharmacyOrder.status}</p>}
@@ -166,29 +168,29 @@ export default function PatientBilling() {
                 </div>
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Itemized charges</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Itemized charges</p>
                 <div className="mt-3 space-y-3">
                   {(selectedInvoice.lineItems || []).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
+                    <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-muted/50 p-4">
                       <div>
-                        <p className="font-medium text-slate-900">{item.label}</p>
-                        <p className="mt-1 text-sm text-slate-600 capitalize">
+                        <p className="font-medium text-foreground">{item.label}</p>
+                        <p className="mt-1 text-sm text-muted-foreground capitalize">
                           {item.category || 'charge'} • Qty {item.quantity} • Unit ₹{Number(item.unitPrice || 0).toLocaleString()}
                         </p>
-                        {item.notes && <p className="mt-1 text-sm text-slate-500">{item.notes}</p>}
+                        {item.notes && <p className="mt-1 text-sm text-muted-foreground">{item.notes}</p>}
                       </div>
-                      <p className="font-semibold text-slate-900">₹{Number(item.lineTotal || 0).toLocaleString()}</p>
+                      <p className="font-semibold text-foreground">₹{Number(item.lineTotal || 0).toLocaleString()}</p>
                     </div>
                   ))}
                 </div>
-                {(selectedInvoice.lineItems || []).length === 0 && <p className="mt-3 text-sm text-slate-500">No line items are attached to this invoice.</p>}
+                {(selectedInvoice.lineItems || []).length === 0 && <p className="mt-3 text-sm text-muted-foreground">No line items are attached to this invoice.</p>}
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <div className="space-y-2 text-sm text-slate-600">
+              <article className="rounded-xl border border-border p-4">
+                <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between"><span>Subtotal</span><span>₹{Number(selectedInvoice.subtotal || 0).toLocaleString()}</span></div>
-                  <div className="flex items-center justify-between font-semibold text-slate-900"><span>Total</span><span>₹{Number(selectedInvoice.totalAmount || 0).toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(selectedInvoice.totalAmount || 0).toLocaleString()}</span></div>
                   <div className="flex items-center justify-between"><span>Payment method</span><span>{selectedInvoice.paymentMethod || 'Not recorded'}</span></div>
                   <div className="flex items-center justify-between"><span>Created</span><span>{selectedInvoice.createdAt ? new Date(selectedInvoice.createdAt).toLocaleString() : '—'}</span></div>
                   <div className="flex items-center justify-between"><span>Paid at</span><span>{selectedInvoice.paidAt ? new Date(selectedInvoice.paidAt).toLocaleString() : 'Pending'}</span></div>
@@ -204,15 +206,15 @@ export default function PatientBilling() {
           )}
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }
 
 function SummaryCard({ label, value }) {
   return (
-    <article className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-      <p className="text-sm text-slate-500">{label}</p>
-      <h3 className="mt-2 text-3xl font-semibold text-slate-900">{value}</h3>
+    <article className="rounded-xl bg-card p-6 shadow-sm">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <h3 className="mt-2 text-3xl font-semibold text-foreground">{value}</h3>
     </article>
   );
 }

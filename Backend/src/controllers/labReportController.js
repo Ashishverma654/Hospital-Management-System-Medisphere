@@ -15,6 +15,28 @@ export const uploadLabReport = async (req, res) => {
       return res.status(400).json({ message: "Report file is required." });
     }
 
+    if (!labOrderId && req.user.role === "patient") {
+      const { patient, user } = await ensurePatientProfileForUser(req.user.id);
+      const report = await LabReport.create({
+        patientId: patient._id,
+        patientUserId: user._id,
+        reportName: reportName || req.file.originalname,
+        reportType: reportType || "External Lab Report",
+        reportFile: req.file.path,
+        filePublicId: req.file.filename,
+        uploadedBy: req.user.id,
+        status: "uploaded",
+        releasedToPortal: true,
+        releasedAt: new Date(),
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Lab report uploaded successfully.",
+        data: report,
+      });
+    }
+
     if (!labOrderId) {
       return res.status(400).json({ message: "Lab order is required for technician report upload." });
     }
@@ -96,13 +118,16 @@ export const getPatientReports = async (req, res) => {
       .populate("appointmentId")
       .populate("labOrderId");
 
-    const data = reports.filter((report) =>
-      getPublicReportVisibility({
+    const data = reports.filter((report) => {
+      if (!report.labOrderId) {
+        return true;
+      }
+      return getPublicReportVisibility({
         report,
         orderPaymentStatus: report.labOrderId?.paymentStatus,
         orderReleasedToPortal: report.labOrderId?.releasedToPortal,
-      })
-    );
+      });
+    });
 
     res.status(200).json({
       success: true,

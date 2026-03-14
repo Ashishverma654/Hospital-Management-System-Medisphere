@@ -15,6 +15,7 @@ import { Button } from "../ui/button";
 import { FiMenu, FiBell, FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
 import logoImg from '../../assets/logo.png';
 import { notificationsApi } from '../../services/apiServices.js';
+import ThemeToggle from '../ThemeToggle.jsx';
 
 export default function Navbar({ toggleSidebar }) {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
@@ -51,27 +52,36 @@ export default function Navbar({ toggleSidebar }) {
   }, [isAuthenticated, user?.role]);
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-background/80 backdrop-blur-md px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 sm:px-6">
       <div className="flex items-center gap-4">
         {isAuthenticated && toggleSidebar && (
-          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="hidden md:flex">
+          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="hidden md:flex border border-border bg-card">
             <FiMenu className="h-5 w-5" />
           </Button>
         )}
         
         <NavLink to="/" className="flex items-center gap-2">
            <img src={logoImg} alt="logo" className="h-8 w-auto md:h-10" />
-           <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+           <span className="font-bold text-xl text-foreground">
              MediFlow
            </span>
         </NavLink>
       </div>
 
+      <div className="hidden md:flex items-center gap-3">
+        <input
+          type="search"
+          placeholder="Search patients, appointments, or staff"
+          className="h-10 w-[300px] rounded-full border border-border bg-card px-4 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
+        />
+      </div>
+
       <div className="flex items-center gap-4">
         {isAuthenticated ? (
           <>
+            <ThemeToggle />
             <DropdownMenu>
-              <DropdownMenuTrigger className="relative flex items-center justify-center p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-accent-foreground mr-1 outline-none">
+              <DropdownMenuTrigger className="relative flex items-center justify-center h-10 w-10 rounded-xl border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground mr-1 outline-none">
                   <FiBell className="h-5 w-5" />
                   {unreadCount > 0 && (
                     <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-destructive"></span>
@@ -105,7 +115,7 @@ export default function Navbar({ toggleSidebar }) {
             </DropdownMenu>
 
             <DropdownMenu>
-              <DropdownMenuTrigger className="relative h-9 w-9 rounded-full outline-none ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:opacity-80 cursor-pointer">
+              <DropdownMenuTrigger className="relative h-10 w-10 rounded-full outline-none ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:opacity-80 cursor-pointer border border-border bg-card">
                   <Avatar className="h-9 w-9 border border-border">
                     <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'User'}`} alt="@user" className="object-cover" />
                     <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>

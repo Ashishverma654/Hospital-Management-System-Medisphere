@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { patientApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const parseList = (value) =>
   value
@@ -85,17 +87,17 @@ export default function PatientProfile() {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Profile</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Your patient profile</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Profile</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Your patient profile</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Keep your demographic and medical basics up to date so care teams can support you faster.
         </p>
       </div>
 
       <form onSubmit={updateProfile} className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm space-y-4">
+        <section className="rounded-2xl bg-card p-6 shadow-sm space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Full name" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
             <Field label="Phone" value={form.phone} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} />
@@ -121,14 +123,14 @@ export default function PatientProfile() {
           />
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm space-y-4">
-          <h3 className="text-lg font-semibold text-slate-900">Emergency contact</h3>
+        <section className="rounded-2xl bg-card p-6 shadow-sm space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Emergency contact</h3>
           <Field label="Contact name" value={form.emergencyName} onChange={(value) => setForm((current) => ({ ...current, emergencyName: value }))} />
           <Field label="Contact phone" value={form.emergencyPhone} onChange={(value) => setForm((current) => ({ ...current, emergencyPhone: value }))} />
           <Field label="Relation" value={form.emergencyRelation} onChange={(value) => setForm((current) => ({ ...current, emergencyRelation: value }))} />
 
-          <div className="rounded-[1.25rem] border border-slate-200 p-4 text-sm text-slate-600">
-            <p className="font-semibold text-slate-900">Account email</p>
+          <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+            <p className="font-semibold text-foreground">Account email</p>
             <p className="mt-1">{profile?.user?.email || '—'}</p>
           </div>
 
@@ -137,20 +139,20 @@ export default function PatientProfile() {
           </Button>
         </section>
       </form>
-    </section>
+    </motion.section>
   );
 }
 
 function Field({ label, value, onChange, type = 'text', readOnly = false }) {
   return (
-    <label className="block text-sm text-slate-600">
-      <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">{label}</span>
+    <label className="block text-sm text-muted-foreground">
+      <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         readOnly={readOnly}
-        className={`w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900 ${readOnly ? 'bg-slate-50 text-slate-400' : 'bg-white'}`}
+        className={`w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary ${readOnly ? 'bg-muted/50 text-muted-foreground' : 'bg-card'}`}
       />
     </label>
   );
@@ -158,12 +160,12 @@ function Field({ label, value, onChange, type = 'text', readOnly = false }) {
 
 function SelectField({ label, value, onChange, options }) {
   return (
-    <label className="block text-sm text-slate-600">
-      <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">{label}</span>
+    <label className="block text-sm text-muted-foreground">
+      <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+        className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
       >
         {options.map((option) => (
           <option key={option || 'none'} value={option}>

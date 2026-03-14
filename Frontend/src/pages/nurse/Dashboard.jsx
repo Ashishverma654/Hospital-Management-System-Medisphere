@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const statCards = [
   ['assignedPatientsCount', 'Assigned Patients'],
@@ -37,43 +39,43 @@ export default function NurseDashboard() {
   const upcomingAssignments = assignments.filter((assignment) => assignment.status !== 'active').slice(0, 4);
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Nursing Station</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Nurse dashboard</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Nursing Station</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Nurse dashboard</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Track your current shift, assigned patients, vitals workload, and urgent bedside care updates from one workspace.
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {statCards.map(([key, label]) => (
-          <article key={key} className="rounded-[1.5rem] bg-white p-6 shadow-sm">
-            <p className="text-sm text-slate-500">{label}</p>
-            <h3 className="mt-2 text-3xl font-semibold text-slate-900">{stats?.[key] ?? '—'}</h3>
+          <article key={key} className="rounded-xl bg-card p-6 shadow-sm">
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <h3 className="mt-2 text-3xl font-semibold text-foreground">{stats?.[key] ?? '—'}</h3>
           </article>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Duty Context</p>
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Duty Context</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="rounded-[1.25rem] border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Assigned ward</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-900">
+            <div className="rounded-xl border border-border p-4">
+              <p className="text-sm text-muted-foreground">Assigned ward</p>
+              <h3 className="mt-2 text-xl font-semibold text-foreground">
                 {stats?.assignedWard?.name || 'No active ward assignment'}
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {stats?.assignedWard?.wardNumber ? `Ward ${stats.assignedWard.wardNumber}` : 'Ward details will appear here when assigned.'}
               </p>
             </div>
-            <div className="rounded-[1.25rem] border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Current shift</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-900">
+            <div className="rounded-xl border border-border p-4">
+              <p className="text-sm text-muted-foreground">Current shift</p>
+              <h3 className="mt-2 text-xl font-semibold text-foreground">
                 {stats?.currentShift?.name || 'No active shift'}
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {stats?.currentShift?.startTime && stats?.currentShift?.endTime
                   ? `${stats.currentShift.startTime} - ${stats.currentShift.endTime}`
                   : 'Shift timing will appear here when available.'}
@@ -82,7 +84,7 @@ export default function NurseDashboard() {
           </div>
 
           <div className="mt-6">
-            <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Quick Actions</p>
+            <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Quick Actions</p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {(stats?.quickActions || []).map((action) => (
                 <Button key={action.path} variant="outline" onClick={() => navigate(action.path)}>
@@ -93,17 +95,17 @@ export default function NurseDashboard() {
           </div>
         </article>
 
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Shift Visibility</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Current and upcoming assignments</h3>
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Shift Visibility</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">Current and upcoming assignments</h3>
 
           <div className="mt-4 space-y-3">
             {currentAssignments.map((assignment) => (
-              <div key={assignment.id} className="rounded-[1.25rem] border border-emerald-200 bg-emerald-50 p-4">
-                <p className="font-medium text-slate-900">
+              <div key={assignment.id} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="font-medium text-foreground">
                   {assignment.shift?.name || 'Active shift'} {assignment.ward?.name ? `• ${assignment.ward.name}` : ''}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {assignment.patient?.name
                     ? `Patient: ${assignment.patient.name} (${assignment.patient.patientId || 'No patient ID'})`
                     : 'Ward-level assignment'}
@@ -112,18 +114,18 @@ export default function NurseDashboard() {
             ))}
 
             {upcomingAssignments.map((assignment) => (
-              <div key={assignment.id} className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-medium text-slate-900">
+              <div key={assignment.id} className="rounded-xl border border-border p-4">
+                <p className="font-medium text-foreground">
                   {assignment.shift?.name || 'Scheduled shift'} {assignment.ward?.name ? `• ${assignment.ward.name}` : ''}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Starts {assignment.assignmentStart ? new Date(assignment.assignmentStart).toLocaleString() : 'TBD'}
                 </p>
               </div>
             ))}
 
             {assignments.length === 0 && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-6 text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
                 No nurse assignments are available yet.
               </p>
             )}
@@ -132,48 +134,48 @@ export default function NurseDashboard() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr,1fr]">
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Recent Vitals</p>
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Recent Vitals</p>
           <div className="mt-4 space-y-3">
             {(stats?.recentVitals || []).map((entry) => (
-              <div key={entry.id} className="rounded-[1.25rem] border border-slate-200 p-4">
+              <div key={entry.id} className="rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-900">{entry.patientName || 'Assigned patient'}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-medium text-foreground">{entry.patientName || 'Assigned patient'}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       BP {entry.systolicBp || '—'}/{entry.diastolicBp || '—'} • Pulse {entry.pulse || '—'} • Temp {entry.temperature || '—'}
                     </p>
                   </div>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     {entry.recordedAt ? new Date(entry.recordedAt).toLocaleString() : 'No time'}
                   </span>
                 </div>
               </div>
             ))}
             {stats?.recentVitals?.length === 0 && (
-              <p className="text-sm text-slate-500">No recent vitals have been recorded for your assigned patients.</p>
+              <p className="text-sm text-muted-foreground">No recent vitals have been recorded for your assigned patients.</p>
             )}
           </div>
         </article>
 
-        <article className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Care Priorities</p>
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Care Priorities</p>
           <div className="mt-4 space-y-3">
-            <div className="rounded-[1.25rem] border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Vitals due</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{stats?.vitalsDueCount ?? 0}</p>
+            <div className="rounded-xl border border-border p-4">
+              <p className="text-sm text-muted-foreground">Vitals due</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.vitalsDueCount ?? 0}</p>
             </div>
-            <div className="rounded-[1.25rem] border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Urgent escalations logged today</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{stats?.urgentEscalations ?? 0}</p>
+            <div className="rounded-xl border border-border p-4">
+              <p className="text-sm text-muted-foreground">Urgent escalations logged today</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.urgentEscalations ?? 0}</p>
             </div>
-            <div className="rounded-[1.25rem] border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">Pending nursing tasks</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">{stats?.pendingTasks ?? 0}</p>
+            <div className="rounded-xl border border-border p-4">
+              <p className="text-sm text-muted-foreground">Pending nursing tasks</p>
+              <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.pendingTasks ?? 0}</p>
             </div>
           </div>
         </article>
       </div>
-    </section>
+    </motion.section>
   );
 }

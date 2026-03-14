@@ -54,7 +54,7 @@ export function DataTable({
   }
 
   if (!data || data.length === 0) {
-    return <div className="text-center py-8 text-gray-500">{emptyMessage}</div>;
+    return <div className="text-center py-8 text-muted-foreground">{emptyMessage}</div>;
   }
 
   return (
@@ -82,7 +82,7 @@ export function DataTable({
           {sortedData.map((row) => (
             <TableRow
               key={row._id || row.id}
-              className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+              className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''}
               onClick={() => onRowClick && onRowClick(row)}
             >
               {columns.map((column) => (

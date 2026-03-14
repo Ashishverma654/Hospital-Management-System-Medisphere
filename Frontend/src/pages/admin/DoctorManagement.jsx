@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { departmentApi, doctorApi, locationApi, specializationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Eye, Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialForm = {
   name: '',
@@ -206,12 +208,12 @@ export default function DoctorManagement() {
   );
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Doctor Administration</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Doctors</h2>
-          <p className="mt-2 max-w-3xl text-slate-600">
+          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Doctor Administration</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Doctors</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
             Create doctor employee accounts, assign departments, multiple specializations, and locations, and control whether profiles are active and ready for public publishing later.
           </p>
         </div>
@@ -222,7 +224,7 @@ export default function DoctorManagement() {
       </div>
 
       {lastCredential && (
-        <article className="rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5">
+        <article className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <p className="text-sm font-semibold text-amber-900">Temporary doctor credential generated</p>
           <p className="mt-2 text-sm text-amber-800">
             Email: <strong>{lastCredential.email}</strong> | Employee ID: <strong>{lastCredential.employeeId}</strong> | Temporary Password: <strong>{lastCredential.temporaryPassword}</strong>
@@ -233,32 +235,32 @@ export default function DoctorManagement() {
 
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr),200px,170px,190px,220px,60px]">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by doctor name or email"
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
-        <select value={filterDepartment} onChange={(event) => setFilterDepartment(event.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900">
+        <select value={filterDepartment} onChange={(event) => setFilterDepartment(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All Departments</option>
           {departments.map((dept) => (
             <option key={dept._id} value={dept._id}>{dept.name}</option>
           ))}
         </select>
-        <select value={filterActive} onChange={(event) => setFilterActive(event.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900">
+        <select value={filterActive} onChange={(event) => setFilterActive(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All Active</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <select value={filterPublished} onChange={(event) => setFilterPublished(event.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900">
+        <select value={filterPublished} onChange={(event) => setFilterPublished(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All Published</option>
           <option value="true">Published</option>
           <option value="false">Unpublished</option>
         </select>
-        <select value={filterOnboarding} onChange={(event) => setFilterOnboarding(event.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900">
+        <select value={filterOnboarding} onChange={(event) => setFilterOnboarding(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All Onboarding</option>
           {onboardingOptions.map((item) => (
             <option key={item} value={item}>{item}</option>
@@ -269,11 +271,37 @@ export default function DoctorManagement() {
         </Button>
       </div>
 
-      <article className="overflow-hidden rounded-[2rem] bg-white shadow-sm">
+      <article className="doccure-card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Doctor Cards</p>
+            <h3 className="mt-1 text-lg font-semibold text-foreground">Quick doctor snapshot</h3>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {loading && (
+            <>
+              <DoctorCardSkeleton />
+              <DoctorCardSkeleton />
+              <DoctorCardSkeleton />
+            </>
+          )}
+          {!loading && doctors.length === 0 && (
+            <div className="col-span-full rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+              No doctors to display yet. New doctor profiles created by admins will appear here automatically.
+            </div>
+          )}
+          {!loading && doctors.map((doctor) => (
+            <DoctorCard key={doctor.id} doctor={doctor} onView={() => { setSelectedDoctor(doctor); setShowDetail(true); }} />
+          ))}
+        </div>
+      </article>
+
+      <article className="overflow-hidden rounded-2xl bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Doctor</th>
                 <th className="px-4 py-3 font-medium">Department</th>
                 <th className="px-4 py-3 font-medium">Specializations</th>
@@ -287,12 +315,12 @@ export default function DoctorManagement() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">Loading doctors...</td>
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Loading doctors...</td>
                 </tr>
               )}
               {!loading && doctors.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">No doctors found.</td>
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">No doctors found.</td>
                 </tr>
               )}
               {doctors.map((doctor) => (
@@ -302,24 +330,24 @@ export default function DoctorManagement() {
                       <img
                         src={doctor.profileImage || doctor.userId?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(doctor.userId?.name || 'Doctor')}`}
                         alt={doctor.userId?.name || 'Doctor'}
-                        className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                        className="h-10 w-10 rounded-full border border-border object-cover"
                       />
                       <div>
-                        <p className="font-medium text-slate-900">{doctor.userId?.name}</p>
-                        <p className="text-xs text-slate-500">{doctor.userId?.email}</p>
+                        <p className="font-medium text-foreground">{doctor.userId?.name}</p>
+                        <p className="text-xs text-muted-foreground">{doctor.userId?.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{doctor.departmentId?.name || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{(doctor.specializationIds || []).map((item) => item.name).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">₹{Number(doctor.consultationFee || 0).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{doctor.departmentId?.name || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{(doctor.specializationIds || []).map((item) => item.name).join(', ') || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">₹{Number(doctor.consultationFee || 0).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     {doctor.isFeatured ? (
                       <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
                         Featured #{doctor.featureOrder || 0}
                       </span>
                     ) : (
-                      <span className="text-slate-500">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -327,12 +355,12 @@ export default function DoctorManagement() {
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${doctor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                         {doctor.isActive ? 'Active' : 'Inactive'}
                       </span>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${doctor.isPublished ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-700'}`}>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${doctor.isPublished ? 'bg-sky-100 text-sky-800' : 'bg-muted text-foreground'}`}>
                         {doctor.isPublished ? 'Published' : 'Unpublished'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs capitalize text-slate-500">{doctor.onboardingStatus || 'created'}</td>
+                  <td className="px-4 py-3 text-xs capitalize text-muted-foreground">{doctor.onboardingStatus || 'created'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedDoctor(doctor); setShowDetail(true); }}>
@@ -377,7 +405,7 @@ export default function DoctorManagement() {
           onUploadImage={handleProfileImageUpload}
         />
       )}
-    </section>
+    </motion.section>
   );
 }
 
@@ -393,32 +421,32 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <form onSubmit={onSubmit} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+      <form onSubmit={onSubmit} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-semibold text-slate-900">{showPasswordHint ? 'Create Doctor' : 'Edit Doctor'}</h3>
+            <h3 className="text-xl font-semibold text-foreground">{showPasswordHint ? 'Create Doctor' : 'Edit Doctor'}</h3>
             {showPasswordHint && (
-              <p className="mt-1 text-sm text-slate-500">A temporary password will be generated automatically when you create this doctor account.</p>
+              <p className="mt-1 text-sm text-muted-foreground">A temporary password will be generated automatically when you create this doctor account.</p>
             )}
           </div>
-          <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-900">✕</button>
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</button>
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <Field label="Doctor Name">
-            <input type="text" value={form.name} onChange={(e) => onChange({ ...form, name: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+            <input type="text" value={form.name} onChange={(e) => onChange({ ...form, name: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
           </Field>
           <Field label="Email">
-            <input type="email" value={form.email} onChange={(e) => onChange({ ...form, email: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+            <input type="email" value={form.email} onChange={(e) => onChange({ ...form, email: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
           </Field>
           <Field label="Phone">
-            <input type="text" value={form.phone} onChange={(e) => onChange({ ...form, phone: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+            <input type="text" value={form.phone} onChange={(e) => onChange({ ...form, phone: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
           </Field>
           <Field label="Title">
-            <input type="text" value={form.title} onChange={(e) => onChange({ ...form, title: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required />
+            <input type="text" value={form.title} onChange={(e) => onChange({ ...form, title: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
           </Field>
           <Field label="Department">
-            <select value={form.departmentId} onChange={(e) => onChange({ ...form, departmentId: e.target.value, specializationIds: [] })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" required>
+            <select value={form.departmentId} onChange={(e) => onChange({ ...form, departmentId: e.target.value, specializationIds: [] })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
               <option value="">Select department</option>
               {departments.map((dept) => (
                 <option key={dept._id} value={dept._id}>{dept.name}</option>
@@ -426,38 +454,38 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
             </select>
           </Field>
           <Field label="Consultation Fee">
-            <input type="number" value={form.consultationFee} onChange={(e) => onChange({ ...form, consultationFee: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+            <input type="number" value={form.consultationFee} onChange={(e) => onChange({ ...form, consultationFee: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
           </Field>
           <Field label="Years of Experience">
-            <input type="number" value={form.experienceYears} onChange={(e) => onChange({ ...form, experienceYears: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+            <input type="number" value={form.experienceYears} onChange={(e) => onChange({ ...form, experienceYears: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
           </Field>
           <Field label="Profile Image URL">
-            <input type="text" value={form.profileImage} onChange={(e) => onChange({ ...form, profileImage: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+            <input type="text" value={form.profileImage} onChange={(e) => onChange({ ...form, profileImage: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
           </Field>
           <Field label="Feature Order">
-            <input type="number" value={form.featureOrder} onChange={(e) => onChange({ ...form, featureOrder: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+            <input type="number" value={form.featureOrder} onChange={(e) => onChange({ ...form, featureOrder: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
           </Field>
         </div>
 
         <Field label="Qualifications (comma separated)" className="mt-4">
-          <input type="text" value={form.qualifications} onChange={(e) => onChange({ ...form, qualifications: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+          <input type="text" value={form.qualifications} onChange={(e) => onChange({ ...form, qualifications: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
         </Field>
 
         <Field label="Expertise (comma separated)" className="mt-4">
-          <input type="text" value={form.expertise} onChange={(e) => onChange({ ...form, expertise: e.target.value })} className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+          <input type="text" value={form.expertise} onChange={(e) => onChange({ ...form, expertise: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
         </Field>
 
         <Field label="Bio / About" className="mt-4">
-          <textarea value={form.about} onChange={(e) => onChange({ ...form, about: e.target.value })} className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900" />
+          <textarea value={form.about} onChange={(e) => onChange({ ...form, about: e.target.value })} className="min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
         </Field>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Field label="Specializations">
-            <div className="rounded-2xl border border-slate-200 p-4">
-              {specializations.length === 0 && <p className="text-sm text-slate-500">Select a department to load valid specializations.</p>}
+            <div className="rounded-2xl border border-border p-4">
+              {specializations.length === 0 && <p className="text-sm text-muted-foreground">Select a department to load valid specializations.</p>}
               <div className="space-y-2">
                 {specializations.map((item) => (
-                  <label key={item._id} className="flex items-center gap-3 text-sm text-slate-700">
+                  <label key={item._id} className="flex items-center gap-3 text-sm text-foreground">
                     <input
                       type="checkbox"
                       checked={form.specializationIds.includes(item._id)}
@@ -470,10 +498,10 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
             </div>
           </Field>
           <Field label="Hospital Locations">
-            <div className="rounded-2xl border border-slate-200 p-4">
+            <div className="rounded-2xl border border-border p-4">
               <div className="space-y-2">
                 {locations.map((item) => (
-                  <label key={item._id} className="flex items-center gap-3 text-sm text-slate-700">
+                  <label key={item._id} className="flex items-center gap-3 text-sm text-foreground">
                     <input
                       type="checkbox"
                       checked={form.hospitalLocations.includes(item._id)}
@@ -488,15 +516,15 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+          <label className="flex items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm text-foreground">
             <input type="checkbox" checked={form.isActive} onChange={(e) => onChange({ ...form, isActive: e.target.checked })} />
             Active internally
           </label>
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+          <label className="flex items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm text-foreground">
             <input type="checkbox" checked={form.isPublished} onChange={(e) => onChange({ ...form, isPublished: e.target.checked })} />
             Published for future public visibility
           </label>
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 md:col-span-2">
+          <label className="flex items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm text-foreground md:col-span-2">
             <input type="checkbox" checked={form.isFeatured} onChange={(e) => onChange({ ...form, isFeatured: e.target.checked })} />
             Feature this doctor on the public website
           </label>
@@ -514,18 +542,18 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
 function DoctorDetailModal({ doctor, onClose, onUploadImage }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-slate-900">Doctor Profile</h3>
-          <button type="button" onClick={onClose} className="text-slate-500 hover:text-slate-900">✕</button>
+          <h3 className="text-xl font-semibold text-foreground">Doctor Profile</h3>
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</button>
         </div>
 
         <div className="mt-5 grid gap-6 md:grid-cols-[220px,minmax(0,1fr)]">
-          <article className="rounded-[1.75rem] border border-slate-200 p-5 text-center">
+          <article className="rounded-2xl border border-border p-5 text-center">
             <img
               src={doctor.profileImage || doctor.userId?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(doctor.userId?.name || 'Doctor')}`}
               alt={doctor.userId?.name || 'Doctor'}
-              className="mx-auto h-28 w-28 rounded-full border border-slate-200 object-cover"
+              className="mx-auto h-28 w-28 rounded-full border border-border object-cover"
             />
             <label className="mt-4 inline-flex cursor-pointer rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
               Update Photo
@@ -557,7 +585,7 @@ function DoctorDetailModal({ doctor, onClose, onUploadImage }) {
 function Field({ children, className = '', label }) {
   return (
     <div className={className}>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );
@@ -566,8 +594,68 @@ function Field({ children, className = '', label }) {
 function Detail({ className = '', label, value }) {
   return (
     <div className={className}>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-900">{value || '—'}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium text-foreground">{value || '—'}</p>
+    </div>
+  );
+}
+
+function DoctorCard({ doctor, onView }) {
+  const name = doctor.userId?.name || 'Doctor';
+  const email = doctor.userId?.email || 'No email';
+  const department = doctor.departmentId?.name || 'No department';
+  const specializations = (doctor.specializationIds || []).map((item) => item.name).join(', ') || 'No specializations';
+  return (
+    <div className="doccure-card-soft p-5">
+      <div className="flex items-start gap-4">
+        <img
+          src={doctor.profileImage || doctor.userId?.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`}
+          alt={name}
+          className="h-14 w-14 rounded-2xl border border-border object-cover"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+          <p className="text-xs text-muted-foreground truncate">{email}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{department}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2">{specializations}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+        <span className={`rounded-full px-2.5 py-1 font-semibold ${doctor.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+          {doctor.isActive ? 'Active' : 'Inactive'}
+        </span>
+        <span className={`rounded-full px-2.5 py-1 font-semibold ${doctor.isPublished ? 'bg-sky-100 text-sky-700' : 'bg-muted text-foreground'}`}>
+          {doctor.isPublished ? 'Published' : 'Unpublished'}
+        </span>
+        {doctor.isFeatured && (
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700">
+            Featured #{doctor.featureOrder || 0}
+          </span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onView}
+        className="mt-4 w-full rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+      >
+        View profile
+      </button>
+    </div>
+  );
+}
+
+function DoctorCardSkeleton() {
+  return (
+    <div className="doccure-card-soft p-5 animate-pulse">
+      <div className="flex items-start gap-4">
+        <div className="h-14 w-14 rounded-2xl bg-muted" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-2/3 rounded bg-muted" />
+          <div className="h-3 w-1/2 rounded bg-muted" />
+          <div className="h-3 w-3/4 rounded bg-muted" />
+        </div>
+      </div>
+      <div className="mt-4 h-8 w-full rounded-xl bg-muted" />
     </div>
   );
 }

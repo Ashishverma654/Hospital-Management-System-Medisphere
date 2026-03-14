@@ -3,6 +3,8 @@ import { Button } from '../../components/ui/button';
 import { departmentApi, specializationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 const initialForm = {
   name: '',
@@ -85,12 +87,12 @@ export default function SpecializationManagement() {
   const departmentOptions = useMemo(() => departments, [departments]);
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-[2rem] bg-white p-8 shadow-sm md:flex-row md:items-center md:justify-between">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Master Data</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Specializations</h2>
-          <p className="mt-2 max-w-3xl text-slate-600">
+          <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Master Data</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Specializations</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
             Manage doctor-facing specialization records and keep them mapped cleanly to departments for later doctor discovery and filtering.
           </p>
         </div>
@@ -108,19 +110,19 @@ export default function SpecializationManagement() {
 
       <div className="flex flex-col gap-3 lg:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by specialization name"
-            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-9 pr-4 text-sm outline-none focus:border-slate-900"
+            className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
         <select
           value={filterDepartment}
           onChange={(event) => setFilterDepartment(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
         >
           <option value="">All Departments</option>
           {departmentOptions.map((dept) => (
@@ -130,7 +132,7 @@ export default function SpecializationManagement() {
         <select
           value={filterStatus}
           onChange={(event) => setFilterStatus(event.target.value)}
-          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900"
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
         >
           <option value="">All Statuses</option>
           <option value="true">Active</option>
@@ -141,11 +143,11 @@ export default function SpecializationManagement() {
         </Button>
       </div>
 
-      <article className="overflow-hidden rounded-[2rem] bg-white shadow-sm">
+      <article className="overflow-hidden rounded-2xl bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Department</th>
                 <th className="px-4 py-3 font-medium">Description</th>
@@ -156,19 +158,19 @@ export default function SpecializationManagement() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">Loading specializations...</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Loading specializations...</td>
                 </tr>
               )}
               {!loading && specializations.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">No specializations found.</td>
+                  <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">No specializations found.</td>
                 </tr>
               )}
               {specializations.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100 last:border-b-0">
-                  <td className="px-4 py-3 font-medium text-slate-900">{item.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.departmentId?.name || '—'}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.description || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{item.departmentId?.name || '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{item.description || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
                       {item.isActive ? 'Active' : 'Inactive'}
@@ -207,10 +209,10 @@ export default function SpecializationManagement() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl">
+          <form onSubmit={handleSubmit} className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-slate-900">{editingItem ? 'Edit Specialization' : 'Add Specialization'}</h3>
-              <button type="button" onClick={resetForm} className="text-slate-500 hover:text-slate-900">✕</button>
+              <h3 className="text-xl font-semibold text-foreground">{editingItem ? 'Edit Specialization' : 'Add Specialization'}</h3>
+              <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
 
             <div className="mt-5 space-y-4">
@@ -219,7 +221,7 @@ export default function SpecializationManagement() {
                   type="text"
                   value={form.name}
                   onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
+                  className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
                   required
                 />
               </Field>
@@ -227,7 +229,7 @@ export default function SpecializationManagement() {
                 <select
                   value={form.departmentId}
                   onChange={(event) => setForm((current) => ({ ...current, departmentId: event.target.value }))}
-                  className="w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
+                  className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
                   required
                 >
                   <option value="">Select department</option>
@@ -240,7 +242,7 @@ export default function SpecializationManagement() {
                 <textarea
                   value={form.description}
                   onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                  className="min-h-[120px] w-full rounded-2xl border border-slate-200 px-4 py-3 outline-none focus:border-slate-900"
+                  className="min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
                 />
               </Field>
             </div>
@@ -252,14 +254,14 @@ export default function SpecializationManagement() {
           </form>
         </div>
       )}
-    </section>
+    </motion.section>
   );
 }
 
 function Field({ children, label }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
     </div>
   );

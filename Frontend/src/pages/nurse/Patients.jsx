@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function NursePatients() {
   const [patients, setPatients] = useState([]);
@@ -48,44 +50,44 @@ export default function NursePatients() {
     null;
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-[2rem] bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Assigned Scope</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-900">Assigned patients</h2>
-        <p className="mt-2 max-w-3xl text-slate-600">
+    <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
+      <div className="rounded-2xl bg-card p-8 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Assigned Scope</p>
+        <h2 className="mt-2 text-3xl font-semibold text-foreground">Assigned patients</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
           Review your assigned patients, active medication context, allergies, diagnosis notes, lab visibility, and latest vitals.
         </p>
       </div>
 
-      <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search patient, ID, doctor, diagnosis, or ward"
-          className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-900"
+          className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
         />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Patient Load</p>
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Patient Load</p>
           <div className="mt-4 space-y-3">
             {filteredPatients.map((patient) => (
               <button
                 key={patient.id}
                 type="button"
                 onClick={() => setSelectedPatientId(patient.id)}
-                className={`w-full rounded-[1.25rem] border p-4 text-left ${
-                  selectedPatientId === patient.id ? 'border-slate-900 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'
+                className={`w-full rounded-xl border p-4 text-left ${
+                  selectedPatientId === patient.id ? 'border-slate-900 bg-muted/50' : 'border-border bg-card hover:border-border'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-slate-900">{patient.name}</p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{patient.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {patient.patientId || 'No patient ID'} • {patient.age ?? '—'} yrs • {patient.gender || '—'}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {patient.ward?.name || 'No ward'} {patient.bed?.bedNumber ? `• Bed ${patient.bed.bedNumber}` : ''}
                     </p>
                   </div>
@@ -96,75 +98,75 @@ export default function NursePatients() {
               </button>
             ))}
             {filteredPatients.length === 0 && (
-              <p className="rounded-[1.25rem] border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+              <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 No assigned patients match the current search.
               </p>
             )}
           </div>
         </section>
 
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-          {!selectedPatient && <div className="py-24 text-center text-slate-500">Select a patient to review their nursing care context.</div>}
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
+          {!selectedPatient && <div className="py-24 text-center text-muted-foreground">Select a patient to review their nursing care context.</div>}
           {selectedPatient && (
             <div className="space-y-5">
               <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Patient Summary</p>
-                <h3 className="mt-2 text-2xl font-semibold text-slate-900">{selectedPatient.name}</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Patient Summary</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedPatient.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   {selectedPatient.patientId || 'No patient ID'} • {selectedPatient.assignedDoctor?.name || 'No assigned doctor visible'}
                 </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="text-sm text-slate-500">Diagnosis summary</p>
-                  <p className="mt-2 text-sm text-slate-700">{selectedPatient.diagnosisSummary || 'No diagnosis summary available.'}</p>
+                <article className="rounded-xl border border-border p-4">
+                  <p className="text-sm text-muted-foreground">Diagnosis summary</p>
+                  <p className="mt-2 text-sm text-foreground">{selectedPatient.diagnosisSummary || 'No diagnosis summary available.'}</p>
                 </article>
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="text-sm text-slate-500">Ward and bed</p>
-                  <p className="mt-2 text-sm text-slate-700">
+                <article className="rounded-xl border border-border p-4">
+                  <p className="text-sm text-muted-foreground">Ward and bed</p>
+                  <p className="mt-2 text-sm text-foreground">
                     {selectedPatient.ward?.name || 'No ward'}
                     {selectedPatient.bed?.bedNumber ? ` • Bed ${selectedPatient.bed.bedNumber}` : ''}
                   </p>
                 </article>
               </div>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Risk and history</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Risk and history</p>
                 <div className="mt-3 grid gap-4 md:grid-cols-2">
                   <div>
-                    <p className="text-sm text-slate-500">Allergies</p>
-                    <p className="mt-2 text-sm text-slate-700">
+                    <p className="text-sm text-muted-foreground">Allergies</p>
+                    <p className="mt-2 text-sm text-foreground">
                       {selectedPatient.allergies?.length ? selectedPatient.allergies.join(', ') : 'No allergies recorded'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500">Chronic diseases</p>
-                    <p className="mt-2 text-sm text-slate-700">
+                    <p className="text-sm text-muted-foreground">Chronic diseases</p>
+                    <p className="mt-2 text-sm text-foreground">
                       {selectedPatient.chronicDiseases?.length ? selectedPatient.chronicDiseases.join(', ') : 'No chronic diseases recorded'}
                     </p>
                   </div>
                 </div>
               </article>
 
-              <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                <p className="font-semibold text-slate-900">Doctor instructions and medications</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Doctor instructions and medications</p>
                 <div className="mt-3 space-y-3">
                   {(selectedPatient.medicationSummary || []).map((medicine, index) => (
-                    <div key={`${selectedPatient.id}-med-${index}`} className="rounded-xl bg-slate-50 p-4">
-                      <p className="font-medium text-slate-900">{medicine.name}</p>
-                      <p className="mt-1 text-sm text-slate-600">
+                    <div key={`${selectedPatient.id}-med-${index}`} className="rounded-xl bg-muted/50 p-4">
+                      <p className="font-medium text-foreground">{medicine.name}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
                         {medicine.dosage || 'Dose not set'} • {medicine.frequency || 'Frequency not set'} • {medicine.duration || 'Duration not set'}
                       </p>
-                      {medicine.instructions && <p className="mt-1 text-sm text-slate-500">{medicine.instructions}</p>}
+                      {medicine.instructions && <p className="mt-1 text-sm text-muted-foreground">{medicine.instructions}</p>}
                     </div>
                   ))}
                   {selectedPatient.medicationSummary?.length === 0 && (
-                    <p className="text-sm text-slate-500">No active prescription medicines are visible for this patient.</p>
+                    <p className="text-sm text-muted-foreground">No active prescription medicines are visible for this patient.</p>
                   )}
                 </div>
                 {selectedPatient.activePrescription && (
-                  <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-slate-700">
+                  <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-foreground">
                     <p><span className="font-semibold">Advice:</span> {selectedPatient.activePrescription.advice || 'No advice recorded.'}</p>
                     <p className="mt-2">
                       <span className="font-semibold">Admission recommendation:</span>{' '}
@@ -175,27 +177,27 @@ export default function NursePatients() {
               </article>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">Pending lab visibility</p>
+                <article className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">Pending lab visibility</p>
                   <div className="mt-3 space-y-2">
                     {(selectedPatient.pendingLabOrders || []).map((order) => (
-                      <div key={order.id} className="rounded-xl bg-slate-50 p-3">
-                        <p className="text-sm font-medium text-slate-900">{order.tests.join(', ') || 'Lab order'}</p>
-                        <p className="mt-1 text-xs text-slate-600">
+                      <div key={order.id} className="rounded-xl bg-muted/50 p-3">
+                        <p className="text-sm font-medium text-foreground">{order.tests.join(', ') || 'Lab order'}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {order.orderNumber || order.id} • {order.status} • {order.urgency || 'routine'}
                         </p>
                       </div>
                     ))}
                     {selectedPatient.pendingLabOrders?.length === 0 && (
-                      <p className="text-sm text-slate-500">No pending lab work is visible right now.</p>
+                      <p className="text-sm text-muted-foreground">No pending lab work is visible right now.</p>
                     )}
                   </div>
                 </article>
 
-                <article className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">Latest vitals</p>
+                <article className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">Latest vitals</p>
                   {selectedPatient.latestVitals ? (
-                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                    <div className="mt-3 space-y-2 text-sm text-foreground">
                       <p>Recorded: {new Date(selectedPatient.latestVitals.recordedAt).toLocaleString()}</p>
                       <p>BP: {selectedPatient.latestVitals.bloodPressure || '—'}</p>
                       <p>Pulse: {selectedPatient.latestVitals.pulse || '—'}</p>
@@ -203,7 +205,7 @@ export default function NursePatients() {
                       <p>SpO2: {selectedPatient.latestVitals.spo2 || '—'}</p>
                     </div>
                   ) : (
-                    <p className="mt-3 text-sm text-slate-500">No vitals have been recorded yet.</p>
+                    <p className="mt-3 text-sm text-muted-foreground">No vitals have been recorded yet.</p>
                   )}
                 </article>
               </div>
@@ -211,6 +213,6 @@ export default function NursePatients() {
           )}
         </section>
       </div>
-    </section>
+    </motion.section>
   );
 }

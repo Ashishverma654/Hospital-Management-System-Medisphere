@@ -4,6 +4,8 @@ import { Button } from '../../components/ui/button';
 import { billingApi, receptionistApi } from '../../services/apiServices.js';
 import { Calendar, CreditCard, FilePlus, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function ReceptionistDashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -67,22 +69,22 @@ export default function ReceptionistDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <article key={stat.title} className="rounded-[1.75rem] bg-white p-6 shadow-sm">
+          <article key={stat.title} className="rounded-2xl bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-500">{stat.title}</p>
+              <p className="text-sm text-muted-foreground">{stat.title}</p>
               <stat.icon className="h-4 w-4 text-[#ee4c35]" />
             </div>
-            <p className="mt-4 text-3xl font-semibold text-slate-900">{loading ? '...' : stat.value}</p>
+            <p className="mt-4 text-3xl font-semibold text-foreground">{loading ? '...' : stat.value}</p>
           </article>
         ))}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-        <section className="rounded-[2rem] bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Today&apos;s Queue</p>
-              <h3 className="mt-2 text-2xl font-semibold text-slate-900">Active front-desk flow</h3>
+              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Today&apos;s Queue</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Active front-desk flow</h3>
             </div>
             <Button variant="outline" asChild>
               <Link to="/employee/receptionist/queue">Manage Queue</Link>
@@ -91,54 +93,54 @@ export default function ReceptionistDashboard() {
 
           <div className="mt-5 space-y-3">
             {(dashboard?.queue || []).slice(0, 8).map((appointment) => (
-              <article key={appointment._id} className="rounded-[1.25rem] border border-slate-200 p-4">
+              <article key={appointment._id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-slate-900">{appointment.patientId?.name || 'Patient'}</p>
-                    <p className="text-sm text-slate-600">
+                    <p className="font-semibold text-foreground">{appointment.patientId?.name || 'Patient'}</p>
+                    <p className="text-sm text-muted-foreground">
                       {appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}
                     </p>
                   </div>
-                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                     {appointment.status}
                   </span>
                 </div>
               </article>
             ))}
             {!loading && (dashboard?.queue || []).length === 0 && (
-              <p className="text-sm text-slate-500">No appointments in today&apos;s queue yet.</p>
+              <p className="text-sm text-muted-foreground">No appointments in today&apos;s queue yet.</p>
             )}
           </div>
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">New Registrations</p>
+          <section className="rounded-2xl bg-card p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">New Registrations</p>
             <div className="mt-4 space-y-3">
               {(dashboard?.registrations || []).slice(0, 5).map((patient) => (
-                <article key={patient._id} className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">{patient.userId?.name}</p>
-                  <p className="mt-1 text-sm text-slate-600">{patient.userId?.patientId} • {patient.userId?.phone}</p>
+                <article key={patient._id} className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">{patient.userId?.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{patient.userId?.patientId} • {patient.userId?.phone}</p>
                 </article>
               ))}
-              {!loading && (dashboard?.registrations || []).length === 0 && <p className="text-sm text-slate-500">No new registrations today.</p>}
+              {!loading && (dashboard?.registrations || []).length === 0 && <p className="text-sm text-muted-foreground">No new registrations today.</p>}
             </div>
           </section>
 
-          <section className="rounded-[2rem] bg-white p-6 shadow-sm">
-            <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Pending Billing Actions</p>
+          <section className="rounded-2xl bg-card p-6 shadow-sm">
+            <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Pending Billing Actions</p>
             <div className="mt-4 space-y-3">
               {(dashboard?.pendingBillingAppointments || []).slice(0, 5).map((appointment) => (
-                <article key={appointment._id} className="rounded-[1.25rem] border border-slate-200 p-4">
-                  <p className="font-semibold text-slate-900">{appointment.patientId?.name}</p>
-                  <p className="mt-1 text-sm text-slate-600">{appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}</p>
+                <article key={appointment._id} className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">{appointment.patientId?.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}</p>
                   <Button className="mt-3" size="sm" onClick={() => handleInitiateBilling(appointment._id)}>
                     <CreditCard className="mr-2 h-4 w-4" />
                     Initiate Bill
                   </Button>
                 </article>
               ))}
-              {!loading && (dashboard?.pendingBillingAppointments || []).length === 0 && <p className="text-sm text-slate-500">No pending billing actions right now.</p>}
+              {!loading && (dashboard?.pendingBillingAppointments || []).length === 0 && <p className="text-sm text-muted-foreground">No pending billing actions right now.</p>}
             </div>
           </section>
         </div>
