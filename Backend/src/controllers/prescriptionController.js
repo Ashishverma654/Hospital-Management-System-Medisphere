@@ -90,6 +90,29 @@ export const getPatientPrescriptions = async (req, res) => {
   }
 };
 
+export const getMyPrescriptions = async (req, res) => {
+  try {
+    if (req.user.role === "doctor") {
+      const doctor = await Doctor.findOne({ userId: req.user.id });
+      if (!doctor) {
+        return res.status(404).json({ message: "Doctor profile not found." });
+      }
+      const prescriptions = await Prescription.find({ doctorId: doctor._id })
+        .sort({ createdAt: -1 })
+        .populate({ path: "patientId", populate: { path: "userId", select: "name patientId" } })
+        .populate("appointmentId");
+      return res.status(200).json({ success: true, data: prescriptions });
+    }
+
+    return getPatientPrescriptions(req, res);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 
 export const getPrescriptionByAppointment = async (req, res) => {
   try {

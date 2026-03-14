@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Download, Send, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { StatusBadge } from '../../components/StatusBadge.jsx';
 
 // Common lab tests
 const COMMON_TESTS = [
@@ -42,6 +43,7 @@ export default function LabOrderCreation() {
 
   const [loading, setLoading] = useState(false);
   const [appointment, setAppointment] = useState(null);
+  const [recentOrders, setRecentOrders] = useState([]);
 
   const [formData, setFormData] = useState({
     patientId: patientId || '',
@@ -77,6 +79,19 @@ export default function LabOrderCreation() {
       fetchAppointment();
     }
   }, [appointmentId]);
+
+  const loadRecentOrders = async () => {
+    try {
+      const data = await labOrderApi.getByDoctor();
+      setRecentOrders(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore dashboard list failures
+    }
+  };
+
+  useEffect(() => {
+    loadRecentOrders();
+  }, []);
 
   const handleAddTest = () => {
     if (!selectedTest) {
@@ -146,13 +161,52 @@ export default function LabOrderCreation() {
 
   const totalAmount = formData.tests.reduce((sum, test) => sum + test.price, 0);
 
+  const orderStats = recentOrders.reduce(
+    (acc, order) => {
+      acc.total += 1;
+      acc[order.status] = (acc[order.status] || 0) + 1;
+      return acc;
+    },
+    { total: 0 }
+  );
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Order Lab Tests</h2>
         <p className="text-muted-foreground">
           Create a lab order for the patient's diagnostic testing
         </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{orderStats.total || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Issued by you</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Pending processing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{orderStats.ordered || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Awaiting lab pickup</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Reports ready</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{orderStats.reportReady || 0}</div>
+            <p className="text-xs text-muted-foreground mt-1">Ready for release</p>
+          </CardContent>
+        </Card>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -329,6 +383,54 @@ export default function LabOrderCreation() {
           </Button>
         </div>
       </form>
+
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent lab orders</CardTitle>
+          <Button variant="outline" onClick={loadRecentOrders}>Refresh</Button>
+        </CardHeader>
+        <CardContent>
+          {recentOrders.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No lab orders created yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {recentOrders.slice(0, 6).map((order) => (
+                <div key={order._id} className="rounded-xl border border-border p-4">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {order.patientName || 'Patient'} • {order.orderNumber || order._id}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.items?.map((item) => item.testName).join(', ') || 'No tests listed'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleString() : 'Created recently'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={order.status}>{order.status}</StatusBadge>
+                      <StatusBadge status={order.paymentStatus}>{order.paymentStatus}</StatusBadge>
+                      {order.urgency && order.urgency !== 'routine' && (
+                        <StatusBadge status="urgent">{order.urgency}</StatusBadge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => labOrderApi.downloadPdf(order._id)}
+                      >
+                        <Download className="h-4 w-4 mr-1" /> PDF
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

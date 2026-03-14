@@ -9,11 +9,16 @@ import { getOrderStatusForPayment } from "../utils/labWorkflow.js";
 import { getOrderStatusForPayment as getPharmacyStatusForPayment } from "../utils/pharmacyWorkflow.js";
 import { notifyPatient } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 
 const INVOICE_POPULATE = [
   { path: "patientId", populate: { path: "userId", select: "name email phone patientId" } },
   { path: "patientUserId", select: "name email phone patientId" },
-  { path: "appointmentId", populate: { path: "doctorId", populate: { path: "userId", select: "name email employeeId" } } },
+  { path: "appointmentId", populate: [
+    { path: "doctorId", populate: { path: "userId", select: "name email employeeId" } },
+    { path: "hospitalLocationId", select: "name city state" },
+  ] },
   { path: "labOrderId", select: "orderNumber status paymentStatus urgency totalAmount appointmentId createdAt" },
   { path: "pharmacyOrderId", select: "status paymentStatus total items createdAt completedAt prescriptionId" },
   { path: "bedId", select: "bedNumber status admittedAt dischargedAt" },
@@ -151,6 +156,8 @@ const mapInvoice = (invoice) => {
             date: invoice.appointmentId.date,
             slot: invoice.appointmentId.slot,
             status: invoice.appointmentId.status,
+            consultationMode: invoice.appointmentId.consultationMode,
+            locationName: invoice.appointmentId.hospitalLocationId?.name,
             doctorName: invoice.appointmentId.doctorId?.userId?.name,
           }
         : null,
@@ -200,6 +207,9 @@ const mapInvoice = (invoice) => {
     })),
   };
 };
+
+const getFrontendBase = () => process.env.FRONTEND_URL || "http://localhost:5173";
+const getApiBase = () => process.env.BACKEND_URL || "http://localhost:3500/api";
 
 const syncInvoicePaymentState = async (invoice) => {
   const paidAt = invoice.paidAt || new Date();
@@ -373,6 +383,18 @@ export const createInvoice = async (req, res) => {
       });
     }
 
+    if (user?.email) {
+      const frontendUrl = getFrontendBase();
+      const apiUrl = getApiBase();
+      const invoiceLink = `${frontendUrl}/patient/bills?invoice=${invoice._id}`;
+      const pdfLink = `${apiUrl}/billing/${invoice._id}/pdf`;
+      await sendEmail(
+        user.email,
+        "Your Invoice is Ready",
+        `Your invoice ${invoice.invoiceNumber} is ready. View it in the patient portal: ${invoiceLink} or download PDF: ${pdfLink}`
+      );
+    }
+
     await logAudit({
       actor: { id: req.user.id, name: req.user.name, role: req.user.role },
       action: "invoice_created",
@@ -385,6 +407,56 @@ export const createInvoice = async (req, res) => {
       message: "Invoice created successfully.",
       invoice: mapInvoice(populated),
     });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const downloadInvoicePdf = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate(INVOICE_POPULATE);
+    if (!invoice) {
+      return res.status(404).json({ message: "Invoice not found." });
+    }
+
+    if (!(await ensureInvoiceAccess(req, invoice))) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    return generateInvoicePDF(res, invoice);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const emailInvoice = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id).populate(INVOICE_POPULATE);
+    if (!invoice) {
+      return res.status(404).json({ message: "Invoice not found." });
+    }
+
+    if (!(await ensureInvoiceAccess(req, invoice))) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    const patientUser = invoice.patientId?.userId || invoice.patientUserId;
+    if (!patientUser?.email) {
+      return res.status(400).json({ message: "Patient email not available." });
+    }
+
+    const frontendUrl = getFrontendBase();
+    const apiUrl = getApiBase();
+    const invoiceLink = `${frontendUrl}/patient/bills?invoice=${invoice._id}`;
+    const pdfLink = `${apiUrl}/billing/${invoice._id}/pdf`;
+
+    await sendEmail(
+      patientUser.email,
+      "Your Invoice Receipt",
+      `Here is your invoice ${invoice.invoiceNumber}. View it: ${invoiceLink} or download PDF: ${pdfLink}`
+    );
+
+    return res.json({ message: "Invoice email sent successfully." });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

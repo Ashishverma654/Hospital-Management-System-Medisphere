@@ -103,13 +103,33 @@ export const EMPLOYEE_DASHBOARD_META = {
   },
 };
 
-export const isEmployeeRole = (role) => EMPLOYEE_ROLES.includes(role);
+export const normalizeRole = (role) => {
+  if (!role) return role;
+  const raw = String(role).trim();
+  if (!raw) return raw;
+  const compact = raw.replace(/\s+/g, '').toLowerCase();
 
-export const getRoleLabel = (role) => ROLE_LABELS[role] || role;
+  if (compact === 'superreceptionist') return 'subadmin';
+  if (compact === 'labtechnician') return 'labTechnician';
+  if (compact === 'superadmin') return 'superadmin';
+  if (compact === 'subadmin') return 'subadmin';
+  if (compact === 'receptionist') return 'receptionist';
+  if (compact === 'pharmacist') return 'pharmacist';
+  if (compact === 'doctor') return 'doctor';
+  if (compact === 'nurse') return 'nurse';
+  if (compact === 'admin') return 'admin';
+  if (compact === 'patient') return 'patient';
 
-export const getEmployeeHomeRoute = (role) => EMPLOYEE_ROLE_PATHS[role] || '/employee/login';
+  return role;
+};
 
-export const getSessionTypeForRole = (role) => (role === PATIENT_ROLE ? 'patient' : 'employee');
+export const isEmployeeRole = (role) => EMPLOYEE_ROLES.includes(normalizeRole(role));
+
+export const getRoleLabel = (role) => ROLE_LABELS[normalizeRole(role)] || role;
+
+export const getEmployeeHomeRoute = (role) => EMPLOYEE_ROLE_PATHS[normalizeRole(role)] || '/employee/login';
+
+export const getSessionTypeForRole = (role) => (normalizeRole(role) === PATIENT_ROLE ? 'patient' : 'employee');
 
 export const getDefaultRouteForSession = (user, sessionType) => {
   if (!user) {

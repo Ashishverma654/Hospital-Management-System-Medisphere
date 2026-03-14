@@ -17,9 +17,14 @@ const initialForm = {
   qualifications: '',
   experienceYears: '',
   consultationFee: '',
+  consultationFeeVideo: '',
+  consultationFeePhone: '',
   about: '',
   expertise: '',
   profileImage: '',
+  articles: [],
+  media: [],
+  locationFees: [],
   isActive: true,
   isPublished: false,
   isFeatured: false,
@@ -44,6 +49,19 @@ export default function DoctorManagement() {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [lastCredential, setLastCredential] = useState(null);
+
+  const fetchSpecializations = async (departmentId) => {
+    if (!departmentId) {
+      setSpecializations([]);
+      return;
+    }
+    try {
+      const data = await specializationApi.getAll({ departmentId, isActive: true });
+      setSpecializations(Array.isArray(data) ? data : []);
+    } catch {
+      toast.error('Failed to load specializations for that department.');
+    }
+  };
 
   const loadMasters = async () => {
     try {
@@ -85,21 +103,7 @@ export default function DoctorManagement() {
   }, [search, filterDepartment, filterActive, filterPublished, filterOnboarding]);
 
   useEffect(() => {
-    const loadSpecializations = async () => {
-      if (!form.departmentId) {
-        setSpecializations([]);
-        return;
-      }
-
-      try {
-        const data = await specializationApi.getAll({ departmentId: form.departmentId, isActive: true });
-        setSpecializations(Array.isArray(data) ? data : []);
-      } catch {
-        toast.error('Failed to load specializations for that department.');
-      }
-    };
-
-    loadSpecializations();
+    fetchSpecializations(form.departmentId);
   }, [form.departmentId]);
 
   const resetForm = () => {
@@ -129,8 +133,13 @@ export default function DoctorManagement() {
       qualifications: (doctor.qualifications || []).join(', '),
       experienceYears: doctor.experienceYears ?? '',
       consultationFee: doctor.consultationFee ?? '',
+      consultationFeeVideo: doctor.consultationFeeVideo ?? '',
+      consultationFeePhone: doctor.consultationFeePhone ?? '',
       about: doctor.about || '',
       expertise: (doctor.expertise || []).join(', '),
+      articles: doctor.articles || [],
+      media: doctor.media || [],
+      locationFees: doctor.locationFees || [],
       profileImage: doctor.profileImage || doctor.userId?.profileImage || '',
       isActive: doctor.isActive,
       isPublished: doctor.isPublished,
@@ -144,12 +153,44 @@ export default function DoctorManagement() {
     event.preventDefault();
     setSaving(true);
     try {
+      const cleanedArticles = (form.articles || [])
+        .map((item) => ({
+          title: item.title?.trim() || '',
+          date: item.date?.trim() || '',
+          link: item.link?.trim() || '',
+          image: item.image?.trim() || '',
+        }))
+        .filter((item) => item.title || item.link || item.date || item.image);
+
+      const cleanedMedia = (form.media || [])
+        .map((item) => ({
+          type: item.type || 'video',
+          title: item.title?.trim() || '',
+          url: item.url?.trim() || '',
+          thumbnail: item.thumbnail?.trim() || '',
+        }))
+        .filter((item) => item.title || item.url || item.thumbnail);
+
+      const cleanedLocationFees = (form.locationFees || [])
+        .map((item) => ({
+          locationId: item.locationId || '',
+          fee: Number(item.fee) || 0,
+        }))
+        .filter((item) => item.locationId);
+
       const payload = {
         ...form,
+        specializationIds: Array.isArray(form.specializationIds) ? form.specializationIds : [],
+        hospitalLocations: Array.isArray(form.hospitalLocations) ? form.hospitalLocations : [],
         qualifications: form.qualifications,
         expertise: form.expertise,
+        articles: cleanedArticles,
+        media: cleanedMedia,
+        locationFees: cleanedLocationFees,
         experienceYears: Number(form.experienceYears) || 0,
         consultationFee: Number(form.consultationFee) || 0,
+        consultationFeeVideo: form.consultationFeeVideo === '' ? null : Number(form.consultationFeeVideo) || 0,
+        consultationFeePhone: form.consultationFeePhone === '' ? null : Number(form.consultationFeePhone) || 0,
       };
 
       if (editingDoctor) {
@@ -341,9 +382,9 @@ export default function DoctorManagement() {
                   <td className="px-4 py-3 text-muted-foreground">{doctor.departmentId?.name || '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{(doctor.specializationIds || []).map((item) => item.name).join(', ') || '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">₹{Number(doctor.consultationFee || 0).toLocaleString()}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {doctor.isFeatured ? (
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
                         Featured #{doctor.featureOrder || 0}
                       </span>
                     ) : (
@@ -395,6 +436,7 @@ export default function DoctorManagement() {
           saving={saving}
           showPasswordHint={!editingDoctor}
           specializations={specializations}
+          onRefreshSpecializations={fetchSpecializations}
         />
       )}
 
@@ -409,7 +451,16 @@ export default function DoctorManagement() {
   );
 }
 
-function DoctorFormModal({ departments, form, locations, onChange, onClose, onSubmit, saving, showPasswordHint, specializations }) {
+const formatDateForInput = (value) => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.valueOf())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return '';
+};
+
+function DoctorFormModal({ departments, form, locations, onChange, onClose, onSubmit, saving, showPasswordHint, specializations, onRefreshSpecializations }) {
   const toggleArrayValue = (field, value) => {
     const current = form[field] || [];
     const exists = current.includes(value);
@@ -417,6 +468,88 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
       ...form,
       [field]: exists ? current.filter((item) => item !== value) : [...current, value],
     });
+  };
+
+  const updateArticle = (index, field, value) => {
+    const next = [...(form.articles || [])];
+    next[index] = { ...next[index], [field]: value };
+    onChange({ ...form, articles: next });
+  };
+
+  const addArticle = () => {
+    onChange({
+      ...form,
+      articles: [...(form.articles || []), { title: '', date: '', link: '', image: '' }],
+    });
+  };
+
+  const removeArticle = (index) => {
+    const next = [...(form.articles || [])];
+    next.splice(index, 1);
+    onChange({ ...form, articles: next });
+  };
+
+  const updateMedia = (index, field, value) => {
+    const next = [...(form.media || [])];
+    next[index] = { ...next[index], [field]: value };
+    onChange({ ...form, media: next });
+  };
+
+  const addMedia = () => {
+    onChange({
+      ...form,
+      media: [...(form.media || []), { type: 'video', title: '', url: '', thumbnail: '' }],
+    });
+  };
+
+  const removeMedia = (index) => {
+    const next = [...(form.media || [])];
+    next.splice(index, 1);
+    onChange({ ...form, media: next });
+  };
+
+  const updateLocationFee = (index, field, value) => {
+    const next = [...(form.locationFees || [])];
+    next[index] = { ...next[index], [field]: value };
+    onChange({ ...form, locationFees: next });
+  };
+
+  const addLocationFee = () => {
+    onChange({
+      ...form,
+      locationFees: [...(form.locationFees || []), { locationId: '', fee: '' }],
+    });
+  };
+
+  const removeLocationFee = (index) => {
+    const next = [...(form.locationFees || [])];
+    next.splice(index, 1);
+    onChange({ ...form, locationFees: next });
+  };
+
+  const [newSpecName, setNewSpecName] = useState('');
+  const [creatingSpec, setCreatingSpec] = useState(false);
+
+  const handleCreateSpecialization = async () => {
+    if (!form.departmentId) {
+      toast.error('Select a department first.');
+      return;
+    }
+    if (!newSpecName.trim()) {
+      toast.error('Enter a specialization name.');
+      return;
+    }
+    setCreatingSpec(true);
+    try {
+      await specializationApi.create({ name: newSpecName.trim(), departmentId: form.departmentId });
+      toast.success('Specialization created.');
+      setNewSpecName('');
+      await onRefreshSpecializations?.(form.departmentId);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to create specialization.');
+    } finally {
+      setCreatingSpec(false);
+    }
   };
 
   return (
@@ -446,7 +579,7 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
             <input type="text" value={form.title} onChange={(e) => onChange({ ...form, title: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
           </Field>
           <Field label="Department">
-            <select value={form.departmentId} onChange={(e) => onChange({ ...form, departmentId: e.target.value, specializationIds: [] })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
+            <select value={form.departmentId} onChange={(e) => onChange({ ...form, departmentId: e.target.value, specializationIds: [] })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" required>
               <option value="">Select department</option>
               {departments.map((dept) => (
                 <option key={dept._id} value={dept._id}>{dept.name}</option>
@@ -454,30 +587,168 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
             </select>
           </Field>
           <Field label="Consultation Fee">
-            <input type="number" value={form.consultationFee} onChange={(e) => onChange({ ...form, consultationFee: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+            <input type="number" value={form.consultationFee} onChange={(e) => onChange({ ...form, consultationFee: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
+          </Field>
+          <Field label="Video Consultation Fee (optional)">
+            <input type="number" value={form.consultationFeeVideo} onChange={(e) => onChange({ ...form, consultationFeeVideo: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
+          </Field>
+          <Field label="Phone Consultation Fee (optional)">
+            <input type="number" value={form.consultationFeePhone} onChange={(e) => onChange({ ...form, consultationFeePhone: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
           <Field label="Years of Experience">
-            <input type="number" value={form.experienceYears} onChange={(e) => onChange({ ...form, experienceYears: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+            <input type="number" value={form.experienceYears} onChange={(e) => onChange({ ...form, experienceYears: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
           <Field label="Profile Image URL">
-            <input type="text" value={form.profileImage} onChange={(e) => onChange({ ...form, profileImage: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+            <input type="text" value={form.profileImage} onChange={(e) => onChange({ ...form, profileImage: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
           <Field label="Feature Order">
-            <input type="number" value={form.featureOrder} onChange={(e) => onChange({ ...form, featureOrder: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+            <input type="number" value={form.featureOrder} onChange={(e) => onChange({ ...form, featureOrder: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
         </div>
 
         <Field label="Qualifications (comma separated)" className="mt-4">
-          <input type="text" value={form.qualifications} onChange={(e) => onChange({ ...form, qualifications: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+          <input type="text" value={form.qualifications} onChange={(e) => onChange({ ...form, qualifications: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
         </Field>
 
-        <Field label="Expertise (comma separated)" className="mt-4">
-          <input type="text" value={form.expertise} onChange={(e) => onChange({ ...form, expertise: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+        <Field label="Specialization & Expertise (comma separated)" className="mt-4">
+          <input type="text" value={form.expertise} onChange={(e) => onChange({ ...form, expertise: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
         </Field>
 
         <Field label="Bio / About" className="mt-4">
-          <textarea value={form.about} onChange={(e) => onChange({ ...form, about: e.target.value })} className="min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+          <textarea value={form.about} onChange={(e) => onChange({ ...form, about: e.target.value })} className="min-h-[120px] w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
         </Field>
+
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">Articles</h4>
+            <Button type="button" variant="outline" size="sm" onClick={addArticle}>Add article</Button>
+          </div>
+          {(form.articles || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">Add articles written by this doctor.</p>
+          )}
+          {(form.articles || []).map((article, index) => (
+            <div key={`article-${index}`} className="rounded-2xl border border-border p-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <input
+                  type="text"
+                  placeholder="Article title"
+                  value={article.title || ''}
+                  onChange={(e) => updateArticle(index, 'title', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                />
+                <input
+                  type="date"
+                  placeholder="Publish date"
+                  value={formatDateForInput(article.date)}
+                  onChange={(e) => updateArticle(index, 'date', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Article link"
+                value={article.link || ''}
+                onChange={(e) => updateArticle(index, 'link', e.target.value)}
+                className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <input
+                type="text"
+                placeholder="Thumbnail image URL (optional)"
+                value={article.image || ''}
+                onChange={(e) => updateArticle(index, 'image', e.target.value)}
+                className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <div className="flex justify-end">
+                <Button type="button" variant="destructive" size="sm" onClick={() => removeArticle(index)}>Remove</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">Location-based fees (optional)</h4>
+            <Button type="button" variant="outline" size="sm" onClick={addLocationFee}>Add location fee</Button>
+          </div>
+          {(form.locationFees || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">Set optional fees per hospital location.</p>
+          )}
+          {(form.locationFees || []).map((feeRow, index) => (
+            <div key={`location-fee-${index}`} className="rounded-2xl border border-border p-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <select
+                  value={feeRow.locationId || ''}
+                  onChange={(e) => updateLocationFee(index, 'locationId', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                >
+                  <option value="">Select location</option>
+                  {locations.map((item) => (
+                    <option key={item._id} value={item._id}>{item.name} ({item.city})</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  placeholder="Fee"
+                  value={feeRow.fee || ''}
+                  onChange={(e) => updateLocationFee(index, 'fee', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button type="button" variant="destructive" size="sm" onClick={() => removeLocationFee(index)}>Remove</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">Media</h4>
+            <Button type="button" variant="outline" size="sm" onClick={addMedia}>Add media</Button>
+          </div>
+          {(form.media || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">Add videos, images, or other media for this doctor.</p>
+          )}
+          {(form.media || []).map((mediaItem, index) => (
+            <div key={`media-${index}`} className="rounded-2xl border border-border p-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-3">
+                <select
+                  value={mediaItem.type || 'video'}
+                  onChange={(e) => updateMedia(index, 'type', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                >
+                  <option value="video">Video</option>
+                  <option value="image">Image</option>
+                  <option value="article">Article</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Media title"
+                  value={mediaItem.title || ''}
+                  onChange={(e) => updateMedia(index, 'title', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                />
+                <input
+                  type="text"
+                  placeholder="Media URL"
+                  value={mediaItem.url || ''}
+                  onChange={(e) => updateMedia(index, 'url', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Thumbnail URL (optional)"
+                value={mediaItem.thumbnail || ''}
+                onChange={(e) => updateMedia(index, 'thumbnail', e.target.value)}
+                className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+              />
+              <div className="flex justify-end">
+                <Button type="button" variant="destructive" size="sm" onClick={() => removeMedia(index)}>Remove</Button>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Field label="Specializations">
@@ -490,10 +761,26 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
                       type="checkbox"
                       checked={form.specializationIds.includes(item._id)}
                       onChange={() => toggleArrayValue('specializationIds', item._id)}
+                      className="accent-primary"
                     />
                     {item.name}
                   </label>
                 ))}
+              </div>
+              <div className="mt-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Add new specialization</p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={newSpecName}
+                    onChange={(e) => setNewSpecName(e.target.value)}
+                    placeholder="e.g. Stroke Management"
+                    className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                  <Button type="button" size="sm" variant="outline" onClick={handleCreateSpecialization} disabled={creatingSpec}>
+                    {creatingSpec ? 'Adding...' : 'Add'}
+                  </Button>
+                </div>
               </div>
             </div>
           </Field>
@@ -506,6 +793,7 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
                       type="checkbox"
                       checked={form.hospitalLocations.includes(item._id)}
                       onChange={() => toggleArrayValue('hospitalLocations', item._id)}
+                      className="accent-primary"
                     />
                     {item.name} ({item.city})
                   </label>

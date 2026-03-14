@@ -86,7 +86,7 @@ export default function DoctorReports() {
     {
       key: 'patientId',
       label: 'Patient',
-      render: (patient) => patient?.userId?.name || 'N/A',
+      render: (_, row) => row?.patientProfileId?.userId?.name || row?.patientId?.userId?.name || 'N/A',
     },
     {
       key: 'createdAt',
@@ -114,6 +114,40 @@ export default function DoctorReports() {
       </div>
 
       {error && <ErrorState error={error} />}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total uploads</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{reports.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Reports you uploaded</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Latest upload</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {reports[0]?.createdAt ? new Date(reports[0].createdAt).toLocaleDateString() : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Most recent report</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active patients</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Set(reports.map((r) => r.patientId?._id || r.patientId)).size || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Patients with reports</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Upload Form */}
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm">

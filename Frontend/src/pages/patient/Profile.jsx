@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { patientApi } from '../../services/apiServices.js';
+import { patientApi, userApi } from '../../services/apiServices.js';
+import { useDispatch } from 'react-redux';
+import { updateUser } from '../../store/authSlice.js';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
@@ -12,6 +14,7 @@ const parseList = (value) =>
     .filter(Boolean);
 
 export default function PatientProfile() {
+  const dispatch = useDispatch();
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({
     name: '',
@@ -27,6 +30,7 @@ export default function PatientProfile() {
     emergencyRelation: '',
   });
   const [saving, setSaving] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '', saving: false });
 
   const loadProfile = async () => {
     try {
@@ -86,6 +90,34 @@ export default function PatientProfile() {
     }
   };
 
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+      toast.error('All password fields are required.');
+      return;
+    }
+    if (passwordForm.next.length < 6) {
+      toast.error('New password must be at least 6 characters.');
+      return;
+    }
+    if (passwordForm.next !== passwordForm.confirm) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+    setPasswordForm((prev) => ({ ...prev, saving: true }));
+    try {
+      const response = await userApi.changePassword({ oldPassword: passwordForm.current, newPassword: passwordForm.next });
+      if (response) {
+        dispatch(updateUser({ mustResetPassword: response.mustResetPassword, onboardingStatus: response.onboardingStatus }));
+      }
+      toast.success('Password updated successfully.');
+      setPasswordForm({ current: '', next: '', confirm: '', saving: false });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update password.');
+      setPasswordForm((prev) => ({ ...prev, saving: false }));
+    }
+  };
+
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
@@ -138,6 +170,37 @@ export default function PatientProfile() {
             {saving ? 'Saving...' : 'Save changes'}
           </Button>
         </section>
+      </form>
+
+      <form onSubmit={handlePasswordChange} className="rounded-2xl bg-card p-6 shadow-sm space-y-4">
+        <div>
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Security</p>
+          <h3 className="mt-2 text-xl font-semibold text-foreground">Change password</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Use your current password to set a new one for your patient portal.
+          </p>
+        </div>
+        <Field
+          label="Current password"
+          type="password"
+          value={passwordForm.current}
+          onChange={(value) => setPasswordForm((prev) => ({ ...prev, current: value }))}
+        />
+        <Field
+          label="New password"
+          type="password"
+          value={passwordForm.next}
+          onChange={(value) => setPasswordForm((prev) => ({ ...prev, next: value }))}
+        />
+        <Field
+          label="Confirm new password"
+          type="password"
+          value={passwordForm.confirm}
+          onChange={(value) => setPasswordForm((prev) => ({ ...prev, confirm: value }))}
+        />
+        <Button type="submit" disabled={passwordForm.saving}>
+          {passwordForm.saving ? 'Updating...' : 'Update password'}
+        </Button>
       </form>
     </motion.section>
   );

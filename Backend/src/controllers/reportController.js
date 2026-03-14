@@ -44,3 +44,22 @@ export const getPatientReports = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getMyReports = async (req, res) => {
+  try {
+    if (req.user.role === "doctor") {
+      const doctor = await Doctor.findOne({ userId: req.user.id });
+      if (!doctor) {
+        return res.status(404).json({ message: "Doctor profile not found." });
+      }
+      const reports = await Report.find({ doctorId: doctor._id })
+        .populate({ path: "patientProfileId", populate: { path: "userId", select: "name email patientId" } })
+        .sort({ createdAt: -1 });
+      return res.json(reports);
+    }
+
+    return getPatientReports(req, res);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

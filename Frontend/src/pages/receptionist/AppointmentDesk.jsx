@@ -19,6 +19,21 @@ const initialBooking = {
   reasonForVisit: '',
 };
 
+const initialWalkIn = {
+  name: '',
+  email: '',
+  phone: '',
+  dateOfBirth: '',
+  gender: 'unknown',
+  address: '',
+  bloodGroup: '',
+  allergies: '',
+  chronicDiseases: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+  emergencyContactRelation: '',
+};
+
 export default function AppointmentDesk() {
   const [searchParams] = useSearchParams();
   const preselectedPatientId = searchParams.get('patientId') || '';
@@ -33,6 +48,9 @@ export default function AppointmentDesk() {
   const [filterStatus, setFilterStatus] = useState('');
   const [queueDate, setQueueDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
+  const [bookingMode, setBookingMode] = useState('existing');
+  const [walkInForm, setWalkInForm] = useState(initialWalkIn);
+  const [walkInCredential, setWalkInCredential] = useState(null);
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', slot: '' });
 
@@ -120,10 +138,31 @@ export default function AppointmentDesk() {
     event.preventDefault();
     setSaving(true);
     try {
-      await appointmentApi.book(booking);
+      let patientId = booking.patientId;
+      if (bookingMode === 'walkIn') {
+        const response = await receptionistApi.registerPatient({
+          ...walkInForm,
+          emergencyContact: {
+            name: walkInForm.emergencyContactName,
+            phone: walkInForm.emergencyContactPhone,
+            relation: walkInForm.emergencyContactRelation,
+          },
+        });
+        patientId = response.patient?.id;
+        setWalkInCredential(response.temporaryCredential || null);
+      }
+
+      await appointmentApi.book({
+        ...booking,
+        patientId,
+        visitType: bookingMode === 'walkIn' ? 'walkIn' : booking.visitType,
+      });
       toast.success('Appointment booked successfully.');
-      setBooking({ ...initialBooking, patientId: booking.patientId, date: booking.date });
+      setBooking({ ...initialBooking, patientId: bookingMode === 'walkIn' ? '' : booking.patientId, date: booking.date });
       setAvailableSlots([]);
+      if (bookingMode === 'walkIn') {
+        setWalkInForm(initialWalkIn);
+      }
       loadQueue();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to book appointment.');
@@ -214,30 +253,99 @@ export default function AppointmentDesk() {
           </div>
 
           <div className="mt-5 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={patientQuery}
-                onChange={(event) => setPatientQuery(event.target.value)}
-                placeholder="Search patient by name, patient ID, phone, or email"
-                className="w-full rounded-2xl border border-border py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
-              />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setBookingMode('existing')}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  bookingMode === 'existing'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border border-border bg-card text-foreground hover:bg-muted'
+                }`}
+              >
+                Existing patient
+              </button>
+              <button
+                type="button"
+                onClick={() => setBookingMode('walkIn')}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  bookingMode === 'walkIn'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border border-border bg-card text-foreground hover:bg-muted'
+                }`}
+              >
+                Walk-in patient
+              </button>
             </div>
 
-            <Field label="Patient">
-              <select value={booking.patientId} onChange={(event) => setBooking((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
-                <option value="">Select patient</option>
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>{patient.name} • {patient.patientId}</option>
-                ))}
-              </select>
-            </Field>
+            {walkInCredential && bookingMode === 'walkIn' && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <p className="font-semibold text-amber-900">Temporary patient credential generated</p>
+                <p className="mt-1">Patient ID: <strong>{walkInCredential.patientId}</strong> | Password: <strong>{walkInCredential.temporaryPassword}</strong></p>
+              </div>
+            )}
 
-            {selectedPatient && (
-              <div className="rounded-xl border border-border bg-muted/50 p-4">
-                <p className="font-semibold text-foreground">{selectedPatient.name}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{selectedPatient.patientId} • {selectedPatient.phone} • {selectedPatient.email}</p>
+            {bookingMode === 'existing' && (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={patientQuery}
+                    onChange={(event) => setPatientQuery(event.target.value)}
+                    placeholder="Search patient by name, patient ID, phone, or email"
+                    className="w-full rounded-2xl border border-border py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+
+                <Field label="Patient">
+                  <select value={booking.patientId} onChange={(event) => setBooking((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required={bookingMode === 'existing'}>
+                    <option value="">Select patient</option>
+                    {patients.map((patient) => (
+                      <option key={patient.id} value={patient.id}>{patient.name} • {patient.patientId}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                {selectedPatient && (
+                  <div className="rounded-xl border border-border bg-muted/50 p-4">
+                    <p className="font-semibold text-foreground">{selectedPatient.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{selectedPatient.patientId} • {selectedPatient.phone} • {selectedPatient.email}</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {bookingMode === 'walkIn' && (
+              <div className="rounded-2xl border border-border p-4 space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Full name">
+                    <input type="text" value={walkInForm.name} onChange={(e) => setWalkInForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+                  </Field>
+                  <Field label="Email">
+                    <input type="email" value={walkInForm.email} onChange={(e) => setWalkInForm((c) => ({ ...c, email: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+                  </Field>
+                  <Field label="Phone">
+                    <input type="text" value={walkInForm.phone} onChange={(e) => setWalkInForm((c) => ({ ...c, phone: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+                  </Field>
+                  <Field label="Date of birth">
+                    <input type="date" value={walkInForm.dateOfBirth} onChange={(e) => setWalkInForm((c) => ({ ...c, dateOfBirth: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+                  </Field>
+                </div>
+                <Field label="Address">
+                  <input type="text" value={walkInForm.address} onChange={(e) => setWalkInForm((c) => ({ ...c, address: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                </Field>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Field label="Emergency contact name (optional)">
+                    <input type="text" value={walkInForm.emergencyContactName} onChange={(e) => setWalkInForm((c) => ({ ...c, emergencyContactName: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  </Field>
+                  <Field label="Emergency contact phone (optional)">
+                    <input type="text" value={walkInForm.emergencyContactPhone} onChange={(e) => setWalkInForm((c) => ({ ...c, emergencyContactPhone: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  </Field>
+                  <Field label="Relation (optional)">
+                    <input type="text" value={walkInForm.emergencyContactRelation} onChange={(e) => setWalkInForm((c) => ({ ...c, emergencyContactRelation: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  </Field>
+                </div>
               </div>
             )}
 
@@ -270,7 +378,7 @@ export default function AppointmentDesk() {
                 <input type="date" value={booking.date} onChange={(event) => setBooking((current) => ({ ...current, date: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
               </Field>
               <Field label="Visit Type">
-                <select value={booking.visitType} onChange={(event) => setBooking((current) => ({ ...current, visitType: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                <select value={bookingMode === 'walkIn' ? 'walkIn' : booking.visitType} onChange={(event) => setBooking((current) => ({ ...current, visitType: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" disabled={bookingMode === 'walkIn'}>
                   <option value="newConsultation">New Consultation</option>
                   <option value="followUp">Follow-up</option>
                   <option value="walkIn">Walk-in</option>

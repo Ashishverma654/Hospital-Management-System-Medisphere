@@ -1,5 +1,5 @@
 import { api } from '../lib/api.js';
-import { getSessionTypeForRole } from '../auth/constants.js';
+import { getSessionTypeForRole, normalizeRole } from '../auth/constants.js';
 
 const requestState = new Map();
 const MIN_INTERVAL_MS = 2000;
@@ -29,16 +29,21 @@ const rateLimitedPost = async (url, body) => {
 };
 
 const persistAuth = (data, sessionType = getSessionTypeForRole(data.user.role)) => {
+  const normalizedRole = normalizeRole(data.user.role || 'patient');
   const user = {
     id: data.user.id,
     name: data.user.name,
     email: data.user.email,
-    role: data.user.role || 'patient',
+    role: normalizedRole || 'patient',
     patientId: data.user.patientId,
     employeeId: data.user.employeeId,
+    profileImage: data.user.profileImage,
+    isActive: data.user.isActive,
+    onboardingStatus: data.user.onboardingStatus,
+    mustResetPassword: data.user.mustResetPassword,
   };
   const token = data.accessToken;
-  return { user, token, sessionType };
+  return { user, token, sessionType: sessionType || getSessionTypeForRole(normalizedRole) };
 };
 
 export const loginPatient = async (email, password) => {

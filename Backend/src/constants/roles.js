@@ -35,7 +35,25 @@ export const CREATION_PERMISSIONS = {
   subadmin: ["nurse", "receptionist", "labTechnician", "pharmacist"],
 };
 
-export const normalizeSystemRole = (role) => LEGACY_ROLE_MIGRATIONS[role] || role;
+export const normalizeSystemRole = (role) => {
+  if (!role) return role;
+  const raw = `${role}`.trim();
+  if (!raw) return raw;
+  const compact = raw.replace(/\s+/g, "").toLowerCase();
+
+  if (compact === "superreceptionist") return "subadmin";
+  if (compact === "labtechnician") return "labTechnician";
+  if (compact === "superadmin") return "superadmin";
+  if (compact === "subadmin") return "subadmin";
+  if (compact === "receptionist") return "receptionist";
+  if (compact === "pharmacist") return "pharmacist";
+  if (compact === "doctor") return "doctor";
+  if (compact === "nurse") return "nurse";
+  if (compact === "admin") return "admin";
+  if (compact === "patient") return "patient";
+
+  return LEGACY_ROLE_MIGRATIONS[role] || role;
+};
 
 export const isEmployeeRole = (role) => EMPLOYEE_ROLES.includes(normalizeSystemRole(role));
 

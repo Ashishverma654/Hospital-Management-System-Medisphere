@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { appointmentApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
@@ -55,12 +56,20 @@ export default function PatientAppointments() {
 
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-      <div className="rounded-2xl bg-card p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Appointments</p>
-        <h2 className="mt-2 text-3xl font-semibold text-foreground">Appointments and visit history</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Track upcoming appointments, visit status, and doctor details across all departments.
-        </p>
+      <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Appointments</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Appointments and visit history</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
+            Track upcoming appointments, visit status, and doctor details across all departments.
+          </p>
+        </div>
+        <Link
+          to="/patient/book-appointment"
+          className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110"
+        >
+          Book appointment
+        </Link>
       </div>
 
       <section className="rounded-2xl bg-card p-6 shadow-sm">
@@ -68,7 +77,7 @@ export default function PatientAppointments() {
           <select
             value={filters.status}
             onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-            className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+            className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-primary"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value || 'all'} value={option.value}>
@@ -80,13 +89,13 @@ export default function PatientAppointments() {
             type="date"
             value={filters.startDate}
             onChange={(event) => setFilters((current) => ({ ...current, startDate: event.target.value }))}
-            className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+            className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
           />
           <input
             type="date"
             value={filters.endDate}
             onChange={(event) => setFilters((current) => ({ ...current, endDate: event.target.value }))}
-            className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+            className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
           />
         </div>
       </section>
@@ -114,9 +123,12 @@ export default function PatientAppointments() {
               </button>
             ))}
             {upcoming.length === 0 && !loading && (
-              <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                No upcoming appointments.
-              </p>
+              <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                <p>No upcoming appointments.</p>
+                <Link to="/patient/book-appointment" className="mt-2 inline-flex text-xs font-semibold text-primary hover:underline">
+                  Book an appointment
+                </Link>
+              </div>
             )}
           </div>
 

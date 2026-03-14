@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog.jsx';
 import { StatusBadge, DataTable, LoadingSkeleton, ErrorState } from '../../components';
 import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
-import { Calendar, Clock, User, Play, Eye } from 'lucide-react';
+import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
@@ -15,6 +16,9 @@ export default function DoctorAppointments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [startingConsultation, setStartingConsultation] = useState(null);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [quickViewData, setQuickViewData] = useState(null);
+  const [quickViewLoading, setQuickViewLoading] = useState(false);
 
   useEffect(() => {
     fetchTodayAppointments();
@@ -25,7 +29,8 @@ export default function DoctorAppointments() {
       setLoading(true);
       setError(null);
       const response = await appointmentApi.getDoctorToday();
-      setTodayAppointments(Array.isArray(response) ? response : []);
+      const normalized = Array.isArray(response) ? response : response?.data || [];
+      setTodayAppointments(Array.isArray(normalized) ? normalized : []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch appointments');
       toast.error('Failed to load appointments');
@@ -48,6 +53,46 @@ export default function DoctorAppointments() {
       setStartingConsultation(null);
     }
   };
+
+  const openQuickView = async (appointment) => {
+    try {
+      setQuickViewLoading(true);
+      setQuickViewOpen(true);
+      const summary = await appointmentApi.getPatientSummary(appointment.patientId?._id || appointment.patientId);
+      setQuickViewData({ appointment, summary });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load patient quick view');
+      setQuickViewData(null);
+    } finally {
+      setQuickViewLoading(false);
+    }
+  };
+
+  const closeQuickView = () => {
+    setQuickViewOpen(false);
+    setQuickViewData(null);
+  };
+
+  const buildTriageFlags = (summary) => {
+    const patient = summary?.patient;
+    const flags = [];
+    if (!patient) return flags;
+    if (patient.allergies?.length) flags.push({ label: 'Allergy risk', tone: 'bg-orange-500/10 text-orange-600' });
+    if (patient.chronicDiseases?.length) flags.push({ label: 'Chronic conditions', tone: 'bg-amber-500/10 text-amber-600' });
+    if (patient.latestVitals) {
+      const { temperature, spo2, pulse, bloodPressure } = patient.latestVitals;
+      const highTemp = temperature && Number(temperature) >= 100;
+      const lowSpo2 = spo2 && Number(spo2) < 94;
+      const highPulse = pulse && Number(pulse) > 100;
+      const highBp = bloodPressure && bloodPressure.split('/').some((val) => Number(val) >= 140);
+      if (highTemp || lowSpo2 || highPulse || highBp) {
+        flags.push({ label: 'Vitals need review', tone: 'bg-red-500/10 text-red-600' });
+      }
+    }
+    return flags;
+  };
+
+  const isImageReport = (url = '') => /\.(png|jpe?g|gif|webp)$/i.test(url);
 
   const columns = [
     {
@@ -112,6 +157,14 @@ export default function DoctorAppointments() {
               {startingConsultation === row._id ? 'Starting...' : 'Start'}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openQuickView(row)}
+            className="text-xs"
+          >
+            <Stethoscope className="h-3 w-3 mr-1" /> Quick view
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -206,6 +259,142 @@ export default function DoctorAppointments() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={quickViewOpen} onOpenChange={closeQuickView}>
+        <DialogContent className="h-[100dvh] max-w-2xl rounded-none sm:rounded-l-3xl sm:rounded-r-none sm:ml-auto sm:mr-0 sm:w-[42rem] sm:max-w-[42rem]">
+          <DialogHeader>
+            <DialogTitle>Patient chart drawer</DialogTitle>
+            <DialogDescription>Full chart snapshot with labs and prescription history.</DialogDescription>
+          </DialogHeader>
+          {quickViewLoading && (
+            <div className="py-10 text-center text-muted-foreground">Loading patient summary…</div>
+          )}
+          {!quickViewLoading && quickViewData && (
+            <div className="space-y-5 overflow-y-auto pr-2">
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Patient</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">
+                  {quickViewData.summary?.patient?.name || 'Patient'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {quickViewData.summary?.patient?.patientId || 'No ID'} • {quickViewData.summary?.patient?.age || '—'}y • {quickViewData.summary?.patient?.gender || '—'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {buildTriageFlags(quickViewData.summary).map((flag) => (
+                  <span key={flag.label} className={`rounded-full px-3 py-1 text-xs font-semibold ${flag.tone}`}>
+                    {flag.label}
+                  </span>
+                ))}
+                {buildTriageFlags(quickViewData.summary).length === 0 && (
+                  <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+                    No high-risk flags detected
+                  </span>
+                )}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" /> Allergies & Conditions
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Allergies: {quickViewData.summary?.patient?.allergies?.length ? quickViewData.summary.patient.allergies.join(', ') : 'None reported'}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Chronic: {quickViewData.summary?.patient?.chronicDiseases?.length ? quickViewData.summary.patient.chronicDiseases.join(', ') : 'None listed'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Latest vitals
+                  </p>
+                  {quickViewData.summary?.patient?.latestVitals ? (
+                    <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                      <p>BP: {quickViewData.summary.patient.latestVitals.bloodPressure || '—'}</p>
+                      <p>Pulse: {quickViewData.summary.patient.latestVitals.pulse || '—'}</p>
+                      <p>Temp: {quickViewData.summary.patient.latestVitals.temperature || '—'}</p>
+                      <p>SpO2: {quickViewData.summary.patient.latestVitals.spo2 || '—'}</p>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">No vitals recorded yet.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-sm font-semibold text-foreground">Lab orders needing attention</p>
+                  <div className="mt-2 space-y-2">
+                    {(quickViewData.summary?.recentLabOrders || []).map((order) => (
+                      <div key={order._id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                        <span>{order.orderNumber || 'Lab order'} • {order.status}</span>
+                        <span className="text-xs text-muted-foreground">{order.paymentStatus || 'pending'}</span>
+                      </div>
+                    ))}
+                    {(quickViewData.summary?.recentLabOrders || []).length === 0 && (
+                      <p className="text-sm text-muted-foreground">No lab orders in the recent list.</p>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-sm font-semibold text-foreground">Prescription history</p>
+                  <div className="mt-2 space-y-2">
+                    {(quickViewData.summary?.recentPrescriptions || []).map((prescription) => (
+                      <div key={prescription._id} className="rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                        <p className="font-medium text-foreground">{prescription.diagnosis || 'Prescription'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {prescription.medicines?.map((med) => med.name).filter(Boolean).join(', ') || 'No medicines listed'}
+                        </p>
+                      </div>
+                    ))}
+                    {(quickViewData.summary?.recentPrescriptions || []).length === 0 && (
+                      <p className="text-sm text-muted-foreground">No recent prescriptions on record.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border p-4">
+                <p className="text-sm font-semibold text-foreground">Lab report previews</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {(quickViewData.summary?.recentLabReports || []).map((report) => (
+                    <div key={report._id} className="rounded-lg border border-border/60 bg-muted/40 p-3">
+                      <p className="font-medium text-foreground">{report.reportName || 'Lab report'}</p>
+                      <p className="text-xs text-muted-foreground">{report.reportType || 'Diagnostic report'}</p>
+                      {report.reportFile && isImageReport(report.reportFile) && (
+                        <img src={report.reportFile} alt={report.reportName} className="mt-2 h-32 w-full rounded-lg object-cover" />
+                      )}
+                      {report.reportFile && (
+                        <a
+                          href={report.reportFile}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex text-xs font-semibold text-primary hover:underline"
+                        >
+                          Open report file
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                  {(quickViewData.summary?.recentLabReports || []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No lab reports available yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeQuickView}>Close</Button>
+            {quickViewData?.appointment?._id && (
+              <Button onClick={() => navigate(`/doctor/appointments/${quickViewData.appointment._id}/summary`)}>
+                Full summary
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

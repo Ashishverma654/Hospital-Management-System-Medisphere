@@ -24,6 +24,7 @@ export default function BillingManagement() {
   const [form, setForm] = useState(initialForm);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [downloadingId, setDownloadingId] = useState('');
 
   const loadInvoices = async () => {
     try {
@@ -131,6 +132,35 @@ export default function BillingManagement() {
     }
   };
 
+  const downloadPdf = async (invoiceId) => {
+    try {
+      setDownloadingId(invoiceId);
+      const response = await billingApi.downloadPdf(invoiceId);
+      const blob = new Blob([response], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to download invoice.');
+    } finally {
+      setDownloadingId('');
+    }
+  };
+
+  const emailInvoice = async (invoiceId) => {
+    try {
+      await billingApi.emailInvoice(invoiceId);
+      toast.success('Invoice email sent.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to send invoice email.');
+    }
+  };
+
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -213,7 +243,13 @@ export default function BillingManagement() {
               <article className="rounded-xl border border-border p-4">
                 <p className="font-semibold text-foreground">Linked context</p>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  {selectedInvoice.context?.appointment && <p>Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}</p>}
+                  {selectedInvoice.context?.appointment && (
+                    <p>
+                      Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}
+                      {selectedInvoice.context.appointment.consultationMode ? ` • ${selectedInvoice.context.appointment.consultationMode}` : ''}
+                      {selectedInvoice.context.appointment.locationName ? ` • ${selectedInvoice.context.appointment.locationName}` : ''}
+                    </p>
+                  )}
                   {selectedInvoice.context?.labOrder && <p>Lab Order: {selectedInvoice.context.labOrder.orderNumber} • {selectedInvoice.context.labOrder.status}</p>}
                   {selectedInvoice.context?.pharmacyOrder && <p>Pharmacy Order: {selectedInvoice.context.pharmacyOrder.id} • {selectedInvoice.context.pharmacyOrder.status}</p>}
                   {selectedInvoice.context?.ward && <p>Ward: {selectedInvoice.context.ward.name}</p>}
@@ -249,9 +285,17 @@ export default function BillingManagement() {
                 </div>
               </article>
 
-              {selectedInvoice.paymentStatus !== 'paid' && (
-                <Button onClick={() => markPaid(selectedInvoice.id)}>Mark Paid</Button>
-              )}
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" onClick={() => downloadPdf(selectedInvoice.id)} disabled={downloadingId === selectedInvoice.id}>
+                  {downloadingId === selectedInvoice.id ? 'Preparing PDF...' : 'Download PDF'}
+                </Button>
+                <Button variant="outline" onClick={() => emailInvoice(selectedInvoice.id)}>
+                  Email Receipt
+                </Button>
+                {selectedInvoice.paymentStatus !== 'paid' && (
+                  <Button onClick={() => markPaid(selectedInvoice.id)}>Mark Paid</Button>
+                )}
+              </div>
             </div>
           )}
         </section>

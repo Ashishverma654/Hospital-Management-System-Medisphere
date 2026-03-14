@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { billingApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
@@ -7,11 +8,15 @@ import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 
 export default function PatientBilling() {
+  const [searchParams] = useSearchParams();
   const [invoices, setInvoices] = useState([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [filters, setFilters] = useState({ billType: '', paymentStatus: '', date: '' });
   const [payingInvoiceId, setPayingInvoiceId] = useState('');
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('upi');
+  const [upiId, setUpiId] = useState('');
 
   const loadInvoices = async () => {
     try {
@@ -48,6 +53,13 @@ export default function PatientBilling() {
     loadInvoiceDetail(selectedInvoiceId);
   }, [selectedInvoiceId]);
 
+  useEffect(() => {
+    const invoiceParam = searchParams.get('invoice');
+    if (invoiceParam) {
+      setSelectedInvoiceId(invoiceParam);
+    }
+  }, [searchParams]);
+
   const totals = useMemo(
     () => ({
       total: invoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
@@ -60,7 +72,7 @@ export default function PatientBilling() {
   const payInvoice = async (invoiceId) => {
     try {
       setPayingInvoiceId(invoiceId);
-      await billingApi.pay(invoiceId, { paymentMethod: 'card' });
+      await billingApi.pay(invoiceId, { paymentMethod });
       toast.success('Payment completed successfully.');
       await loadInvoices();
       await loadInvoiceDetail(invoiceId);
@@ -68,6 +80,32 @@ export default function PatientBilling() {
       toast.error(error.response?.data?.message || 'Payment failed.');
     } finally {
       setPayingInvoiceId('');
+    }
+  };
+
+  const downloadPdf = async (invoiceId) => {
+    try {
+      const response = await billingApi.downloadPdf(invoiceId);
+      const blob = new Blob([response], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to download invoice.');
+    }
+  };
+
+  const emailInvoice = async (invoiceId) => {
+    try {
+      await billingApi.emailInvoice(invoiceId);
+      toast.success('Invoice sent to your email.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to send invoice email.');
     }
   };
 
@@ -158,7 +196,13 @@ export default function PatientBilling() {
               <article className="rounded-xl border border-border p-4">
                 <p className="font-semibold text-foreground">Linked context</p>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  {selectedInvoice.context?.appointment && <p>Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}</p>}
+                  {selectedInvoice.context?.appointment && (
+                    <p>
+                      Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}
+                      {selectedInvoice.context.appointment.consultationMode ? ` • ${selectedInvoice.context.appointment.consultationMode}` : ''}
+                      {selectedInvoice.context.appointment.locationName ? ` • ${selectedInvoice.context.appointment.locationName}` : ''}
+                    </p>
+                  )}
                   {selectedInvoice.context?.labOrder && <p>Lab Order: {selectedInvoice.context.labOrder.orderNumber} • {selectedInvoice.context.labOrder.status}</p>}
                   {selectedInvoice.context?.pharmacyOrder && <p>Pharmacy Order: {selectedInvoice.context.pharmacyOrder.id} • {selectedInvoice.context.pharmacyOrder.status}</p>}
                   {selectedInvoice.context?.ward && <p>Ward: {selectedInvoice.context.ward.name} {selectedInvoice.context.bed?.bedNumber ? `• Bed ${selectedInvoice.context.bed.bedNumber}` : ''}</p>}
@@ -197,15 +241,64 @@ export default function PatientBilling() {
                 </div>
               </article>
 
-              {selectedInvoice.paymentStatus !== 'paid' && (
-                <Button className="w-full" disabled={payingInvoiceId === selectedInvoice.id} onClick={() => payInvoice(selectedInvoice.id)}>
-                  {payingInvoiceId === selectedInvoice.id ? 'Processing payment...' : 'Pay this bill'}
+              <div className="grid gap-3 md:grid-cols-3">
+                <Button variant="outline" onClick={() => downloadPdf(selectedInvoice.id)}>
+                  Download receipt (PDF)
                 </Button>
-              )}
+                <Button variant="outline" onClick={() => emailInvoice(selectedInvoice.id)}>
+                  Email receipt
+                </Button>
+                {selectedInvoice.paymentStatus !== 'paid' && (
+                  <Button className="w-full" disabled={payingInvoiceId === selectedInvoice.id} onClick={() => setPaymentOpen(true)}>
+                    {payingInvoiceId === selectedInvoice.id ? 'Processing payment...' : 'Pay this bill'}
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </section>
       </div>
+
+      {paymentOpen && selectedInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-foreground">Choose payment method</h3>
+              <button type="button" onClick={() => setPaymentOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="mt-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input type="radio" name="payMethod" value="upi" checked={paymentMethod === 'upi'} onChange={(e) => setPaymentMethod(e.target.value)} />
+                UPI payment
+              </label>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input type="radio" name="payMethod" value="card" checked={paymentMethod === 'card'} onChange={(e) => setPaymentMethod(e.target.value)} />
+                Card payment
+              </label>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input type="radio" name="payMethod" value="razorpay" checked={paymentMethod === 'razorpay'} onChange={(e) => setPaymentMethod(e.target.value)} />
+                Razorpay
+              </label>
+              {paymentMethod === 'upi' && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">UPI ID (optional)</label>
+                  <input
+                    type="text"
+                    value={upiId}
+                    onChange={(e) => setUpiId(e.target.value)}
+                    placeholder="name@upi"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                </div>
+              )}
+              <Button className="w-full" onClick={async () => { await payInvoice(selectedInvoice.id); setPaymentOpen(false); }}>
+                Confirm payment
+              </Button>
+              <p className="text-xs text-muted-foreground">This demo marks the invoice paid. Gateway integration can be added later.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.section>
   );
 }

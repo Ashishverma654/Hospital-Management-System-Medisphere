@@ -40,6 +40,14 @@ const doctorSchema = mongoose.Schema(
       required: true,
       default: 500
     },
+    consultationFeeVideo: {
+      type: Number,
+      default: null,
+    },
+    consultationFeePhone: {
+      type: Number,
+      default: null,
+    },
 
     about: {
       type: String,
@@ -69,6 +77,16 @@ const doctorSchema = mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "HospitalLocation",
+      },
+    ],
+
+    locationFees: [
+      {
+        locationId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "HospitalLocation",
+        },
+        fee: Number,
       },
     ],
 

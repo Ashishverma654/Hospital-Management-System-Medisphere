@@ -1,5 +1,6 @@
 import Invoice from "../models/Invoice.js";
 import Medicine from "../models/Medicine.js";
+import MedicineStockLog from "../models/MedicineStockLog.js";
 import PharmacyOrder from "../models/PharmacyOrder.js";
 import Prescription from "../models/Prescription.js";
 import {
@@ -511,8 +512,23 @@ export const completePharmacyOrder = async (req, res) => {
         if (medicine.stock < item.fulfilledQuantity) {
           return res.status(400).json({ message: `Insufficient stock remaining for ${item.medicineName}.` });
         }
+        const previousStock = medicine.stock;
         medicine.stock -= item.fulfilledQuantity;
         await medicine.save();
+
+        await MedicineStockLog.create({
+          medicineId: medicine._id,
+          changeType: "sale",
+          quantityChange: -Math.abs(item.fulfilledQuantity),
+          previousStock,
+          newStock: medicine.stock,
+          referenceType: "pharmacyOrder",
+          referenceId: order._id,
+          performedByUserId: req.user.id,
+          performedByName: req.user.name,
+          performedByRole: req.user.role,
+          notes: `Dispensed ${item.fulfilledQuantity} ${medicine.unit || "unit"} for order ${order._id}`,
+        });
       }
       item.fulfillmentStatus = item.unavailableQuantity > 0
         ? PHARMACY_STATUS.PARTIALLY_FULFILLED

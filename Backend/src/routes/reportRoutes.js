@@ -2,6 +2,7 @@ import express from "express";
 import {
   uploadReport,
   getPatientReports,
+  getMyReports,
 } from "../controllers/reportController.js";
 import upload from "../middlewares/uploadMiddleware.js";
 import {
@@ -20,8 +21,8 @@ router.post(
 router.get(
   "/my",
   verifyAccessToken,
-  authorizeRoles("patient"),
-  getPatientReports,
+  authorizeRoles("patient", "doctor"),
+  getMyReports,
 );
 
 export default router;

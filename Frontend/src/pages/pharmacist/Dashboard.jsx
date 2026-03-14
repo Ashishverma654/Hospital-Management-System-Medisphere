@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { pharmacistApi } from '../../services/apiServices.js';
+import { pharmacistApi, pharmacyApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
@@ -19,11 +19,17 @@ const cards = [
 export default function PharmacistDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [recentLedger, setRecentLedger] = useState([]);
 
   useEffect(() => {
     const load = async () => {
       try {
-        setStats(await pharmacistApi.getDashboard());
+        const [dashboardData, ledgerData] = await Promise.all([
+          pharmacistApi.getDashboard(),
+          pharmacyApi.getRecentStockLedger({ limit: 6 }),
+        ]);
+        setStats(dashboardData);
+        setRecentLedger(Array.isArray(ledgerData) ? ledgerData : []);
       } catch (error) {
         toast.error(error.response?.data?.message || 'Failed to load pharmacist dashboard.');
       }
@@ -88,6 +94,27 @@ export default function PharmacistDashboard() {
           </div>
         </article>
       </div>
+
+      <article className="rounded-2xl bg-card p-6 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Recent stock movements</p>
+        <h3 className="mt-2 text-2xl font-semibold text-foreground">Inventory activity</h3>
+        <div className="mt-4 space-y-3">
+          {recentLedger.map((entry) => (
+            <div key={entry._id} className="rounded-xl border border-border p-4">
+              <p className="font-medium text-foreground">{entry.medicineId?.name || 'Medicine'} • {entry.changeType}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {entry.quantityChange > 0 ? `+${entry.quantityChange}` : entry.quantityChange} • Stock {entry.previousStock} → {entry.newStock}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(entry.createdAt).toLocaleString()} • {entry.performedByName || 'System'}
+              </p>
+            </div>
+          ))}
+          {recentLedger.length === 0 && (
+            <p className="text-sm text-muted-foreground">No recent stock movements recorded.</p>
+          )}
+        </div>
+      </article>
     </motion.section>
   );
 }

@@ -18,13 +18,18 @@ const quickActions = [
 
 export default function LabTechDashboard() {
   const [dashboard, setDashboard] = useState(null);
+  const [pendingReports, setPendingReports] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const data = await labTechApi.getDashboard();
+      const [data, pending] = await Promise.all([
+        labTechApi.getDashboard(),
+        labTechApi.getPendingReports(),
+      ]);
       setDashboard(data);
+      setPendingReports(Array.isArray(pending) ? pending : []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load lab technician dashboard.');
     } finally {
@@ -132,6 +137,43 @@ export default function LabTechDashboard() {
           </div>
         </section>
       </div>
+
+      <section className="rounded-2xl bg-card p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Pending Reports</p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">Reports ready for action</h3>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/employee/lab-technician/processing">Open processing queue</Link>
+          </Button>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {pendingReports.slice(0, 6).map((order) => (
+            <article key={order._id} className="rounded-xl border border-border p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="font-semibold text-foreground">{order.patientName}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {order.orderNumber} • {order.doctorName} • {order.items?.map((item) => item.testName).join(', ')}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Updated {new Date(order.updatedAt || order.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <StatusBadge status={order.status}>{order.status}</StatusBadge>
+                  <StatusBadge status={order.paymentStatus}>{order.paymentStatus}</StatusBadge>
+                </div>
+              </div>
+            </article>
+          ))}
+          {!loading && pendingReports.length === 0 && (
+            <p className="text-sm text-muted-foreground">No reports are waiting for release right now.</p>
+          )}
+        </div>
+      </section>
     </motion.section>
   );
 }

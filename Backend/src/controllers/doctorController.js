@@ -33,6 +33,48 @@ const parseIdArray = (value) => {
   return [value].filter(Boolean);
 };
 
+const parseObjectArray = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const sanitizeArticles = (value) =>
+  parseObjectArray(value)
+    .map((item) => ({
+      title: item?.title?.trim() || "",
+      date: item?.date?.trim() || "",
+      link: item?.link?.trim() || "",
+      image: item?.image?.trim() || "",
+    }))
+    .filter((item) => item.title || item.link || item.date || item.image);
+
+const sanitizeMedia = (value) =>
+  parseObjectArray(value)
+    .map((item) => ({
+      type: item?.type || "video",
+      title: item?.title?.trim() || "",
+      url: item?.url?.trim() || "",
+      thumbnail: item?.thumbnail?.trim() || "",
+    }))
+    .filter((item) => item.title || item.url || item.thumbnail);
+
+const sanitizeLocationFees = (value) =>
+  parseObjectArray(value)
+    .map((item) => ({
+      locationId: item?.locationId,
+      fee: Number(item?.fee) || 0,
+    }))
+    .filter((item) => item.locationId && item.fee >= 0);
+
 const generateEmployeeId = async () => {
   let employeeId;
   let exists = true;
@@ -137,9 +179,14 @@ const buildDoctorPayload = (doctor) => ({
   qualifications: doctor.qualifications,
   experienceYears: doctor.experienceYears,
   consultationFee: doctor.consultationFee,
+  consultationFeeVideo: doctor.consultationFeeVideo,
+  consultationFeePhone: doctor.consultationFeePhone,
   about: doctor.about,
   expertise: doctor.expertise,
+  articles: doctor.articles || [],
+  media: doctor.media || [],
   hospitalLocations: doctor.hospitalLocations,
+  locationFees: doctor.locationFees || [],
   profileImage: doctor.profileImage,
   isActive: doctor.isActive,
   isPublished: doctor.isPublished,
@@ -166,8 +213,13 @@ export const createDoctor = async (req, res) => {
       qualifications,
       experienceYears,
       consultationFee,
+      consultationFeeVideo,
+      consultationFeePhone,
       about,
       expertise,
+      articles,
+      media,
+      locationFees,
       profileImage,
       isPublished = false,
       isActive = true,
@@ -221,8 +273,13 @@ export const createDoctor = async (req, res) => {
       qualifications: parseStringArray(qualifications),
       experienceYears: Number(experienceYears) || 0,
       consultationFee: Number(consultationFee) || 0,
+      consultationFeeVideo: consultationFeeVideo !== undefined && consultationFeeVideo !== null ? Number(consultationFeeVideo) || 0 : null,
+      consultationFeePhone: consultationFeePhone !== undefined && consultationFeePhone !== null ? Number(consultationFeePhone) || 0 : null,
       about: about || "",
       expertise: parseStringArray(expertise),
+      articles: sanitizeArticles(articles),
+      media: sanitizeMedia(media),
+      locationFees: sanitizeLocationFees(locationFees),
       profileImage: profileImage || user.profileImage,
       isActive,
       isPublished: Boolean(isPublished),
@@ -351,8 +408,13 @@ export const updateDoctorAdmin = async (req, res) => {
       qualifications,
       experienceYears,
       consultationFee,
+      consultationFeeVideo,
+      consultationFeePhone,
       about,
       expertise,
+      articles,
+      media,
+      locationFees,
       profileImage,
       isPublished,
       isActive,
@@ -398,8 +460,13 @@ export const updateDoctorAdmin = async (req, res) => {
     if (qualifications !== undefined) doctor.qualifications = parseStringArray(qualifications);
     if (experienceYears !== undefined) doctor.experienceYears = Number(experienceYears) || 0;
     if (consultationFee !== undefined) doctor.consultationFee = Number(consultationFee) || 0;
+    if (consultationFeeVideo !== undefined) doctor.consultationFeeVideo = consultationFeeVideo === null || consultationFeeVideo === '' ? null : Number(consultationFeeVideo) || 0;
+    if (consultationFeePhone !== undefined) doctor.consultationFeePhone = consultationFeePhone === null || consultationFeePhone === '' ? null : Number(consultationFeePhone) || 0;
     if (about !== undefined) doctor.about = about;
     if (expertise !== undefined) doctor.expertise = parseStringArray(expertise);
+    if (articles !== undefined) doctor.articles = sanitizeArticles(articles);
+    if (media !== undefined) doctor.media = sanitizeMedia(media);
+    if (locationFees !== undefined) doctor.locationFees = sanitizeLocationFees(locationFees);
     if (typeof isPublished === "boolean") doctor.isPublished = isPublished;
     if (typeof isFeatured === "boolean") doctor.isFeatured = isFeatured;
     if (featureOrder !== undefined) doctor.featureOrder = Number(featureOrder) || 0;

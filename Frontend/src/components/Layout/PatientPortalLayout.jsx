@@ -5,12 +5,14 @@ import {
   LayoutDashboard, Calendar, FileText, Pill, FlaskConical, ClipboardList,
   CreditCard, Clock, User, Bell, LogOut, Heart, ChevronRight, Menu, X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { logout } from '../../store/authSlice.js';
 import { pageVariants } from '../../lib/animation-variants.js';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.jsx';
 import logoImg from '../../assets/logo.png';
 import ThemeToggle from '../ThemeToggle.jsx';
+import { userApi } from '../../services/apiServices.js';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +23,7 @@ import {
 
 const NAV_ITEMS = [
   { to: '/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard, desc: 'Overview and care status' },
+  { to: '/patient/book-appointment', label: 'Book Appointment', icon: Calendar, desc: 'New visit booking' },
   { to: '/patient/appointments', label: 'Appointments', icon: Calendar, desc: 'Visits and scheduling' },
   { to: '/patient/prescriptions', label: 'Prescriptions', icon: FileText, desc: 'Active medicines' },
   { to: '/patient/medicine-orders', label: 'Medicine Orders', icon: Pill, desc: 'Pharmacy orders' },
@@ -44,11 +47,43 @@ export default function PatientPortalLayout() {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetStep, setResetStep] = useState('notice');
+  const [resetForm, setResetForm] = useState({ newPassword: '', confirmPassword: '', loading: false });
 
   const handleLogout = () => {
     dispatch(logout());
     localStorage.removeItem('mediflow_auth');
     navigate('/patient/login');
+  };
+
+  useEffect(() => {
+    if (user?.mustResetPassword) {
+      setResetOpen(true);
+      setResetStep('notice');
+    }
+  }, [user?.mustResetPassword]);
+
+  const handleForceReset = async (event) => {
+    event.preventDefault();
+    if (resetForm.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters.');
+      return;
+    }
+    if (resetForm.newPassword !== resetForm.confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+    setResetForm((prev) => ({ ...prev, loading: true }));
+    try {
+      await userApi.changePassword({ newPassword: resetForm.newPassword });
+      toast.success('Password updated. Please sign in again.');
+      handleLogout();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Unable to update password.');
+    } finally {
+      setResetForm((prev) => ({ ...prev, loading: false }));
+    }
   };
 
   const SidebarContent = () => (
@@ -165,6 +200,12 @@ export default function PatientPortalLayout() {
               <span className="doccure-chip">Care plan</span>
               <span className="doccure-chip">Lab updates</span>
             </div>
+            <NavLink
+              to="/patient/book-appointment"
+              className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition hover:brightness-110"
+            >
+              Book appointment
+            </NavLink>
           </div>
           <SidebarContent />
         </aside>
@@ -190,6 +231,66 @@ export default function PatientPortalLayout() {
           <Outlet />
         </motion.main>
       </div>
+
+      {resetOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl">
+            {resetStep === 'notice' ? (
+              <>
+                <h3 className="text-xl font-semibold text-foreground">Password update required</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  For security, please set a new password before continuing to the portal.
+                </p>
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
+                    onClick={() => setResetStep('form')}
+                  >
+                    Set new password
+                  </button>
+                  <button
+                    type="button"
+                    className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+                    onClick={() => setResetStep('form')}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleForceReset} className="space-y-4">
+                <h3 className="text-xl font-semibold text-foreground">Create a new password</h3>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">New password</label>
+                  <input
+                    type="password"
+                    value={resetForm.newPassword}
+                    onChange={(e) => setResetForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">Confirm password</label>
+                  <input
+                    type="password"
+                    value={resetForm.confirmPassword}
+                    onChange={(e) => setResetForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={resetForm.loading}
+                  className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+                >
+                  {resetForm.loading ? 'Updating...' : 'Update password'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

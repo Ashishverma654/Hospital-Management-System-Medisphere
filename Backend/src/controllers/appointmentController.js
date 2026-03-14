@@ -2,17 +2,39 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
+import Invoice from "../models/Invoice.js";
 import DoctorAvailability from "../models/DoctorAvailability.js";
 import LabOrder from "../models/LabOrder.js";
 import Prescription from "../models/Prescription.js";
 import LabReport from "../models/LabReport.js";
+import Vitals from "../models/Vitals.js";
 import { generateSlots } from "../utils/generateSlots.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { sendSms } from "../utils/sendSms.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
 import { notifyPatient } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
 
 const OCCUPIED_SLOT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed"];
+
+const resolveConsultationFee = ({ doctor, consultationMode, hospitalLocationId }) => {
+  if (!doctor) return 0;
+  if (consultationMode === "video" && doctor.consultationFeeVideo != null) {
+    return Number(doctor.consultationFeeVideo || 0);
+  }
+  if (consultationMode === "phone" && doctor.consultationFeePhone != null) {
+    return Number(doctor.consultationFeePhone || 0);
+  }
+  if (consultationMode === "in-person" && hospitalLocationId) {
+    const match = (doctor.locationFees || []).find(
+      (item) => `${item.locationId}` === `${hospitalLocationId}` || `${item.locationId?._id}` === `${hospitalLocationId}`
+    );
+    if (match && match.fee != null) {
+      return Number(match.fee || 0);
+    }
+  }
+  return Number(doctor.consultationFee || 0);
+};
 
 export const bookAppointment = async (req, res) => {
   try {
@@ -21,6 +43,7 @@ export const bookAppointment = async (req, res) => {
       date,
       slot,
       patientId: providedPatientId,
+      hospitalLocationId,
       visitType = "newConsultation",
       consultationMode = "in-person",
       reasonForVisit,
@@ -127,6 +150,10 @@ export const bookAppointment = async (req, res) => {
       patientId: patientUser._id,
       patientProfileId: patientProfile._id,
       doctorUserId: doctor.userId,
+      hospitalLocationId:
+        hospitalLocationId && doctor.hospitalLocations?.some((loc) => loc.toString() === hospitalLocationId)
+          ? hospitalLocationId
+          : undefined,
       date,
       slot,
       visitType,
@@ -144,6 +171,48 @@ export const bookAppointment = async (req, res) => {
       checkedInBy: visitType === "walkIn" ? req.user.id : undefined,
       createdBy: req.user.id,
     });
+
+    // Auto-create consultation invoice
+    const existingInvoice = await Invoice.findOne({ appointmentId: appointment._id });
+    if (!existingInvoice) {
+      const doctorFee = resolveConsultationFee({
+        doctor,
+        consultationMode,
+        hospitalLocationId: appointment.hospitalLocationId,
+      });
+
+      const createdInvoice = await Invoice.create({
+        patientId: patientProfile._id,
+        patientUserId: patientUser._id,
+        appointmentId: appointment._id,
+        billType: "consultation",
+        doctorFee,
+        lineItems: [
+          {
+            label: "Consultation Fee",
+            category: "consultation",
+            referenceType: "appointment",
+            referenceId: appointment._id,
+            quantity: 1,
+            unitPrice: doctorFee,
+            lineTotal: doctorFee,
+            notes: consultationMode ? `Mode: ${consultationMode}` : undefined,
+          },
+        ],
+        createdBy: req.user.id,
+        updatedBy: req.user.id,
+      });
+
+      if (patientUser?.email) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const apiUrl = process.env.BACKEND_URL || "http://localhost:3500/api";
+        await sendEmail(
+          patientUser.email,
+          "Appointment Invoice Ready",
+          `Your consultation invoice is ready. View it here: ${frontendUrl}/patient/bills?invoice=${createdInvoice._id} or download PDF: ${apiUrl}/billing/${createdInvoice._id}/pdf`
+        );
+      }
+    }
 
     res.status(201).json({
       message: "Appointment booked successfully.",
@@ -173,7 +242,11 @@ export const bookAppointment = async (req, res) => {
     await sendEmail(
       patientUser.email,
       "Appointment Confirmed",
-      `Your appointment has been booked successfully for ${appointment.date}.`
+      `Your appointment has been booked successfully for ${appointment.date} at ${appointment.slot}.`
+    );
+    await sendSms(
+      patientUser.phone,
+      `MediFlow: Your appointment is booked for ${appointment.date} at ${appointment.slot}.`
     );
 
   } catch (error) {
@@ -647,6 +720,9 @@ export const getPatientSummary = async (req, res) => {
     const { patientId } = req.params;
 
     const { patient, user } = await resolvePatientContext(patientId);
+    const latestVitals = await Vitals.findOne({ patientId: patient._id })
+      .sort({ recordedAt: -1 })
+      .select("recordedAt systolicBp diastolicBp pulse temperature spo2 respirationRate bloodSugar weight notes");
 
     // Get recent prescriptions
     const recentPrescriptions = await Prescription.find({ patientId: patient._id })
@@ -689,6 +765,22 @@ export const getPatientSummary = async (req, res) => {
           maritalStatus: patient.maritalStatus,
           emergencyContact: patient.emergencyContact,
           insuranceProvider: patient.insuranceProvider,
+          latestVitals: latestVitals
+            ? {
+                recordedAt: latestVitals.recordedAt,
+                bloodPressure:
+                  latestVitals.systolicBp && latestVitals.diastolicBp
+                    ? `${latestVitals.systolicBp}/${latestVitals.diastolicBp}`
+                    : null,
+                pulse: latestVitals.pulse,
+                temperature: latestVitals.temperature,
+                spo2: latestVitals.spo2,
+                respirationRate: latestVitals.respirationRate,
+                bloodSugar: latestVitals.bloodSugar,
+                weight: latestVitals.weight,
+                notes: latestVitals.notes,
+              }
+            : null,
         },
         recentPrescriptions,
         recentLabOrders,

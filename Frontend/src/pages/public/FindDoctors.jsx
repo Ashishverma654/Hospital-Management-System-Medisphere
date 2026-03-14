@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Search, ArrowRight, Sparkles } from 'lucide-react';
@@ -7,6 +8,8 @@ import { SkeletonCard } from '../../components/ui/skeleton.jsx';
 import { staggerContainer, staggerItem, fadeInUp } from '../../lib/animation-variants.js';
 
 export default function FindDoctors() {
+  const { isAuthenticated, sessionType, user } = useSelector((state) => state.auth);
+  const isPatient = isAuthenticated && sessionType === 'patient' && user?.role === 'patient';
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [specializations, setSpecializations] = useState([]);
@@ -69,8 +72,17 @@ export default function FindDoctors() {
               Browse published doctor profiles, filter by department and specialization, and view live availability from the hospital directory.
             </p>
             <div className="mt-6 flex gap-3">
-              <Link to="/patient/register" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-110 transition-all">Register to Book</Link>
-              <Link to="/patient/login" className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors">Patient Login</Link>
+              {isPatient ? (
+                <>
+                  <Link to="/patient/appointments" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-110 transition-all">My Appointments</Link>
+                  <Link to="/patient/dashboard" className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors">Go to Portal</Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/patient/register" className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-110 transition-all">Register to Book</Link>
+                  <Link to="/patient/login" className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors">Patient Login</Link>
+                </>
+              )}
             </div>
           </motion.div>
         </div>

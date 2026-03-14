@@ -27,6 +27,7 @@ export default function DoctorPrescriptions() {
   const [error, setError] = useState(null);
   const [medicines, setMedicines] = useState([]);
   const [appointment, setAppointment] = useState(null);
+  const [recentPrescriptions, setRecentPrescriptions] = useState([]);
 
   const [formData, setFormData] = useState({
     appointmentId: appointmentId || '',
@@ -43,7 +44,7 @@ export default function DoctorPrescriptions() {
   });
 
   useEffect(() => {
-    Promise.all([fetchMedicines(), appointmentId && fetchAppointment(appointmentId)]);
+    Promise.all([fetchMedicines(), appointmentId && fetchAppointment(appointmentId), fetchRecentPrescriptions()]);
   }, [appointmentId]);
 
   const fetchMedicines = async () => {
@@ -69,6 +70,15 @@ export default function DoctorPrescriptions() {
       setError(err.response?.data?.message || 'Failed to fetch appointment');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRecentPrescriptions = async () => {
+    try {
+      const data = await prescriptionApi.getMy();
+      setRecentPrescriptions(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore recent list failures
     }
   };
 
@@ -117,7 +127,7 @@ export default function DoctorPrescriptions() {
   if (error) return <ErrorState error={error} />;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Create Prescription</h2>
         <p className="text-muted-foreground">
@@ -125,6 +135,40 @@ export default function DoctorPrescriptions() {
             ? `Create prescription for ${appointment.patientId?.userId?.name || 'Patient'}`
             : 'Fill in the prescription details below'}
         </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total prescriptions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{recentPrescriptions.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Created by you</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Latest prescription</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {recentPrescriptions[0]?.createdAt ? new Date(recentPrescriptions[0].createdAt).toLocaleDateString() : '—'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Most recent order</p>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Unique patients</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Set(recentPrescriptions.map((p) => p.patientId?._id || p.patientId)).size || 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Prescriptions issued</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
@@ -152,7 +196,7 @@ export default function DoctorPrescriptions() {
                   <p className="font-medium">{appointment.patientId?.userId?.name}</p>
                   <p className="text-muted-foreground">
                     {new Date(appointment.date).toLocaleDateString()} at{' '}
-                    {appointment.time}
+                    {appointment.slot || '—'}
                   </p>
                 </div>
               )}
@@ -321,6 +365,32 @@ export default function DoctorPrescriptions() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Recent prescriptions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentPrescriptions.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No prescriptions created yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {recentPrescriptions.slice(0, 6).map((prescription) => (
+                <div key={prescription._id} className="rounded-xl border border-border p-4">
+                  <p className="font-medium text-foreground">
+                    {prescription.patientId?.userId?.name || 'Patient'} • {prescription.diagnosis || 'Prescription'}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {prescription.createdAt ? new Date(prescription.createdAt).toLocaleString() : 'Created recently'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

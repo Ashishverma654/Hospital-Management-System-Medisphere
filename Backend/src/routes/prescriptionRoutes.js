@@ -3,6 +3,7 @@ import {
   createPrescription,
   downloadPrescriptionPDF,
   getPatientPrescriptions,
+  getMyPrescriptions,
   getPrescriptionByAppointment,
   getPrescriptionByPatient
 } from "../controllers/prescriptionController.js";
@@ -23,8 +24,8 @@ router.post(
 router.get(
   "/my",
   verifyAccessToken,
-  authorizeRoles("patient"),
-  getPatientPrescriptions,
+  authorizeRoles("patient", "doctor"),
+  getMyPrescriptions,
 );
 
 router.get("/appointment/:appointmentId", verifyAccessToken, authorizeRoles("doctor", "admin"), getPrescriptionByAppointment);

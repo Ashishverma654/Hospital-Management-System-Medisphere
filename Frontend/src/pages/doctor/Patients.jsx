@@ -137,7 +137,7 @@ export default function DoctorPatients() {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium text-sm">
-                          {new Date(apt.date).toLocaleDateString()} at {apt.time}
+                          {new Date(apt.date).toLocaleDateString()} at {apt.slot || '—'}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
                           Status: <span className="font-medium capitalize">{apt.status}</span>

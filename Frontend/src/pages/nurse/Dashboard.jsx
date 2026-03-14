@@ -17,16 +17,25 @@ export default function NurseDashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [assignments, setAssignments] = useState([]);
+  const [assignedPatients, setAssignedPatients] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [handoverNotes, setHandoverNotes] = useState([]);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [dashboardData, assignmentData] = await Promise.all([
+        const [dashboardData, assignmentData, patientData, taskData, handoverData] = await Promise.all([
           nurseApi.getDashboard(),
           nurseApi.getAssignments(),
+          nurseApi.getAssignedPatients(),
+          nurseApi.getTasks(),
+          nurseApi.getHandover(),
         ]);
         setStats(dashboardData);
         setAssignments(Array.isArray(assignmentData) ? assignmentData : []);
+        setAssignedPatients(Array.isArray(patientData) ? patientData : []);
+        setTasks(Array.isArray(taskData) ? taskData : []);
+        setHandoverNotes(Array.isArray(handoverData) ? handoverData : []);
       } catch (error) {
         toast.error(error.response?.data?.message || 'Failed to load nurse dashboard.');
       }
@@ -37,6 +46,10 @@ export default function NurseDashboard() {
 
   const currentAssignments = assignments.filter((assignment) => assignment.status === 'active');
   const upcomingAssignments = assignments.filter((assignment) => assignment.status !== 'active').slice(0, 4);
+
+  const openTasks = tasks.filter((task) => task.status !== 'completed').slice(0, 6);
+  const priorityHandovers = handoverNotes.slice(0, 5);
+  const patientCards = assignedPatients.slice(0, 6);
 
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
@@ -133,27 +146,87 @@ export default function NurseDashboard() {
         </article>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr,1fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
         <article className="rounded-2xl bg-card p-6 shadow-sm">
-          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Recent Vitals</p>
-          <div className="mt-4 space-y-3">
-            {(stats?.recentVitals || []).map((entry) => (
-              <div key={entry.id} className="rounded-xl border border-border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-foreground">{entry.patientName || 'Assigned patient'}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      BP {entry.systolicBp || '—'}/{entry.diastolicBp || '—'} • Pulse {entry.pulse || '—'} • Temp {entry.temperature || '—'}
-                    </p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {entry.recordedAt ? new Date(entry.recordedAt).toLocaleString() : 'No time'}
-                  </span>
-                </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Assigned Patients</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Current care list</h3>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/employee/nurse/patients')}>View all</Button>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {patientCards.map((patient) => (
+              <div key={patient.id} className="rounded-xl border border-border p-4">
+                <p className="font-medium text-foreground">{patient.name || 'Assigned patient'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {patient.patientId ? `ID ${patient.patientId}` : 'No patient ID'} • {patient.age ? `${patient.age}y` : 'Age N/A'} • {patient.gender || '—'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ward {patient.ward?.wardNumber || '—'} • {patient.bed?.bedNumber ? `Bed ${patient.bed.bedNumber}` : 'Bed pending'}
+                </p>
               </div>
             ))}
-            {stats?.recentVitals?.length === 0 && (
-              <p className="text-sm text-muted-foreground">No recent vitals have been recorded for your assigned patients.</p>
+            {assignedPatients.length === 0 && (
+              <p className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                No assigned patients yet.
+              </p>
+            )}
+          </div>
+        </article>
+
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Open Tasks</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Tasks requiring follow-up</h3>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/employee/nurse/tasks')}>Manage tasks</Button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {openTasks.map((task) => (
+              <div key={task.id} className="rounded-xl border border-border p-4">
+                <p className="font-medium text-foreground">{task.taskType || 'Nursing task'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {task.patient?.name ? `Patient: ${task.patient.name}` : 'Ward task'} • {task.status}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Due {task.dueAt ? new Date(task.dueAt).toLocaleString() : 'TBD'}
+                </p>
+              </div>
+            ))}
+            {openTasks.length === 0 && (
+              <p className="text-sm text-muted-foreground">No open nursing tasks right now.</p>
+            )}
+          </div>
+        </article>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr,1fr]">
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Handover Notes</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">Latest shift handovers</h3>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/employee/nurse/handover')}>Open handover</Button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {priorityHandovers.map((note) => (
+              <div key={note.id} className="rounded-xl border border-border p-4">
+                <p className="font-medium text-foreground">{note.summary || 'Handover note'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {note.patient?.name ? `Patient: ${note.patient.name}` : note.ward?.name ? `Ward: ${note.ward.name}` : 'General'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {note.createdAt ? new Date(note.createdAt).toLocaleString() : 'Updated recently'}
+                </p>
+              </div>
+            ))}
+            {handoverNotes.length === 0 && (
+              <p className="text-sm text-muted-foreground">No handover notes recorded yet.</p>
             )}
           </div>
         </article>
@@ -176,6 +249,30 @@ export default function NurseDashboard() {
           </div>
         </article>
       </div>
+
+      <article className="rounded-2xl bg-card p-6 shadow-sm">
+        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Recent Vitals</p>
+        <div className="mt-4 space-y-3">
+          {(stats?.recentVitals || []).map((entry) => (
+            <div key={entry.id} className="rounded-xl border border-border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-medium text-foreground">{entry.patientName || 'Assigned patient'}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    BP {entry.systolicBp || '—'}/{entry.diastolicBp || '—'} • Pulse {entry.pulse || '—'} • Temp {entry.temperature || '—'}
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {entry.recordedAt ? new Date(entry.recordedAt).toLocaleString() : 'No time'}
+                </span>
+              </div>
+            </div>
+          ))}
+          {stats?.recentVitals?.length === 0 && (
+            <p className="text-sm text-muted-foreground">No recent vitals have been recorded for your assigned patients.</p>
+          )}
+        </div>
+      </article>
     </motion.section>
   );
 }

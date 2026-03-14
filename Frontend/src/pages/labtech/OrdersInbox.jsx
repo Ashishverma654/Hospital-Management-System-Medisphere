@@ -381,6 +381,16 @@ export default function LabTechOrdersInbox({
                         <div className="flex flex-wrap gap-2">
                           <StatusBadge status={report.status}>{report.status}</StatusBadge>
                           {report.patientVisible && <StatusBadge status="completed">Visible to patient</StatusBadge>}
+                          {report.reportFile && (
+                            <a
+                              href={report.reportFile}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+                            >
+                              Download
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>

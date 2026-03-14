@@ -90,6 +90,17 @@ export default function NursePatients() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {patient.ward?.name || 'No ward'} {patient.bed?.bedNumber ? `• Bed ${patient.bed.bedNumber}` : ''}
                     </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {patient.allergies?.length > 0 && (
+                        <StatusBadge status="urgent">Allergy</StatusBadge>
+                      )}
+                      {patient.chronicDiseases?.length > 0 && (
+                        <StatusBadge status="inProgress">Chronic</StatusBadge>
+                      )}
+                      {patient.latestVitals && (
+                        <StatusBadge status="pending">Vitals on file</StatusBadge>
+                      )}
+                    </div>
                   </div>
                   {patient.pendingLabOrders?.length > 0 && (
                     <StatusBadge status="urgent">Lab pending</StatusBadge>

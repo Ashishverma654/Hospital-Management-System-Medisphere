@@ -110,6 +110,24 @@ export default function PatientSummary() {
   const recentLabOrders = summaryData.recentLabOrders || [];
   const recentLabReports = summaryData.recentLabReports || [];
   const appointmentHistory = summaryData.appointmentHistory || [];
+  const triageFlags = [];
+
+  if (patient?.allergies?.length) {
+    triageFlags.push('Allergy risk');
+  }
+  if (patient?.chronicDiseases?.length) {
+    triageFlags.push('Chronic condition');
+  }
+  if (patient?.latestVitals) {
+    const vitals = patient.latestVitals;
+    const highTemp = vitals.temperature && Number(vitals.temperature) >= 100;
+    const lowSpo2 = vitals.spo2 && Number(vitals.spo2) < 94;
+    const highPulse = vitals.pulse && Number(vitals.pulse) > 100;
+    const highBp = vitals.bloodPressure && vitals.bloodPressure.split('/').some((val) => Number(val) >= 140);
+    if (highTemp || lowSpo2 || highPulse || highBp) {
+      triageFlags.push('Vitals out of range');
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -207,6 +225,32 @@ export default function PatientSummary() {
                 )}
               </div>
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Triage Flags */}
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            Triage highlights
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {triageFlags.length ? (
+            triageFlags.map((flag) => (
+              <span
+                key={flag}
+                className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-600"
+              >
+                {flag}
+              </span>
+            ))
+          ) : (
+            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+              No high-risk flags identified
+            </span>
           )}
         </CardContent>
       </Card>
@@ -339,7 +383,7 @@ export default function PatientSummary() {
                 >
                   <p className="font-medium text-sm">{order.orderNumber || 'Lab order'}</p>
                   <p className="text-xs text-muted-foreground">
-                    {order.status} • {order.paymentStatus}
+                    {order.status} • {order.paymentStatus} • {order.urgency || 'routine'}
                   </p>
                 </div>
               ))}

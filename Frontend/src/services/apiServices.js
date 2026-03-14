@@ -104,6 +104,8 @@ export const billingApi = {
   create: (body) => api.post('/billing', body),
   getMy: (params) => api.get('/billing/my', { params }),
   getById: (id) => api.get(`/billing/${id}`),
+  downloadPdf: (id) => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),
+  emailInvoice: (id) => api.post(`/billing/${id}/email`),
   getByPatient: (patientId) => api.get(`/billing/patient/${patientId}`),
   getByContext: (params) => api.get('/billing/context', { params }),
   initiateForAppointment: (appointmentId) => api.post(`/billing/appointments/${appointmentId}/initiate`),
@@ -116,6 +118,8 @@ export const pharmacyApi = {
   add: (body) => api.post('/medicines', body),
   update: (id, body) => api.put(`/medicines/${id}`, body),
   delete: (id) => api.delete(`/medicines/${id}`),
+  getStockLedger: (id, params) => api.get(`/medicines/${id}/stock-ledger`, { params }),
+  getRecentStockLedger: (params) => api.get('/medicines/stock-ledger/recent', { params }),
 };
 
 export const pharmacyOrderApi = {
@@ -156,6 +160,7 @@ export const labTechApi = {
   getDashboard: () => api.get('/lab-techs/dashboard'),
   getOrders: (params) => api.get('/lab-techs/orders', { params }),
   getOrder: (id) => api.get(`/lab-techs/orders/${id}`),
+  getPendingReports: () => api.get('/lab-techs/pending-reports'),
   scheduleSampleCollection: (id, body) => api.patch(`/lab-techs/orders/${id}/sample-schedule`, body),
   scheduleReportPickup: (id, body) => api.patch(`/lab-techs/orders/${id}/report-pickup`, body),
   markSampleCollected: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/sample-collected`, body),
@@ -224,6 +229,7 @@ export const adminApi = {
 export const userApi = {
   getMe: () => api.get('/users/me'),
   updateMe: (body) => api.put('/users/me', body),
+  changePassword: (body) => api.put('/users/change-password', body),
   uploadProfileImage: (formData) => api.put('/users/profile-image', formData, { 
     headers: { 'Content-Type': 'multipart/form-data' } 
   }),

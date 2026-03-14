@@ -20,6 +20,7 @@ import PatientMedicineOrders from './pages/patient/MedicineOrders.jsx';
 import PatientLabTests from './pages/patient/LabTests.jsx';
 import PatientLabReports from './pages/patient/LabReports.jsx';
 import PatientBilling from './pages/patient/Billing.jsx';
+import PatientBookAppointment from './pages/patient/BookAppointment.jsx';
 import PatientProfile from './pages/patient/Profile.jsx';
 import PatientNotifications from './pages/patient/Notifications.jsx';
 import PatientTimeline from './pages/patient/Timeline.jsx';
@@ -117,6 +118,10 @@ function App() {
               element={<PatientAppointments />}
             />
             <Route
+              path="/patient/book-appointment"
+              element={<PatientBookAppointment />}
+            />
+            <Route
               path="/patient/prescriptions"
               element={<PatientPrescriptions />}
             />
@@ -153,12 +158,12 @@ function App() {
 
         <Route path="/employee/login" element={<EmployeeLogin />} />
         <Route path="/employee/unauthorized" element={<Unauthorized />} />
+        <Route element={<EmployeeRoute allowedRoles={EMPLOYEE_ROLES} />}>
+          <Route element={<EmployeeAppLayout />}>
+            <Route path="/employee" element={<EmployeeHomeRedirect />} />
+            <Route path="/employee/dashboard" element={<EmployeeHomeRedirect />} />
+            <Route path="/employee/notifications" element={<EmployeeNotifications />} />
 
-            <Route element={<EmployeeRoute allowedRoles={EMPLOYEE_ROLES} />}>
-              <Route element={<EmployeeAppLayout />}>
-                <Route path="/employee" element={<EmployeeHomeRedirect />} />
-                <Route path="/employee/dashboard" element={<EmployeeHomeRedirect />} />
-                <Route path="/employee/notifications" element={<EmployeeNotifications />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.superadmin} element={<GovernanceDashboard />} />
             </Route>
@@ -169,7 +174,7 @@ function App() {
               <Route path={EMPLOYEE_ROLE_PATHS.subadmin} element={<EmployeeRoleDashboard role="subadmin" />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['doctor']} />}>
-              <Route path={EMPLOYEE_ROLE_PATHS.doctor} element={<EmployeeRoleDashboard role="doctor" />} />
+              <Route path={EMPLOYEE_ROLE_PATHS.doctor} element={<Navigate to="/doctor" replace />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['nurse']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.nurse} element={<NurseDashboard />} />

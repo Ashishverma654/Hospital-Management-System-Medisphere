@@ -8,6 +8,8 @@ import {
   payInvoice,
   getAllInvoices,
   initiateConsultationBilling,
+  downloadInvoicePdf,
+  emailInvoice,
 } from "../controllers/billingController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 
@@ -19,6 +21,8 @@ router.get("/context", verifyAccessToken, authorizeRoles("admin", "receptionist"
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getMyInvoices);
 router.get("/:id", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), getInvoiceById);
+router.get("/:id/pdf", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), downloadInvoicePdf);
+router.post("/:id/email", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), emailInvoice);
 router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("admin", "receptionist"), getPatientInvoice);
 router.post("/appointments/:appointmentId/initiate", verifyAccessToken, authorizeRoles("admin", "receptionist"), initiateConsultationBilling);
 

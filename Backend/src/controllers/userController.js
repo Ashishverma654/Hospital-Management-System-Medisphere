@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import bcrypt from "bcryptjs";
 import { normalizeSystemRole } from "../constants/roles.js";
 
 const sanitizeUser = (user) => ({
@@ -14,6 +15,7 @@ const sanitizeUser = (user) => ({
     employeeId: user.employeeId,
     isActive: user.isActive,
     onboardingStatus: user.onboardingStatus,
+    mustResetPassword: user.mustResetPassword,
     dob: user.dob,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
@@ -86,6 +88,47 @@ export const updateMyProfile = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Profile updated successfully.",
+            data: sanitizeUser(user),
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+export const changeMyPassword = async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: "A new password (min 6 chars) is required." });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (!user.mustResetPassword) {
+            if (!oldPassword) {
+                return res.status(400).json({ success: false, message: "Current password is required." });
+            }
+            const isMatch = await bcrypt.compare(oldPassword, user.password || "");
+            if (!isMatch) {
+                return res.status(400).json({ success: false, message: "Current password is incorrect." });
+            }
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        user.password = hashed;
+        user.mustResetPassword = false;
+        if (user.onboardingStatus === "passwordResetPending" || user.onboardingStatus === "invited") {
+            user.onboardingStatus = "active";
+        }
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Password updated successfully.",
             data: sanitizeUser(user),
         });
     } catch (error) {

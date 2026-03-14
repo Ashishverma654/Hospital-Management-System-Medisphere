@@ -5,7 +5,7 @@ export const VISIT_TYPES = ["newConsultation", "followUp", "walkIn"];
 export const BED_STATUSES = ["available", "occupied", "maintenance", "reserved", "cleaning"];
 export const BILL_TYPES = ["consultation", "lab", "pharmacy", "ward", "mixed", "other"];
 export const PAYMENT_STATUSES = ["pending", "partiallyPaid", "paid", "refunded", "cancelled"];
-export const PAYMENT_METHODS = ["cash", "card", "upi", "insurance", "bank-transfer", "wallet"];
+export const PAYMENT_METHODS = ["cash", "card", "upi", "insurance", "bank-transfer", "wallet", "razorpay"];
 
 export const LAB_ORDER_STATUSES = [
   "ordered",

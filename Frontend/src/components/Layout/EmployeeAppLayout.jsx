@@ -14,6 +14,13 @@ import { STAFF_MANAGEMENT_ROLES, getEmployeeHomeRoute, getRoleLabel } from '../.
 import { pageVariants } from '../../lib/animation-variants.js';
 import { ScrollArea } from '../ui/scroll-area.jsx';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.jsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import ThemeToggle from '../ThemeToggle.jsx';
 
 const buildNavItems = (role, homeRoute) => {
@@ -294,12 +301,28 @@ export default function EmployeeAppLayout() {
               >
                 <Bell className="h-4 w-4 text-muted-foreground" />
               </NavLink>
-              <NavLink
-                to="/employee/profile"
-                className="flex items-center justify-center h-10 w-10 rounded-xl border border-border bg-card hover:bg-muted transition-colors"
-              >
-                <User className="h-4 w-4 text-muted-foreground" />
-              </NavLink>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 rounded-full border border-border bg-card px-2 py-1.5 shadow-sm outline-none">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={user?.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'Employee'}`} />
+                    <AvatarFallback>{user?.name?.charAt(0) || 'E'}</AvatarFallback>
+                  </Avatar>
+                  <span className="hidden text-sm font-semibold text-foreground sm:inline">{user?.name || 'Employee'}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem className="cursor-pointer p-0">
+                    <NavLink to="/employee/profile" className="w-full px-2 py-1.5">Profile</NavLink>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                    onClick={handleLogout}
+                  >
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
