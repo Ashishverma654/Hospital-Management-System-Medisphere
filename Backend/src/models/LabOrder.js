@@ -83,7 +83,7 @@ const labOrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-labOrderSchema.pre("save", function assignOrderNumber(next) {
+labOrderSchema.pre("save", function assignOrderNumber() {
   if (!this.orderNumber) {
     const stamp = Date.now().toString().slice(-8);
     this.orderNumber = `LAB-${stamp}`;
@@ -96,8 +96,6 @@ labOrderSchema.pre("save", function assignOrderNumber(next) {
   if (this.reportPickupSchedule?.scheduledAt) {
     this.reportPickupAt = this.reportPickupSchedule.scheduledAt;
   }
-
-  next();
 });
 
 export default mongoose.model("LabOrder", labOrderSchema);

@@ -4,8 +4,8 @@ import { Button } from '../../components/ui/button';
 import { billingApi, receptionistApi } from '../../services/apiServices.js';
 import { Calendar, CreditCard, FilePlus, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function ReceptionistDashboard() {
   const [dashboard, setDashboard] = useState(null);

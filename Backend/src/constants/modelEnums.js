@@ -87,5 +87,14 @@ export const HANDOVER_PRIORITIES = ["low", "medium", "high", "critical"];
 
 export const SHIFT_TYPES = ["morning", "afternoon", "evening", "night", "custom"];
 export const WARD_TYPES = ["general", "semi-private", "private", "icu", "nicu", "picu", "emergency", "maternity", "isolation"];
+export const CLEANING_STATUSES = ["clean", "dirty", "inProgress"];
+export const EQUIPMENT_OPTIONS = [
+  "Ventilator", "Heart Monitor", "Infusion Pump", "Defibrillator", "Oxygen Concentrator",
+  "Suction Machine", "Pulse Oximeter", "ECG Machine", "Nebulizer", "Blood Pressure Monitor",
+  "Patient Bed (Electric)", "Wheelchair", "Stretcher", "IV Stand", "Crash Cart",
+];
 export const AWARD_TYPES = ["hospital", "doctor"];
+export const AWARD_CATEGORIES = ["Hospital Excellence", "Doctor Achievement", "Patient Care", "Innovation", "Accreditation"];
+export const AWARD_ISSUED_BY_TYPES = ["Government", "Private Organization", "International Body"];
+export const AWARD_STATUSES = ["Active", "Hidden"];
 export const ENTITY_STATUSES = ["draft", "active", "inactive", "archived"];

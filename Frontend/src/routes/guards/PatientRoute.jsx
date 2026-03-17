@@ -14,5 +14,9 @@ export default function PatientRoute() {
     return <Navigate to={getEmployeeHomeRoute(user?.role)} replace state={{ from: location }} />;
   }
 
+  if (user?.mustResetPassword && location.pathname !== '/force-password-change') {
+    return <Navigate to="/force-password-change" replace />;
+  }
+
   return <Outlet />;
 }

@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
-import { appointmentApi, getDepartments, getDoctors, getSpecializations, slotApi } from '../../services/apiServices.js';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { appointmentApi, availabilityApi, doctorApi, getDepartments, slotApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { Calendar, RefreshCw } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { RefreshCw, Info, Sunrise, Sun, Moon } from 'lucide-react';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.jsx';
 
 const initialForm = {
   departmentId: '',
-  specializationId: '',
   doctorId: '',
   date: new Date().toISOString().split('T')[0],
   slot: '',
@@ -17,18 +18,55 @@ const initialForm = {
   reasonForVisit: '',
 };
 
+const buildWeekDates = (baseDate) => {
+  const ref = baseDate ? new Date(baseDate) : new Date();
+  const day = ref.getDay(); // 0 Sunday
+  const diff = (day === 0 ? -6 : 1) - day; // Monday start
+  const monday = new Date(ref);
+  monday.setDate(ref.getDate() + diff);
+  return Array.from({ length: 7 }).map((_, idx) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + idx);
+    return date.toISOString().split('T')[0];
+  });
+};
+
+const toMinutes = (value = '00:00') => {
+  const [h, m] = value.split(':').map(Number);
+  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+};
+
 export default function PatientBookAppointment() {
   const [form, setForm] = useState(initialForm);
   const [departments, setDepartments] = useState([]);
-  const [specializations, setSpecializations] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [allSlots, setAllSlots] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [loading, setLoading] = useState(true); // eslint-disable-line no-unused-vars
   const [slotLoading, setSlotLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false); // eslint-disable-line no-unused-vars
+  const [refreshKey, setRefreshKey] = useState(0); // eslint-disable-line no-unused-vars
+  const [dateMode, setDateMode] = useState('quick');
+  const [customDate, setCustomDate] = useState('');
+
+  const normalizeSlot = (slot) => {
+    if (!slot) return '';
+    const [h = '0', m = '0'] = slot.split(':');
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  };
+  const [timeFrom, setTimeFrom] = useState(''); // eslint-disable-line no-unused-vars
+  const [timeTo, setTimeTo] = useState(''); // eslint-disable-line no-unused-vars
+  const [weekStart, setWeekStart] = useState(() => buildWeekDates()[0]);
+  const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart]);
+  const [availability, setAvailability] = useState([]);
+  const [slotStatsByDate, setSlotStatsByDate] = useState(new Map());
+  const [autoPicked, setAutoPicked] = useState(false);
+  const navigate = useNavigate();
+  const slotsContainerRef = useRef(null);
 
   const selectedDoctor = useMemo(
-    () => doctors.find((doc) => doc._id === form.doctorId),
+    () => doctors.find((doc) => `${doc._id || doc.id}` === `${form.doctorId}`),
     [doctors, form.doctorId]
   );
 
@@ -36,9 +74,8 @@ export default function PatientBookAppointment() {
     const loadMasters = async () => {
       setLoading(true);
       try {
-        const [deptData, specData] = await Promise.all([getDepartments(), getSpecializations()]);
+        const deptData = await getDepartments();
         setDepartments(Array.isArray(deptData) ? deptData : []);
-        setSpecializations(Array.isArray(specData) ? specData : []);
       } finally {
         setLoading(false);
       }
@@ -49,9 +86,8 @@ export default function PatientBookAppointment() {
   useEffect(() => {
     const loadDoctors = async () => {
       try {
-        const response = await getDoctors({
+        const response = await doctorApi.getBookingList({
           departmentId: form.departmentId || undefined,
-          specializationId: form.specializationId || undefined,
         });
         setDoctors(Array.isArray(response) ? response : []);
       } catch {
@@ -59,49 +95,171 @@ export default function PatientBookAppointment() {
       }
     };
     loadDoctors();
-  }, [form.departmentId, form.specializationId]);
+  }, [form.departmentId]);
+
+  useEffect(() => {
+    setAutoPicked(false);
+  }, [form.doctorId]);
+
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!form.doctorId) {
+        setAvailability([]);
+        return;
+      }
+      try {
+        const data = await availabilityApi.getByDoctor(form.doctorId);
+        setAvailability(Array.isArray(data) ? data : []);
+      } catch {
+        setAvailability([]);
+      }
+    };
+    loadAvailability();
+  }, [form.doctorId]);
+
+  useEffect(() => {
+    const loadWeekSlots = async () => {
+      if (!form.doctorId) {
+        setSlotStatsByDate(new Map());
+        return;
+      }
+      try {
+        const results = await Promise.all(
+          weekDates.map(async (date) => {
+            try {
+              const response = await slotApi.getByDoctor(form.doctorId, date);
+              const all = response?.allSlots || response?.availableSlots || [];
+              const booked = response?.bookedSlots || [];
+              const available = all.filter((slot) => !booked.includes(slot));
+              return [date, { total: all.length, available: available.length }];
+            } catch {
+              return [date, { total: 0, available: 0 }];
+            }
+          })
+        );
+        setSlotStatsByDate(new Map(results));
+      } catch {
+        setSlotStatsByDate(new Map());
+      }
+    };
+    loadWeekSlots();
+  }, [form.doctorId, weekDates]);
+
+  useEffect(() => {
+    if (autoPicked || !form.doctorId) return;
+    const firstAvailable = weekDates.find((date) => (slotStatsByDate.get(date)?.available ?? 0) > 0);
+    if (firstAvailable) {
+      setForm((current) => ({ ...current, date: firstAvailable, slot: '' }));
+      setAutoPicked(true);
+      setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
+    }
+  }, [autoPicked, form.doctorId, slotStatsByDate, weekDates]);
 
   useEffect(() => {
     const loadSlots = async () => {
       if (!form.doctorId || !form.date) {
         setAvailableSlots([]);
+        setAllSlots([]);
+        setBookedSlots([]);
         return;
       }
+      setTimeFrom('');
+      setTimeTo('');
       setSlotLoading(true);
       try {
         const response = await slotApi.getByDoctor(form.doctorId, form.date);
-        setAvailableSlots(response?.availableSlots || []);
+        const rawAll = response?.allSlots || response?.availableSlots || [];
+        const rawBooked = response?.bookedSlots || [];
+        const normalizedAll = rawAll.map(normalizeSlot);
+        const normalizedBooked = rawBooked.map(normalizeSlot);
+        const normalizedAvailable = normalizedAll.filter((slot) => !normalizedBooked.includes(slot));
+
+        setAvailableSlots(normalizedAvailable);
+        setAllSlots(normalizedAll);
+        setBookedSlots(normalizedBooked);
       } catch {
         setAvailableSlots([]);
+        setAllSlots([]);
+        setBookedSlots([]);
       } finally {
         setSlotLoading(false);
       }
     };
     loadSlots();
-  }, [form.doctorId, form.date]);
-
-  const filteredSpecializations = useMemo(
-    () => specializations.filter((spec) => !form.departmentId || spec.departmentId?._id === form.departmentId),
-    [specializations, form.departmentId]
-  );
+  }, [form.doctorId, form.date, refreshKey]);
 
   const resolveFee = () => {
     if (!selectedDoctor) return 0;
-    let fee = selectedDoctor.consultationFee || 0;
+    let feeVal = Number(selectedDoctor.consultationFee ?? 0);
     if (form.consultationMode === 'video' && selectedDoctor.consultationFeeVideo != null) {
-      fee = selectedDoctor.consultationFeeVideo;
+      feeVal = selectedDoctor.consultationFeeVideo;
     }
     if (form.consultationMode === 'phone' && selectedDoctor.consultationFeePhone != null) {
-      fee = selectedDoctor.consultationFeePhone;
+      feeVal = selectedDoctor.consultationFeePhone;
     }
     if (form.consultationMode === 'in-person' && form.hospitalLocationId) {
       const match = (selectedDoctor.locationFees || []).find(
-        (item) => item.locationId === form.hospitalLocationId || item.locationId?._id === form.hospitalLocationId
+        (item) =>
+          `${item.locationId}` === `${form.hospitalLocationId}` ||
+          `${item.locationId?._id}` === `${form.hospitalLocationId}` ||
+          `${item.locationId?.id}` === `${form.hospitalLocationId}`
       );
-      if (match?.fee != null) fee = match.fee;
+      if (match?.fee != null) feeVal = Number(match.fee) || 0;
     }
-    return fee;
+    return Number.isFinite(feeVal) ? feeVal : 0;
   };
+
+  const fee = useMemo(() => resolveFee(), [selectedDoctor, form.consultationMode, form.hospitalLocationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const slotsToShow = // eslint-disable-line react-hooks/exhaustive-deps
+    form.consultationMode === 'in-person' &&
+    selectedDoctor?.hospitalLocations?.length > 0 &&
+    !form.hospitalLocationId
+      ? []
+      : (allSlots.length ? allSlots : availableSlots);
+
+  const filteredSlots = useMemo(() => slotsToShow, [slotsToShow]);
+
+  const dayRanges = useMemo(() => {
+    if (!form.date) return [];
+    const dayLabel = new Date(`${form.date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+    return availability
+      .filter((item) => item.dayOfWeek === dayLabel)
+      .map((item) => `${item.startTime} - ${item.endTime}`);
+  }, [availability, form.date]);
+
+  const bookedSlotSet = useMemo(() => new Set((bookedSlots || []).map(normalizeSlot)), [bookedSlots]);
+
+  const nextAvailableSlot = useMemo(
+    () => filteredSlots.find((slot) => !bookedSlotSet.has(normalizeSlot(slot))),
+    [filteredSlots, bookedSlotSet]
+  );
+
+  const slotCountsByDate = useMemo(() => {
+    const map = new Map();
+    if (!availability.length) return map;
+    weekDates.forEach((date) => {
+      const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+      const ranges = availability.filter((item) => item.dayOfWeek === dayLabel);
+      const total = ranges.reduce((sum, range) => sum + Math.floor((toMinutes(range.endTime) - toMinutes(range.startTime)) / (range.slotDuration || 15)), 0);
+      map.set(date, total);
+    });
+    return map;
+  }, [availability, weekDates]);
+
+  const dayRangesByDate = useMemo(() => {
+    const map = new Map();
+    if (!availability.length) return map;
+    weekDates.forEach((date) => {
+      const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
+      const ranges = availability
+        .filter((item) => item.dayOfWeek === dayLabel)
+        .map((item) => `${item.startTime} - ${item.endTime}`);
+      map.set(date, ranges);
+    });
+    return map;
+  }, [availability, weekDates]);
+
 
   const handleBook = async (event) => {
     event.preventDefault();
@@ -121,7 +279,7 @@ export default function PatientBookAppointment() {
         hospitalLocationId: form.consultationMode === 'in-person' ? form.hospitalLocationId || undefined : undefined,
       });
       toast.success('Appointment booked successfully.');
-      setForm({ ...initialForm, departmentId: form.departmentId, specializationId: form.specializationId, doctorId: form.doctorId });
+      setForm({ ...initialForm, departmentId: form.departmentId, doctorId: form.doctorId });
       setAvailableSlots([]);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to book appointment.');
@@ -149,7 +307,6 @@ export default function PatientBookAppointment() {
                 setForm((current) => ({
                   ...current,
                   departmentId: event.target.value,
-                  specializationId: '',
                   doctorId: '',
                   slot: '',
                   hospitalLocationId: '',
@@ -162,28 +319,6 @@ export default function PatientBookAppointment() {
               {departments.map((dept) => (
                 <option key={dept._id} value={dept._id}>
                   {dept.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Specialization">
-            <select
-              value={form.specializationId}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  specializationId: event.target.value,
-                  doctorId: '',
-                  slot: '',
-                  hospitalLocationId: '',
-                }))
-              }
-              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary"
-            >
-              <option value="">All specializations</option>
-              {filteredSpecializations.map((spec) => (
-                <option key={spec._id} value={spec._id}>
-                  {spec.name}
                 </option>
               ))}
             </select>
@@ -203,27 +338,119 @@ export default function PatientBookAppointment() {
               required
             >
               <option value="">Select doctor</option>
-              {doctors.map((doctor) => (
-                <option key={doctor._id} value={doctor._id}>
-                  {doctor.userId?.name} • {doctor.departmentId?.name}
+              {doctors.map((doctor) => {
+                const doctorKey = doctor._id || doctor.id;
+                return (
+                <option key={doctorKey} value={doctorKey}>
+                  {doctor.userId?.name || 'Doctor'} • {doctor.departmentId?.name || 'Department'}
                 </option>
-              ))}
+                );
+              })}
             </select>
           </Field>
-          <Field label="Date">
-            <input
-              type="date"
-              value={form.date}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  date: event.target.value,
-                  slot: '',
-                }))
-              }
-              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
-              required
-            />
+          <Field label="Appointment date">
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const prev = new Date(weekStart);
+                  prev.setDate(prev.getDate() - 7);
+                  setWeekStart(prev.toISOString().split('T')[0]);
+                }}
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+              >
+                Previous week
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = new Date(weekStart);
+                  next.setDate(next.getDate() + 7);
+                  setWeekStart(next.toISOString().split('T')[0]);
+                }}
+                className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+              >
+                Next week
+              </button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {weekDates.map((date) => {
+                const slotCount = slotStatsByDate.get(date)?.available ?? slotCountsByDate.get(date) ?? 0;
+                const ranges = dayRangesByDate.get(date) || [];
+                const isDisabled = slotCount === 0;
+                const tone =
+                  slotCount === 0
+                    ? 'bg-muted text-muted-foreground border-border'
+                    : slotCount < 5
+                      ? 'bg-amber-500/15 text-amber-600 border-amber-500/30'
+                      : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30';
+                return (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => {
+                      setDateMode('quick');
+                      setCustomDate('');
+                      setForm((current) => ({ ...current, date, slot: '' }));
+                      setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
+                    }}
+                    disabled={isDisabled}
+                    title={ranges.length ? ranges.join(' | ') : 'No availability'}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      form.date === date && dateMode === 'quick'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border border-border bg-card text-foreground hover:bg-muted'
+                    } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+                    <span className={`ml-2 rounded-full border px-2 py-0.5 text-xs ${tone}`}>
+                      {slotCount}
+                    </span>
+                    {ranges.length > 0 && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Info className="h-3 w-3" />
+                        {ranges[0]}{ranges.length > 1 ? ` +${ranges.length - 1}` : ''}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setDateMode('custom')}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  dateMode === 'custom'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border border-border bg-card text-foreground hover:bg-muted'
+                }`}
+              >
+                Custom date
+              </button>
+            </div>
+            {dateMode === 'custom' && (
+              <div className="mt-3">
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCustomDate(value);
+                    if (value) {
+                      setForm((current) => ({ ...current, date: value, slot: '' }));
+                      setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
+                    }
+                  }}
+                  className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
+                />
+              </div>
+            )}
+            {dayRanges.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {dayRanges.map((range) => (
+                  <span key={range} className="doccure-chip">{range}</span>
+                ))}
+              </div>
+            )}
           </Field>
           <Field label="Visit type">
             <select
@@ -236,21 +463,21 @@ export default function PatientBookAppointment() {
             </select>
           </Field>
           <Field label="Consultation mode">
-            <select
+            <Tabs
               value={form.consultationMode}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  consultationMode: event.target.value,
+                  consultationMode: value,
                   hospitalLocationId: '',
                 }))
               }
-              className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary"
             >
-              <option value="in-person">In-person</option>
-              <option value="video">Video</option>
-              <option value="phone">Phone</option>
-            </select>
+              <TabsList className="w-full">
+                <TabsTrigger value="in-person" className="flex-1">In-Hospital</TabsTrigger>
+                <TabsTrigger value="video" className="flex-1">Video</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </Field>
         </div>
 
@@ -262,41 +489,89 @@ export default function PatientBookAppointment() {
               className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary"
             >
               <option value="">Select location</option>
-              {selectedDoctor.hospitalLocations.map((loc) => (
-                <option key={loc._id} value={loc._id}>
+              {selectedDoctor.hospitalLocations.map((loc) => {
+                const locId = loc._id || loc.id;
+                return (
+                <option key={locId} value={locId}>
                   {loc.name}{loc.city ? ` • ${loc.city}` : ''}
                 </option>
-              ))}
+                );
+              })}
             </select>
           </Field>
         )}
 
         <Field label="Available slots">
+          <div ref={slotsContainerRef} />
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => nextAvailableSlot && setForm((current) => ({ ...current, slot: nextAvailableSlot }))}
+              disabled={!nextAvailableSlot}
+              className="rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-50"
+            >
+              {nextAvailableSlot ? `Next available: ${nextAvailableSlot}` : 'No available slots'}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-2">
             {slotLoading && <span className="text-sm text-muted-foreground">Loading slots...</span>}
             {!slotLoading &&
-              availableSlots.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => setForm((current) => ({ ...current, slot }))}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                    form.slot === slot
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border border-border bg-card text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
-            {!slotLoading && form.doctorId && availableSlots.length === 0 && (
-              <span className="text-sm text-muted-foreground">No available slots for the selected date.</span>
+              form.consultationMode === 'in-person' &&
+              selectedDoctor?.hospitalLocations?.length > 0 &&
+              !form.hospitalLocationId && (
+                <span className="text-sm text-muted-foreground">Select a hospital location to view slots.</span>
+              )}
+            {!slotLoading && (
+              <>
+                <div className="w-full space-y-4">
+                  {groupSlots(filteredSlots).map((group) => (
+                    <div key={group.label} className="rounded-2xl border border-border p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        {group.icon}
+                        <span>{group.label}</span>
+                        <span className="text-xs text-muted-foreground">({group.slots.length} slots)</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        {group.slots.map((slot) => {
+                          const normalized = normalizeSlot(slot);
+                          const isBooked = bookedSlotSet.has(normalized);
+                          const isSelected = normalizeSlot(form.slot) === normalized;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              disabled={isBooked}
+                              onClick={() => setForm((current) => ({ ...current, slot: normalizeSlot(slot) }))}
+                              className={`min-w-[120px] rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                                isBooked
+                                  ? 'border-red-500/40 bg-red-500/10 text-red-500 cursor-not-allowed'
+                                  : isSelected
+                                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                                    : 'border-emerald-500 text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                            >
+                              {formatSlot(slot)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {form.doctorId &&
+                  filteredSlots.length === 0 &&
+                  !(form.consultationMode === 'in-person' &&
+                    selectedDoctor?.hospitalLocations?.length > 0 &&
+                    !form.hospitalLocationId) && (
+                  <span className="text-sm text-muted-foreground">No slots found for the selected date/time.</span>
+                )}
+              </>
             )}
           </div>
         </Field>
 
         <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          Estimated consultation fee: <span className="font-semibold text-foreground">₹{Number(resolveFee() || 0).toLocaleString()}</span>
+          Estimated consultation fee: <span className="font-semibold text-foreground">₹{Number(fee).toLocaleString()}</span>
         </div>
 
         <Field label="Reason for visit">
@@ -316,17 +591,48 @@ export default function PatientBookAppointment() {
             <RefreshCw className="h-4 w-4" /> Reset
           </button>
           <button
-            type="submit"
-            disabled={saving || (form.consultationMode === 'in-person' && selectedDoctor?.hospitalLocations?.length > 0 && !form.hospitalLocationId)}
-            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm disabled:opacity-60"
+            type="button"
+            disabled={!form.slot}
+            onClick={() => {
+              const previewData = {
+                doctor: selectedDoctor,
+                form,
+                fee,
+              };
+              navigate('/patient/booking-preview', { state: previewData });
+            }}
+            className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
           >
-            <Calendar className="h-4 w-4" />
-            {saving ? 'Booking...' : 'Confirm appointment'}
+            Preview & Pay
           </button>
         </div>
       </form>
+
     </motion.section>
   );
+}
+
+function formatSlot(slot) {
+  if (!slot) return '';
+  const [h, m] = slot.split(':').map(Number);
+  const date = new Date();
+  date.setHours(h, m, 0, 0);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function groupSlots(slots) {
+  const groups = [
+    { label: 'Morning | Till 12 PM', icon: <Sunrise className="h-4 w-4 text-amber-500" />, slots: [] },
+    { label: 'Afternoon | 12 PM - 4 PM', icon: <Sun className="h-4 w-4 text-orange-500" />, slots: [] },
+    { label: 'Evening | After 4 PM', icon: <Moon className="h-4 w-4 text-indigo-500" />, slots: [] },
+  ];
+  slots.forEach((slot) => {
+    const [h] = slot.split(':').map(Number);
+    if (h < 12) groups[0].slots.push(slot);
+    else if (h < 16) groups[1].slots.push(slot);
+    else groups[2].slots.push(slot);
+  });
+  return groups.filter((group) => group.slots.length > 0);
 }
 
 function Field({ label, children }) {

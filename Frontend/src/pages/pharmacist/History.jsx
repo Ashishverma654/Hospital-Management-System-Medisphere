@@ -1,6 +1,6 @@
 import PharmacistOrders from './Orders.jsx';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function PharmacistHistory() {
   return (

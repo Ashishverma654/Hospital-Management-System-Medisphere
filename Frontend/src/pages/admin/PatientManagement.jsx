@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { patientApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { CalendarDays, Eye, Pencil, RefreshCw, Search } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
   name: '',
@@ -85,11 +85,11 @@ export default function PatientManagement() {
 
   useEffect(() => {
     loadPatients();
-  }, [search, filterStatus, filterProfileStatus]);
+  }, [search, filterStatus, filterProfileStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadBoard();
-  }, [boardDate]);
+  }, [boardDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openEditor = () => {
     if (!detail?.patient) return;
@@ -119,6 +119,18 @@ export default function PatientManagement() {
   const handleUpdate = async (event) => {
     event.preventDefault();
     if (!selectedPatient) return;
+
+    // DOB Validation (100 years restriction)
+    if (form.dateOfBirth) {
+      const dob = new Date(form.dateOfBirth);
+      const now = new Date();
+      const hundredYearsAgo = new Date();
+      hundredYearsAgo.setFullYear(now.getFullYear() - 100);
+      
+      if (dob > now || dob < hundredYearsAgo) {
+        return toast.error('Please enter a valid date of birth (max 100 years old).');
+      }
+    }
 
     setSaving(true);
     try {
@@ -395,7 +407,7 @@ export default function PatientManagement() {
                   <option value="other">Other</option>
                 </select>
               </Field>
-              <Field label="Date of birth"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
+              <Field label="Date of birth"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" max={new Date().toISOString().split('T')[0]} /></Field>
               <Field label="Blood group"><input type="text" value={form.bloodGroup} onChange={(event) => setForm((current) => ({ ...current, bloodGroup: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
               <Field label="Profile status">
                 <select value={form.profileStatus} onChange={(event) => setForm((current) => ({ ...current, profileStatus: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">

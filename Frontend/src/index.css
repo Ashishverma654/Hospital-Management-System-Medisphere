@@ -7,19 +7,19 @@
 /* ── Doccure-inspired Color Palette ───────────────────────────── */
 :root {
   --background: #f5f7fb;
-  --foreground: #1f2c4b;
+  --foreground: #020617;
   --card: #ffffff;
-  --card-foreground: #1f2c4b;
+  --card-foreground: #020617;
   --popover: #ffffff;
-  --popover-foreground: #1f2c4b;
+  --popover-foreground: #020617;
   --primary: #09e5ab;
   --primary-foreground: #ffffff;
   --secondary: #0de0fe;
   --secondary-foreground: #0b2e4b;
   --muted: #f1f5f9;
   --muted-foreground: #6b7280;
-  --accent: #0de0fe;
-  --accent-foreground: #0b2e4b;
+  --accent: #f1f5f9;
+  --accent-foreground: #020617;
   --destructive: #ff5a5f;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;

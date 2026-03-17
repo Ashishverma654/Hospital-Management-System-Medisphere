@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { UserPlus, Loader2 } from 'lucide-react';
 import { loginSuccess } from '../../store/authSlice.js';
 import { registerPatient } from '../../services/authService.js';
@@ -26,6 +26,7 @@ export default function PatientRegister() {
   const handleRegister = async (e) => {
     e.preventDefault();
     if (!formData.password && !formData.pin) { toast.error('Choose a password, a PIN, or both.'); return; }
+    if (formData.phone && !/^\d{10}$/.test(formData.phone)) { toast.error('Phone number must be exactly 10 digits.'); return; }
     setIsLoading(true);
     try {
       const auth = await registerPatient(formData);

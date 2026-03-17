@@ -5,8 +5,8 @@ import { labTechApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
 import { Activity, Clock3, FileUp, FlaskConical, ListTodo, ShieldCheck } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const quickActions = [
   { label: 'Open Pending Lab Orders', to: '/employee/lab-technician/orders' },

@@ -7,21 +7,11 @@ import Patient from "../models/Patient.js";
 import Specialization from "../models/Specialization.js";
 import User from "../models/User.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
+import { generateUniqueId } from "../utils/idGenerator.js";
+import { ID_PREFIXES } from "../constants/roles.js";
 
 const normalizeName = (value = "") => value.trim().replace(/\s+/g, " ");
 
-const generatePatientId = async () => {
-  let isUnique = false;
-  let newId;
-
-  while (!isUnique) {
-    newId = `PAT-${Math.floor(100000 + Math.random() * 900000)}`;
-    const existing = await User.findOne({ patientId: newId });
-    if (!existing) isUnique = true;
-  }
-
-  return newId;
-};
 
 const generateTemporaryPassword = () => `Pat@${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -191,7 +181,7 @@ export const registerPatientAtDesk = async (req, res) => {
       });
     }
 
-    const patientId = await generatePatientId();
+    const patientId = await generateUniqueId(User, "patientId", ID_PREFIXES.patient);
     const temporaryPassword = generateTemporaryPassword();
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 

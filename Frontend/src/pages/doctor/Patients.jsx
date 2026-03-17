@@ -5,8 +5,8 @@ import { DataTable, LoadingSkeleton, ErrorState } from '../../components';
 import { patientApi, appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Users, FileText, Calendar } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function DoctorPatients() {
   const [patients, setPatients] = useState([]);

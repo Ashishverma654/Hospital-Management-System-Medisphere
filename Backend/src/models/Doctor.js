@@ -28,6 +28,21 @@ const doctorSchema = mongoose.Schema(
     },
 
     qualifications: [String], // e.g., ["MBBS", "MD", "DM"]
+    education: [String],
+    certifications: [String],
+
+    licenseNumber: String,
+    licenseExpiryDate: Date,
+    joiningDate: Date,
+    roomNumber: String,
+
+    emergencyContactName: String,
+    emergencyContactNumber: String,
+    emergencyContactRelationship: String,
+
+    docLicense: String, // Cloudinary URL
+    docEducation: String, // Cloudinary URL
+    docAdditional: String, // Cloudinary URL
 
     experienceYears: {
        type: Number,
@@ -121,21 +136,27 @@ const doctorSchema = mongoose.Schema(
       default: false,
     },
 
-    isFeatured: {
-      type: Boolean,
-      default: false,
-    },
-
-    featureOrder: {
-      type: Number,
-      default: 0,
-    },
-
     onboardingStatus: {
       type: String,
       enum: ["created", "invited", "profileIncomplete", "active", "published", "suspended"],
       default: "created",
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    history: [
+      {
+        action: { type: String, required: true },
+        performedBy: {
+          id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          name: String,
+          role: String,
+        },
+        details: String,
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true },
 );

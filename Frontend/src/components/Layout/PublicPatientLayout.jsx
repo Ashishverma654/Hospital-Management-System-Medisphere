@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Heart, Mail, Phone, MapPin } from 'lucide-react';
 import PublicSiteNavbar from './PublicSiteNavbar.jsx';
 import { pageVariants } from '../../lib/animation-variants.js';

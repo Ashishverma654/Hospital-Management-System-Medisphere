@@ -34,8 +34,6 @@ const mapPublicDoctor = (doctor, awards = []) => ({
   hospitalLocations: doctor.hospitalLocations,
   locationFees: doctor.locationFees || [],
   profileImage: doctor.profileImage || doctor.userId?.profileImage,
-  isFeatured: doctor.isFeatured,
-  featureOrder: doctor.featureOrder,
   awards,
 });
 
@@ -63,9 +61,6 @@ router.get("/departments", async (req, res) => {
     }
 
     const departments = await Department.find(filter).sort({
-      isFeatured: -1,
-      featureOrder: 1,
-      displayOrder: 1,
       name: 1,
     });
 
@@ -99,7 +94,7 @@ router.get("/specializations", async (req, res) => {
 router.get("/doctors", async (req, res) => {
   try {
     const { departmentId, locationId, specializationId, featuredOnly } = req.query;
-    const query = { isActive: true, isPublished: true };
+    const query = { isActive: true, isPublished: true, isDeleted: { $ne: true } };
 
     if (departmentId) query.departmentId = departmentId;
     if (locationId) query.hospitalLocations = locationId;
@@ -108,7 +103,7 @@ router.get("/doctors", async (req, res) => {
 
     const doctors = await Doctor.find(query)
       .populate(publicDoctorPopulate)
-      .sort({ isFeatured: -1, featureOrder: 1, createdAt: -1 });
+      .sort({ createdAt: -1 });
 
     res.json(doctors.map((doctor) => mapPublicDoctor(doctor)));
   } catch (err) {
@@ -123,6 +118,7 @@ router.get("/doctors/:id", async (req, res) => {
       _id: req.params.id,
       isActive: true,
       isPublished: true,
+      isDeleted: { $ne: true },
     }).populate(publicDoctorPopulate);
 
     if (!doctor) {
@@ -132,8 +128,9 @@ router.get("/doctors/:id", async (req, res) => {
     const awards = await Award.find({
       doctorId: doctor._id,
       type: "doctor",
-      isActive: true,
-    }).sort({ year: -1, createdAt: -1 });
+      status: "Active",
+      isPublic: true,
+    }).sort({ awardDate: -1, createdAt: -1 });
 
     return res.json(mapPublicDoctor(doctor, awards));
   } catch (err) {
@@ -146,8 +143,9 @@ router.get("/awards", async (req, res) => {
   try {
     const awards = await Award.find({
       type: "hospital",
-      isActive: true,
-    }).sort({ year: -1, createdAt: -1 });
+      status: "Active",
+      isPublic: true,
+    }).sort({ awardDate: -1, createdAt: -1 });
 
     res.json(awards);
   } catch (err) {
@@ -159,19 +157,21 @@ router.get("/awards", async (req, res) => {
 router.get("/homepage", async (req, res) => {
   try {
     const [featuredDepartments, fallbackDepartments, featuredDoctors, fallbackDoctors, locations, fallbackLocations, awards, specializations] = await Promise.all([
-      Department.find({ isActive: true, isFeatured: true }).sort({ featureOrder: 1, name: 1 }).limit(6),
-      Department.find({ isActive: true }).sort({ displayOrder: 1, name: 1 }).limit(6),
-      Doctor.find({ isActive: true, isPublished: true, isFeatured: true })
+      Department.find({ isActive: true }).sort({ name: 1 }).limit(6),
+      Department.find({ isActive: true }).sort({ name: 1 }).limit(6),
+      Doctor.find({ isActive: true, isPublished: true, isDeleted: { $ne: true } })
         .populate(publicDoctorPopulate)
-        .sort({ featureOrder: 1, createdAt: -1 })
+        .sort({ createdAt: -1 })
         .limit(6),
-      Doctor.find({ isActive: true, isPublished: true })
+      Doctor.find({ isActive: true, isPublished: true, isDeleted: { $ne: true } })
         .populate(publicDoctorPopulate)
-        .sort({ isFeatured: -1, featureOrder: 1, createdAt: -1 })
+        .sort({ createdAt: -1 })
         .limit(6),
       HospitalLocation.find({ isActive: true, isPublished: true }).sort({ name: 1 }).limit(6),
       HospitalLocation.find({ isActive: true }).sort({ name: 1 }).limit(6),
-      Award.find({ type: "hospital", isActive: true }).sort({ year: -1, createdAt: -1 }).limit(6),
+      Award.find({ type: "hospital", status: "Active", isPublic: true })
+        .sort({ featured: -1, displayOrder: 1, awardDate: -1 })
+        .limit(6),
       Specialization.find({ isActive: true }).sort({ name: 1 }).limit(12).populate("departmentId", "name"),
     ]);
 
@@ -179,7 +179,10 @@ router.get("/homepage", async (req, res) => {
       featuredDepartments: featuredDepartments.length ? featuredDepartments : fallbackDepartments,
       featuredDoctors: (featuredDoctors.length ? featuredDoctors : fallbackDoctors).map((doctor) => mapPublicDoctor(doctor)),
       locations: locations.length ? locations : fallbackLocations,
-      awards,
+      awards: awards.map(a => ({
+        ...a.toObject(),
+        year: a.awardDate ? new Date(a.awardDate).getFullYear() : ""
+      })),
       specializations,
     });
   } catch (err) {

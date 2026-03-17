@@ -1,40 +1,39 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { departmentApi, doctorApi, locationApi, specializationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { Eye, Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { ChevronRight, Eye, History, Plus, RefreshCw, Search, Trash2, UserCheck, UserX } from 'lucide-react';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
-  name: '',
+  firstName: '',
+  middleName: '',
+  lastName: '',
   email: '',
   phone: '',
   title: 'Consultant',
   departmentId: '',
-  specializationIds: [],
   hospitalLocations: [],
-  qualifications: '',
+  qualifications: [],
   experienceYears: '',
   consultationFee: '',
   consultationFeeVideo: '',
-  consultationFeePhone: '',
   about: '',
-  expertise: '',
+  expertise: [],
   profileImage: '',
   articles: [],
   media: [],
   locationFees: [],
   isActive: true,
   isPublished: false,
-  isFeatured: false,
-  featureOrder: '',
 };
 
 export default function DoctorManagement() {
+  const navigate = useNavigate();
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [specializations, setSpecializations] = useState([]);
   const [locations, setLocations] = useState([]);
   const [search, setSearch] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
@@ -49,19 +48,7 @@ export default function DoctorManagement() {
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [lastCredential, setLastCredential] = useState(null);
-
-  const fetchSpecializations = async (departmentId) => {
-    if (!departmentId) {
-      setSpecializations([]);
-      return;
-    }
-    try {
-      const data = await specializationApi.getAll({ departmentId, isActive: true });
-      setSpecializations(Array.isArray(data) ? data : []);
-    } catch {
-      toast.error('Failed to load specializations for that department.');
-    }
-  };
+  const [showHistory, setShowHistory] = useState(false);
 
   const loadMasters = async () => {
     try {
@@ -100,11 +87,7 @@ export default function DoctorManagement() {
 
   useEffect(() => {
     loadDoctors();
-  }, [search, filterDepartment, filterActive, filterPublished, filterOnboarding]);
-
-  useEffect(() => {
-    fetchSpecializations(form.departmentId);
-  }, [form.departmentId]);
+  }, [search, filterDepartment, filterActive, filterPublished, filterOnboarding]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetForm = () => {
     setForm(initialForm);
@@ -123,34 +106,38 @@ export default function DoctorManagement() {
     setLastCredential(null);
     setEditingDoctor(doctor);
     setForm({
-      name: doctor.userId?.name || '',
+      firstName: doctor.userId?.firstName || doctor.userId?.name?.split(' ')[0] || '',
+      middleName: doctor.userId?.middleName || '',
+      lastName: doctor.userId?.lastName || doctor.userId?.name?.split(' ').slice(1).join(' ') || '',
       email: doctor.userId?.email || '',
       phone: doctor.userId?.phone || '',
       title: doctor.title || 'Consultant',
       departmentId: doctor.departmentId?._id || '',
-      specializationIds: (doctor.specializationIds || []).map((item) => item._id),
       hospitalLocations: (doctor.hospitalLocations || []).map((item) => item._id),
-      qualifications: (doctor.qualifications || []).join(', '),
+      qualifications: doctor.qualifications || [],
       experienceYears: doctor.experienceYears ?? '',
       consultationFee: doctor.consultationFee ?? '',
       consultationFeeVideo: doctor.consultationFeeVideo ?? '',
-      consultationFeePhone: doctor.consultationFeePhone ?? '',
       about: doctor.about || '',
-      expertise: (doctor.expertise || []).join(', '),
+      expertise: doctor.expertise || [],
+      profileImage: doctor.profileImage || doctor.userId?.profileImage || '',
       articles: doctor.articles || [],
       media: doctor.media || [],
       locationFees: doctor.locationFees || [],
-      profileImage: doctor.profileImage || doctor.userId?.profileImage || '',
       isActive: doctor.isActive,
       isPublished: doctor.isPublished,
-      isFeatured: doctor.isFeatured || false,
-      featureOrder: doctor.featureOrder ?? '',
     });
     setShowForm(true);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (form.phone && !/^\d{10}$/.test(form.phone)) {
+      toast.error('Phone number must be exactly 10 digits.');
+      return;
+    }
+
     setSaving(true);
     try {
       const cleanedArticles = (form.articles || [])
@@ -180,7 +167,6 @@ export default function DoctorManagement() {
 
       const payload = {
         ...form,
-        specializationIds: Array.isArray(form.specializationIds) ? form.specializationIds : [],
         hospitalLocations: Array.isArray(form.hospitalLocations) ? form.hospitalLocations : [],
         qualifications: form.qualifications,
         expertise: form.expertise,
@@ -190,7 +176,6 @@ export default function DoctorManagement() {
         experienceYears: Number(form.experienceYears) || 0,
         consultationFee: Number(form.consultationFee) || 0,
         consultationFeeVideo: form.consultationFeeVideo === '' ? null : Number(form.consultationFeeVideo) || 0,
-        consultationFeePhone: form.consultationFeePhone === '' ? null : Number(form.consultationFeePhone) || 0,
       };
 
       if (editingDoctor) {
@@ -231,6 +216,20 @@ export default function DoctorManagement() {
     }
   };
 
+  const handleSoftDelete = async (doctor) => {
+    if (!window.confirm(`Are you sure you want to delete Dr. ${doctor.userId?.name || 'this doctor'}? This action is irreversible.`)) {
+      return;
+    }
+
+    try {
+      await doctorApi.softDelete(doctor.id);
+      toast.success('Doctor deleted successfully.');
+      loadDoctors();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete doctor.');
+    }
+  };
+
   const handleProfileImageUpload = async (doctorId, file) => {
     const formData = new FormData();
     formData.append('profileImage', file);
@@ -255,10 +254,10 @@ export default function DoctorManagement() {
           <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Doctor Administration</p>
           <h2 className="mt-2 text-3xl font-semibold text-foreground">Doctors</h2>
           <p className="mt-2 max-w-3xl text-muted-foreground">
-            Create doctor employee accounts, assign departments, multiple specializations, and locations, and control whether profiles are active and ready for public publishing later.
+            Create doctor employee accounts, assign departments, and locations, and control whether profiles are active and ready for public publishing later.
           </p>
         </div>
-        <Button onClick={startCreate}>
+        <Button onClick={() => navigate('/employee/manage-roles/add?role=doctor')}>
           <Plus className="mr-2 h-4 w-4" />
           Add Doctor
         </Button>
@@ -345,9 +344,7 @@ export default function DoctorManagement() {
               <tr className="border-b border-border bg-muted/50 text-left text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Doctor</th>
                 <th className="px-4 py-3 font-medium">Department</th>
-                <th className="px-4 py-3 font-medium">Specializations</th>
                 <th className="px-4 py-3 font-medium">Fee</th>
-                <th className="px-4 py-3 font-medium">Featured</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Onboarding</th>
                 <th className="px-4 py-3 font-medium">Actions</th>
@@ -380,17 +377,7 @@ export default function DoctorManagement() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{doctor.departmentId?.name || '—'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{(doctor.specializationIds || []).map((item) => item.name).join(', ') || '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">₹{Number(doctor.consultationFee || 0).toLocaleString()}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {doctor.isFeatured ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                        Featured #{doctor.featureOrder || 0}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${doctor.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
@@ -413,8 +400,16 @@ export default function DoctorManagement() {
                         {doctor.isActive ? <UserX className="mr-1 h-3 w-3" /> : <UserCheck className="mr-1 h-3 w-3" />}
                         {doctor.isActive ? 'Deactivate' : 'Activate'}
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleTogglePublished(doctor)}>
+                       <Button type="button" variant="outline" size="sm" onClick={() => handleTogglePublished(doctor)}>
                         {doctor.isPublished ? 'Unpublish' : 'Publish'}
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedDoctor(doctor); setShowHistory(true); }}>
+                        <History className="mr-1 h-3 w-3" />
+                        History
+                      </Button>
+                      <Button type="button" variant="destructive" size="sm" onClick={() => handleSoftDelete(doctor)}>
+                        <Trash2 className="mr-1 h-3 w-3" />
+                        Delete
                       </Button>
                     </div>
                   </td>
@@ -435,8 +430,6 @@ export default function DoctorManagement() {
           onSubmit={handleSubmit}
           saving={saving}
           showPasswordHint={!editingDoctor}
-          specializations={specializations}
-          onRefreshSpecializations={fetchSpecializations}
         />
       )}
 
@@ -447,7 +440,93 @@ export default function DoctorManagement() {
           onUploadImage={handleProfileImageUpload}
         />
       )}
+
+      {showHistory && selectedDoctor && (
+        <DoctorHistoryModal
+          doctor={selectedDoctor}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </motion.section>
+  );
+}
+
+function DoctorHistoryModal({ doctor, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-2xl overflow-hidden rounded-3xl bg-background shadow-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-border bg-card p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <History className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Doctor History</h3>
+              <p className="text-sm text-muted-foreground">Detailed activity log for Dr. {doctor.userId?.name}</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+            <Plus className="h-5 w-5 rotate-45" />
+          </Button>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto p-6">
+          <div className="space-y-6">
+            {(doctor.history || []).length > 0 ? (
+              [...(doctor.history || [])].reverse().map((log, idx) => (
+                <div key={idx} className="relative flex gap-4">
+                  {idx !== (doctor.history?.length || 0) - 1 && (
+                    <div className="absolute left-[19px] top-10 h-full w-px bg-border" />
+                  )}
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-card shadow-sm z-10">
+                    <ChevronRight className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex flex-col pb-6">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-bold capitalize text-foreground">{log.action}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(log.timestamp).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{log.details}</p>
+                    <div className="flex items-center gap-2">
+                       <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-primary">
+                            {log.performedBy?.name?.charAt(0) || 'S'}
+                          </span>
+                       </div>
+                       <span className="text-xs font-medium text-foreground">
+                         {log.performedBy?.name} 
+                         <span className="ml-1 text-[10px] uppercase text-muted-foreground font-normal">
+                           ({log.performedBy?.role})
+                         </span>
+                       </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <History className="mb-3 h-10 w-10 text-muted-foreground/30" />
+                <p className="text-muted-foreground">No history records found for this doctor.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-border bg-muted/30 p-4 flex justify-end">
+          <Button onClick={onClose} className="rounded-2xl px-8">Close History</Button>
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -460,7 +539,7 @@ const formatDateForInput = (value) => {
   return '';
 };
 
-function DoctorFormModal({ departments, form, locations, onChange, onClose, onSubmit, saving, showPasswordHint, specializations, onRefreshSpecializations }) {
+function DoctorFormModal({ departments, form, locations, onChange, onClose, onSubmit, saving, showPasswordHint }) {
   const toggleArrayValue = (field, value) => {
     const current = form[field] || [];
     const exists = current.includes(value);
@@ -565,11 +644,17 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
           <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">✕</button>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <Field label="Doctor Name">
-            <input type="text" value={form.name} onChange={(e) => onChange({ ...form, name: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+        <div className="mt-5 grid gap-4 md:grid-cols-3">
+          <Field label="First Name">
+            <input type="text" value={form.firstName} onChange={(e) => onChange({ ...form, firstName: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
           </Field>
-          <Field label="Email">
+          <Field label="Middle Name">
+            <input type="text" value={form.middleName} onChange={(e) => onChange({ ...form, middleName: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+          </Field>
+          <Field label="Last Name">
+            <input type="text" value={form.lastName} onChange={(e) => onChange({ ...form, lastName: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+          </Field>
+          <Field label="Email" className="md:col-span-1">
             <input type="email" value={form.email} onChange={(e) => onChange({ ...form, email: e.target.value })} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
           </Field>
           <Field label="Phone">
@@ -592,27 +677,77 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
           <Field label="Video Consultation Fee (optional)">
             <input type="number" value={form.consultationFeeVideo} onChange={(e) => onChange({ ...form, consultationFeeVideo: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
-          <Field label="Phone Consultation Fee (optional)">
-            <input type="number" value={form.consultationFeePhone} onChange={(e) => onChange({ ...form, consultationFeePhone: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
-          </Field>
           <Field label="Years of Experience">
             <input type="number" value={form.experienceYears} onChange={(e) => onChange({ ...form, experienceYears: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
           <Field label="Profile Image URL">
             <input type="text" value={form.profileImage} onChange={(e) => onChange({ ...form, profileImage: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
           </Field>
-          <Field label="Feature Order">
-            <input type="number" value={form.featureOrder} onChange={(e) => onChange({ ...form, featureOrder: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
-          </Field>
         </div>
 
-        <Field label="Qualifications (comma separated)" className="mt-4">
-          <input type="text" value={form.qualifications} onChange={(e) => onChange({ ...form, qualifications: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
-        </Field>
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">Qualifications</h4>
+            <Button type="button" variant="outline" size="sm" onClick={() => onChange({ ...form, qualifications: [...(form.qualifications || []), ''] })}>Add qualification</Button>
+          </div>
+          {(form.qualifications || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">Add qualifications for this doctor.</p>
+          )}
+          <div className="flex flex-col gap-3">
+            {(form.qualifications || []).map((qual, index) => (
+              <div key={`param-qual-${index}`} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. MCh - Cardiothoracic Surgery"
+                  value={qual}
+                  onChange={(e) => {
+                    const next = [...(form.qualifications || [])];
+                    next[index] = e.target.value;
+                    onChange({ ...form, qualifications: next });
+                  }}
+                  className="flex-1 rounded-xl border border-border bg-card px-4 py-2 text-sm text-foreground outline-none focus:border-primary"
+                />
+                <Button type="button" variant="destructive" size="sm" onClick={() => {
+                  const next = [...(form.qualifications || [])];
+                  next.splice(index, 1);
+                  onChange({ ...form, qualifications: next });
+                }}>Remove</Button>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <Field label="Specialization & Expertise (comma separated)" className="mt-4">
-          <input type="text" value={form.expertise} onChange={(e) => onChange({ ...form, expertise: e.target.value })} className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
-        </Field>
+        <div className="mt-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-semibold text-foreground">Expertise</h4>
+            <Button type="button" variant="outline" size="sm" onClick={() => onChange({ ...form, expertise: [...(form.expertise || []), ''] })}>Add expertise</Button>
+          </div>
+          {(form.expertise || []).length === 0 && (
+            <p className="text-sm text-muted-foreground">Add areas of expertise for this doctor.</p>
+          )}
+          <div className="flex flex-col gap-3">
+            {(form.expertise || []).map((exp, index) => (
+              <div key={`param-exp-${index}`} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Heart Transplantation"
+                  value={exp}
+                  onChange={(e) => {
+                    const next = [...(form.expertise || [])];
+                    next[index] = e.target.value;
+                    onChange({ ...form, expertise: next });
+                  }}
+                  className="flex-1 rounded-xl border border-border bg-card px-4 py-2 text-sm text-foreground outline-none focus:border-primary"
+                />
+                <Button type="button" variant="destructive" size="sm" onClick={() => {
+                  const next = [...(form.expertise || [])];
+                  next.splice(index, 1);
+                  onChange({ ...form, expertise: next });
+                }}>Remove</Button>
+              </div>
+            ))}
+          </div>
+        </div>
 
         <Field label="Bio / About" className="mt-4">
           <textarea value={form.about} onChange={(e) => onChange({ ...form, about: e.target.value })} className="min-h-[120px] w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary" />
@@ -750,40 +885,7 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
           ))}
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field label="Specializations">
-            <div className="rounded-2xl border border-border p-4">
-              {specializations.length === 0 && <p className="text-sm text-muted-foreground">Select a department to load valid specializations.</p>}
-              <div className="space-y-2">
-                {specializations.map((item) => (
-                  <label key={item._id} className="flex items-center gap-3 text-sm text-foreground">
-                    <input
-                      type="checkbox"
-                      checked={form.specializationIds.includes(item._id)}
-                      onChange={() => toggleArrayValue('specializationIds', item._id)}
-                      className="accent-primary"
-                    />
-                    {item.name}
-                  </label>
-                ))}
-              </div>
-              <div className="mt-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Add new specialization</p>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    type="text"
-                    value={newSpecName}
-                    onChange={(e) => setNewSpecName(e.target.value)}
-                    placeholder="e.g. Stroke Management"
-                    className="flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-                  />
-                  <Button type="button" size="sm" variant="outline" onClick={handleCreateSpecialization} disabled={creatingSpec}>
-                    {creatingSpec ? 'Adding...' : 'Add'}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Field>
+        <div className="mt-4">
           <Field label="Hospital Locations">
             <div className="rounded-2xl border border-border p-4">
               <div className="space-y-2">
@@ -811,10 +913,6 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
           <label className="flex items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm text-foreground">
             <input type="checkbox" checked={form.isPublished} onChange={(e) => onChange({ ...form, isPublished: e.target.checked })} />
             Published for future public visibility
-          </label>
-          <label className="flex items-center gap-3 rounded-2xl border border-border px-4 py-3 text-sm text-foreground md:col-span-2">
-            <input type="checkbox" checked={form.isFeatured} onChange={(e) => onChange({ ...form, isFeatured: e.target.checked })} />
-            Feature this doctor on the public website
           </label>
         </div>
 
@@ -858,10 +956,9 @@ function DoctorDetailModal({ doctor, onClose, onUploadImage }) {
             <Detail label="Fee" value={`₹${Number(doctor.consultationFee || 0).toLocaleString()}`} />
             <Detail label="Experience" value={`${doctor.experienceYears || 0} years`} />
             <Detail label="Onboarding" value={doctor.onboardingStatus} />
-            <Detail label="Specializations" value={(doctor.specializationIds || []).map((item) => item.name).join(', ') || '—'} className="md:col-span-2" />
-            <Detail label="Locations" value={(doctor.hospitalLocations || []).map((item) => `${item.name}${item.city ? ` (${item.city})` : ''}`).join(', ') || '—'} className="md:col-span-2" />
-            <Detail label="Qualifications" value={(doctor.qualifications || []).join(', ') || '—'} className="md:col-span-2" />
-            <Detail label="Expertise" value={(doctor.expertise || []).join(', ') || '—'} className="md:col-span-2" />
+            <Detail label="Locations" value={Array.isArray(doctor.hospitalLocations) ? doctor.hospitalLocations.map((item) => `${item.name}${item.city ? ` (${item.city})` : ''}`).join(', ') : '—'} className="md:col-span-2" />
+            <Detail label="Qualifications" value={Array.isArray(doctor.qualifications) ? doctor.qualifications.join(', ') : (typeof doctor.qualifications === 'string' ? doctor.qualifications : '—')} className="md:col-span-2" />
+            <Detail label="Expertise" value={Array.isArray(doctor.expertise) ? doctor.expertise.join(', ') : (typeof doctor.expertise === 'string' ? doctor.expertise : '—')} className="md:col-span-2" />
             <Detail label="About" value={doctor.about || '—'} className="md:col-span-2" />
           </div>
         </div>
@@ -892,7 +989,6 @@ function DoctorCard({ doctor, onView }) {
   const name = doctor.userId?.name || 'Doctor';
   const email = doctor.userId?.email || 'No email';
   const department = doctor.departmentId?.name || 'No department';
-  const specializations = (doctor.specializationIds || []).map((item) => item.name).join(', ') || 'No specializations';
   return (
     <div className="doccure-card-soft p-5">
       <div className="flex items-start gap-4">
@@ -905,7 +1001,6 @@ function DoctorCard({ doctor, onView }) {
           <p className="text-sm font-semibold text-foreground truncate">{name}</p>
           <p className="text-xs text-muted-foreground truncate">{email}</p>
           <p className="mt-2 text-xs text-muted-foreground">{department}</p>
-          <p className="text-xs text-muted-foreground line-clamp-2">{specializations}</p>
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
@@ -915,11 +1010,6 @@ function DoctorCard({ doctor, onView }) {
         <span className={`rounded-full px-2.5 py-1 font-semibold ${doctor.isPublished ? 'bg-sky-100 text-sky-700' : 'bg-muted text-foreground'}`}>
           {doctor.isPublished ? 'Published' : 'Unpublished'}
         </span>
-        {doctor.isFeatured && (
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-700">
-            Featured #{doctor.featureOrder || 0}
-          </span>
-        )}
       </div>
       <button
         type="button"

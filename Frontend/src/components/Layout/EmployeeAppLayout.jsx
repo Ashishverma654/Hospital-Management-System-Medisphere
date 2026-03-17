@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used in JSX via motion.div, motion.aside
 import {
   LayoutDashboard, Users, UserCog, Stethoscope, Calendar, CreditCard,
   BedDouble, Building2, MapPin, Award, Settings, ShieldCheck,
@@ -98,6 +98,7 @@ const buildNavItems = (role, homeRoute) => {
       label: 'Clinical',
       items: [
         { to: '/employee/doctors', label: 'Doctors', icon: Stethoscope },
+        { to: '/employee/doctor-availability', label: 'Doctor Availability', icon: Calendar },
         ...(canAccessGovernance ? [{ to: '/employee/patients', label: 'Patients', icon: Users }] : []),
         ...(canAccessGovernance ? [{ to: '/employee/billing', label: 'Billing', icon: CreditCard }] : []),
       ],
@@ -112,7 +113,6 @@ const buildNavItems = (role, homeRoute) => {
         { to: '/employee/beds', label: 'Beds', icon: BedDouble },
         { to: '/employee/admissions', label: 'Admissions', icon: Users },
         { to: '/employee/departments', label: 'Departments', icon: Building2 },
-        { to: '/employee/specializations', label: 'Specializations', icon: Stethoscope },
         { to: '/employee/locations', label: 'Locations', icon: MapPin },
         { to: '/employee/awards', label: 'Awards', icon: Award },
       ],
@@ -160,7 +160,7 @@ export default function EmployeeAppLayout() {
     navigate('/employee/login');
   };
 
-  const SidebarInner = ({ isMobile = false }) => (
+  const renderSidebarInner = (isMobile = false) => (
     <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-sidebar-border">
@@ -250,7 +250,7 @@ export default function EmployeeAppLayout() {
           collapsed ? 'w-[68px]' : 'w-[260px]'
         }`}
       >
-        <SidebarInner />
+        {renderSidebarInner(false)}
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -263,7 +263,7 @@ export default function EmployeeAppLayout() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="absolute left-0 top-0 bottom-0 z-50 w-[260px] flex flex-col bg-sidebar shadow-2xl"
           >
-            <SidebarInner isMobile />
+            {renderSidebarInner(true)}
           </motion.aside>
         </div>
       )}

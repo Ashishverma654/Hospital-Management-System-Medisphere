@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Users, Stethoscope, UserCog, CalendarCheck, ArrowRight } from 'lucide-react';
 import { adminApi } from '../../services/apiServices.js';
 import { getRoleLabel } from '../../auth/constants.js';

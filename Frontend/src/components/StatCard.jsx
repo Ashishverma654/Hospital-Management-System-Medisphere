@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { staggerItem } from '../lib/animation-variants';

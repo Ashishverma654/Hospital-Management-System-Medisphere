@@ -10,6 +10,7 @@ export const departmentApi = {
   create: (body) => api.post('/department', body),
   update: (id, body) => api.put(`/department/${id}`, body),
   toggleActive: (id) => api.put(`/department/${id}/toggle-active`),
+  getHistory: (id) => api.get(`/department/${id}/history`),
 };
 
 export const specializationApi = {
@@ -30,6 +31,7 @@ export const wardApi = {
   getAll: (params) => api.get('/wards', { params }),
   getSummary: () => api.get('/wards/summary'),
   getById: (id) => api.get(`/wards/${id}`),
+  getHistory: (id) => api.get(`/wards/${id}/history`),
   create: (body) => api.post('/wards', body),
   update: (id, body) => api.put(`/wards/${id}`, body),
   toggleActive: (id) => api.put(`/wards/${id}/toggle-active`),
@@ -40,6 +42,7 @@ export const doctorApi = {
   getById: (id) => api.get(`/doctors/${id}`),
   getSlots: (doctorId) => api.get(`/doctors/${doctorId}/slots`),
   create: (body) => api.post('/doctors', body),
+  getBookingList: (params) => api.get('/doctors/booking', { params }),
   getAdminAll: (params) => api.get('/doctors/admin', { params }),
   getAdminById: (id) => api.get(`/doctors/admin/${id}`),
   createAdminDoctor: (body) => api.post('/doctors/admin', body),
@@ -51,13 +54,16 @@ export const doctorApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   getDashboard: () => api.get('/doctors/dashboard'),
+  softDelete: (id) => api.put(`/doctors/admin/${id}/soft-delete`),
 };
 
 export const awardApi = {
   getAll: (params) => api.get('/awards', { params }),
-  create: (body) => api.post('/awards', body),
-  update: (id, body) => api.put(`/awards/${id}`, body),
+  getPublic: () => api.get('/awards/public'),
+  create: (formData) => api.post('/awards', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  update: (id, formData) => api.put(`/awards/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   toggleActive: (id) => api.put(`/awards/${id}/toggle-active`),
+  getHistory: (id) => api.get(`/awards/${id}/history`),
 };
 
 export const slotApi = {
@@ -67,6 +73,8 @@ export const slotApi = {
 export const availabilityApi = {
   getByDoctor: (doctorId) => api.get(`/availability/${doctorId}`),
   create: (body) => api.post('/availability', body),
+  update: (id, body) => api.put(`/availability/${id}`, body),
+  remove: (id) => api.delete(`/availability/${id}`),
 };
 
 export const appointmentApi = {
@@ -272,4 +280,10 @@ export const notificationsApi = {
   getEmployeeUnreadCount: () => api.get('/notifications/employee/unread-count'),
   markReadEmployee: (id) => api.patch(`/notifications/employee/${id}/read`),
   markAllReadEmployee: () => api.patch('/notifications/employee/read-all'),
+};
+
+export const fileApi = {
+  uploadImage: (formData) => api.post('/files/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };

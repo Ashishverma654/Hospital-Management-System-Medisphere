@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
   patientId: '',
@@ -58,7 +58,7 @@ export default function NurseVitals() {
     };
 
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedPatientId) return;

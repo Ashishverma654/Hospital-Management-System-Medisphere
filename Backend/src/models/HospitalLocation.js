@@ -15,9 +15,16 @@ const hospitalLocationSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    district: {
+      type: String,
+    },
     state: {
       type: String,
       required: false,
+    },
+    pincode: {
+      type: String,
+      required: true,
     },
     phone: {
       type: String,

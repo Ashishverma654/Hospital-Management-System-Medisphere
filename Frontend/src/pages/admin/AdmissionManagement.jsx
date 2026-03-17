@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { bedApi, wardApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { RefreshCw, Search } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function AdmissionManagement() {
   const [summary, setSummary] = useState(null);
@@ -34,7 +34,7 @@ export default function AdmissionManagement() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, [search, filterWard]);
+  }, [search, filterWard]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const wardRows = useMemo(() => summary?.wards || [], [summary]);
 

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { pharmacyApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.section in JSX
+import { staggerContainer } from '../../lib/animation-variants.js';
 
 const initialForm = {
   name: '',
@@ -39,22 +39,6 @@ export default function PharmacistInventory() {
     }
   };
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadInventory();
-  }, [filters.search, filters.status, filters.stockState]);
-
-  useEffect(() => {
-    if (selectedMedicine?.id) {
-      loadLedger(selectedMedicine.id);
-    }
-  }, [ledgerFilters.startDate, ledgerFilters.endDate, ledgerFilters.type]);
-
-  const resetForm = () => {
-    setEditingId('');
-    setForm(initialForm);
-  };
-
   const loadLedger = async (medicineId) => {
     if (!medicineId) return;
     try {
@@ -67,6 +51,22 @@ export default function PharmacistInventory() {
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load stock ledger.');
     }
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadInventory();
+  }, [filters.search, filters.status, filters.stockState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedMedicine?.id) {
+      loadLedger(selectedMedicine.id); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [selectedMedicine?.id, ledgerFilters.startDate, ledgerFilters.endDate, ledgerFilters.type]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const resetForm = () => {
+    setEditingId('');
+    setForm(initialForm);
   };
 
   const submit = async (event) => {

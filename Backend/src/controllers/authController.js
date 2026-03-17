@@ -8,13 +8,15 @@ import {
 } from "../utils/generateTokens.js";
 import {
   ALL_ROLES,
-  EMPLOYEE_ROLES,
-  isEmployeeRole,
   normalizeSystemRole,
   PATIENT_ROLE,
+  ID_PREFIXES,
+  isEmployeeRole,
 } from "../constants/roles.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 import { logAudit } from "../services/auditLogService.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { generateUniqueId } from "../utils/idGenerator.js";
 
 // Helper to generate a 6-digit OTP
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -29,6 +31,9 @@ const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   role: normalizeRole(user.role),
+  firstName: user.firstName,
+  middleName: user.middleName,
+  lastName: user.lastName,
   patientId: user.patientId,
   employeeId: user.employeeId,
   profileImage: user.profileImage,
@@ -50,21 +55,17 @@ const buildAuthResponse = (user) => {
 };
 
 const findUserByIdentifier = async (identifier, fields = ["email"]) => {
-  const orFilters = fields.map((field) => ({ [field]: identifier }));
+  if (!identifier) return null;
+  const orFilters = fields.map((field) => {
+    let value = identifier;
+    if (field === "email") value = identifier.toLowerCase().trim();
+    if (field === "patientId" || field === "employeeId") value = identifier.toUpperCase().trim();
+    return { [field]: value };
+  });
   return User.findOne({ $or: orFilters });
 };
 
 // Helper to generate unique Patient ID (e.g., PAT-123456)
-const generatePatientId = async () => {
-  let isUnique = false;
-  let newId;
-  while (!isUnique) {
-    newId = `PAT-${Math.floor(100000 + Math.random() * 900000)}`;
-    const existing = await User.findOne({ patientId: newId });
-    if (!existing) isUnique = true;
-  }
-  return newId;
-};
 
 export const register = async (req, res) => {
   try {
@@ -108,7 +109,7 @@ export const register = async (req, res) => {
     }
     
     if (assignedRole === PATIENT_ROLE) {
-      patientId = await generatePatientId();
+      patientId = await generateUniqueId(User, "patientId", ID_PREFIXES.patient);
     }
 
     const user = await User.create({
@@ -352,9 +353,9 @@ export const findAccountForHelp = async (req, res) => {
       return uDate.getUTCFullYear() === targetDate.getUTCFullYear() &&
              uDate.getUTCMonth() === targetDate.getUTCMonth() &&
              uDate.getUTCDate() === targetDate.getUTCDate();
-    });
+     });
 
-    if (!user || normalizeRole(user.role) !== PATIENT_ROLE) {
+    if (!user) {
       return res.status(404).json({ message: "No account found matching these details" });
     }
     
@@ -364,9 +365,10 @@ export const findAccountForHelp = async (req, res) => {
 
     res.json({ 
       message: "Account found", 
-      email: user.email, // Passing real email back to frontend to trigger OTP flow
+      email: user.email, 
       obfuscatedEmail,
-      patientId: user.patientId
+      patientId: user.patientId,
+      employeeId: user.employeeId
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -384,7 +386,7 @@ export const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || normalizeRole(user.role) !== PATIENT_ROLE) {
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -396,14 +398,49 @@ export const forgotPassword = async (req, res) => {
     };
     await user.save();
 
-    // MOCK SENDING OTP
+    // Send OTP via email
+    await sendEmail(
+      user.email,
+      "Password Reset OTP - Mediflow Hospital",
+      `Your password reset OTP is: ${otp}. It expires in 15 minutes.`
+    );
+
     res.json({ message: "Password reset OTP sent to your email" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 7. Reset Password (and/or PIN)
+// 7. Verify Reset OTP
+export const verifyResetOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user || !user.resetPasswordOtp || !user.resetPasswordOtp.code) {
+      return res.status(400).json({ message: "Invalid request or OTP expired" });
+    }
+
+    if (user.resetPasswordOtp.code !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    if (user.resetPasswordOtp.expiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP has expired" });
+    }
+
+    res.json({ message: "OTP verified successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 8. Reset Password (and/or PIN)
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword, newPin } = req.body;
@@ -414,7 +451,7 @@ export const resetPassword = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user || normalizeRole(user.role) !== PATIENT_ROLE || !user.resetPasswordOtp || !user.resetPasswordOtp.code) {
+    if (!user || !user.resetPasswordOtp || !user.resetPasswordOtp.code) {
       return res.status(400).json({ message: "Invalid request or OTP expired" });
     }
 

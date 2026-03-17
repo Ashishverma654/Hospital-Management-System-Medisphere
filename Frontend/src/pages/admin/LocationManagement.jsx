@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { locationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { Plus, RefreshCw, Search, UserCheck, UserX, History, Clock, User, Calendar, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion'; 
+import { staggerContainer } from '../../lib/animation-variants.js'; 
+import { INDIAN_STATES, STATE_DISTRICTS } from '../../utils/locationData.js';
 
 const initialForm = {
   name: '',
   city: '',
+  district: '',
   state: '',
+  pincode: '',
   address: '',
   phone: '',
   email: '',
@@ -23,9 +26,40 @@ export default function LocationManagement() {
   const [filterStatus, setFilterStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  // Validation Logic
+  useEffect(() => {
+    if (!showForm) {
+      setErrors({});
+      return;
+    }
+    const newErrors = {};
+    if (!form.name.trim()) newErrors.name = 'Location name is required';
+    if (!form.state) newErrors.state = 'State is required';
+    if (!form.city && !form.district) newErrors.city = 'District/City is required';
+    if (!form.address.trim()) newErrors.address = 'Address is required';
+    
+    if (form.phone && !/^[0-9]{10}$/.test(form.phone)) {
+      newErrors.phone = 'Phone number must be exactly 10 digits';
+    }
+    if (form.pincode && !/^[0-9]{6}$/.test(form.pincode)) {
+      newErrors.pincode = '6-digit pincode required';
+    } else if (!form.pincode) {
+      newErrors.pincode = 'Pincode is required';
+    }
+
+    if (form.email && !/\S+@\S+\.\S+/.test(form.email)) {
+      newErrors.email = 'Invalid email address';
+    }
+
+    setErrors(newErrors);
+  }, [form, showForm]);
 
   const loadLocations = async () => {
     setLoading(true);
@@ -44,16 +78,19 @@ export default function LocationManagement() {
 
   useEffect(() => {
     loadLocations();
-  }, [search, filterStatus]);
+  }, [search, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetForm = () => {
     setForm(initialForm);
     setEditingItem(null);
     setShowForm(false);
+    setSubmitAttempted(false);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setSubmitAttempted(true);
+    if (Object.keys(errors).length > 0) return toast.error('Please fix the errors before saving.');
     setSaving(true);
     try {
       if (editingItem) {
@@ -137,6 +174,7 @@ export default function LocationManagement() {
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">City</th>
                 <th className="px-4 py-3 font-medium">Address</th>
+                <th className="px-4 py-3 font-medium">Pincode</th>
                 <th className="px-4 py-3 font-medium">Contact</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Actions</th>
@@ -158,6 +196,7 @@ export default function LocationManagement() {
                   <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{item.city}{item.state ? `, ${item.state}` : ''}</td>
                   <td className="px-4 py-3 text-muted-foreground">{item.address}</td>
+                  <td className="px-4 py-3 font-mono text-xs font-bold text-foreground">{item.pincode || '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{item.phone || item.email || '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${item.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
@@ -175,7 +214,9 @@ export default function LocationManagement() {
                           setForm({
                             name: item.name || '',
                             city: item.city || '',
+                            district: item.district || '',
                             state: item.state || '',
+                            pincode: item.pincode || '',
                             address: item.address || '',
                             phone: item.phone || '',
                             email: item.email || '',
@@ -186,6 +227,15 @@ export default function LocationManagement() {
                         }}
                       >
                         Edit
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setShowHistory(item)}
+                        title="View History"
+                      >
+                        <History className="h-4 w-4" />
                       </Button>
                       <Button type="button" variant={item.isActive ? 'destructive' : 'outline'} size="sm" onClick={() => handleToggle(item)}>
                         {item.isActive ? <UserX className="mr-1 h-3 w-3" /> : <UserCheck className="mr-1 h-3 w-3" />}
@@ -200,17 +250,113 @@ export default function LocationManagement() {
         </div>
       </article>
 
+      {/* History Modal */}
+      <AnimatePresence>
+        {showHistory && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm text-foreground">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-lg rounded-3xl border border-border bg-card p-8 shadow-2xl"
+            >
+              <div className="flex items-center justify-between border-b border-border pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <History className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground">Location History</h3>
+                    <p className="text-sm text-muted-foreground">{showHistory.name}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowHistory(null)} 
+                  className="rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mt-8 space-y-6">
+                {/* Creation Info */}
+                <div className="relative pl-8 before:absolute before:left-[11px] before:top-2 before:h-full before:w-[2px] before:bg-border last:before:hidden">
+                  <div className="absolute left-0 top-1 h-6 w-6 rounded-full border-2 border-primary bg-background flex items-center justify-center z-10">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-emerald-500" />
+                      Created On
+                    </p>
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-2">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{new Date(showHistory.createdAt).toLocaleDateString(undefined, { dateStyle: 'long' })} at {new Date(showHistory.createdAt).toLocaleTimeString()}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        <span>Created by: <span className="font-semibold text-foreground">{showHistory.createdBy?.name || 'System'}</span></span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground/60 ml-7">
+                        <Shield className="h-3 w-3" />
+                        <span className="capitalize">{showHistory.createdBy?.role || 'admin'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Last Update Info */}
+                <div className="relative pl-8">
+                  <div className="absolute left-0 top-1 h-6 w-6 rounded-full border-2 border-primary bg-background flex items-center justify-center z-10">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 text-blue-500" />
+                      Last Updated
+                    </p>
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-2">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{new Date(showHistory.updatedAt).toLocaleDateString(undefined, { dateStyle: 'long' })} at {new Date(showHistory.updatedAt).toLocaleTimeString()}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                        <User className="h-4 w-4" />
+                        <span>Last modified by: <span className="font-semibold text-foreground">{showHistory.updatedBy?.name || 'System'}</span></span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground/60 ml-7">
+                        <Shield className="h-3 w-3" />
+                        <span className="capitalize">{showHistory.updatedBy?.role || 'admin'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-10">
+                <Button 
+                  onClick={() => setShowHistory(null)} 
+                  className="w-full rounded-2xl h-12 font-bold shadow-lg shadow-primary/20"
+                >
+                  Close History
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-2xl bg-card p-6 shadow-2xl">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b border-border pb-4">
               <h3 className="text-xl font-semibold text-foreground">{editingItem ? 'Edit Location' : 'Add Location'}</h3>
               <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
-
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="Location Name">
-                <input type="text" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+              <Field label="Location Name *" error={submitAttempted ? errors.name : null}>
+                <input type="text" value={form.name} onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} className={`w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.name) ? 'border-red-500' : 'border-border'}`} required />
               </Field>
               <Field label="Location Type">
                 <select value={form.locationType} onChange={(e) => setForm((c) => ({ ...c, locationType: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
@@ -221,29 +367,56 @@ export default function LocationManagement() {
                   <option value="other">Other</option>
                 </select>
               </Field>
-              <Field label="City">
-                <input type="text" value={form.city} onChange={(e) => setForm((c) => ({ ...c, city: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+              <Field label="State *" error={submitAttempted ? errors.state : null}>
+                <select 
+                  value={form.state} 
+                  onChange={(e) => setForm((c) => ({ ...c, state: e.target.value, city: '', district: '' }))} 
+                  className={`w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.state) ? 'border-red-500' : 'border-border'}`}
+                  required
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </Field>
-              <Field label="State">
-                <input type="text" value={form.state} onChange={(e) => setForm((c) => ({ ...c, state: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              <Field label="District/City *" error={submitAttempted ? errors.city : null}>
+                <select 
+                  value={form.city || form.district} 
+                  onChange={(e) => setForm((c) => ({ ...c, city: e.target.value, district: e.target.value }))} 
+                  className={`w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.city) ? 'border-red-500' : 'border-border'}`}
+                  required
+                  disabled={!form.state}
+                >
+                  <option value="">Select District</option>
+                  {form.state && STATE_DISTRICTS[form.state]?.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </Field>
-              <Field label="Phone">
-                <input type="text" value={form.phone} onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              <Field label="Pincode *" error={submitAttempted ? errors.pincode : null}>
+                <input type="text" maxLength="6" value={form.pincode} onChange={(e) => setForm((c) => ({ ...c, pincode: e.target.value.replace(/\D/g, '') }))} className={`w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.pincode) ? 'border-red-500' : 'border-border'}`} required />
               </Field>
-              <Field label="Email">
-                <input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              <Field label="Phone" error={submitAttempted ? errors.phone : null}>
+                <input 
+                  type="text" 
+                  maxLength="10"
+                  value={form.phone} 
+                  onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value.replace(/\D/g, '') }))} 
+                  className={`w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.phone) ? 'border-red-500' : 'border-border'}`} 
+                  placeholder="10-digit mobile number"
+                />
+              </Field>
+              <Field label="Email" error={submitAttempted ? errors.email : null}>
+                <input type="email" value={form.email} onChange={(e) => setForm((c) => ({ ...c, email: e.target.value }))} className={`w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.email) ? 'border-red-500' : 'border-border'}`} />
+              </Field>
+              <Field label="Map URL">
+                <input type="text" value={form.mapUrl} onChange={(e) => setForm((c) => ({ ...c, mapUrl: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
               </Field>
             </div>
-            <Field label="Address" className="mt-4">
-              <textarea value={form.address} onChange={(e) => setForm((c) => ({ ...c, address: e.target.value }))} className="min-h-[110px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+            <Field label="Address *" className="mt-4" error={submitAttempted ? errors.address : null}>
+              <textarea value={form.address} onChange={(e) => setForm((c) => ({ ...c, address: e.target.value }))} className={`min-h-[110px] w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.address) ? 'border-red-500' : 'border-border'}`} required />
             </Field>
-            <Field label="Map URL" className="mt-4">
-              <input type="text" value={form.mapUrl} onChange={(e) => setForm((c) => ({ ...c, mapUrl: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
-            </Field>
-
+ 
             <div className="mt-6 flex gap-3">
               <Button type="button" variant="outline" className="flex-1" onClick={resetForm}>Cancel</Button>
-              <Button type="submit" className="flex-1" disabled={saving}>{saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Location'}</Button>
+              <Button type="submit" className="flex-1" disabled={saving || (submitAttempted && Object.keys(errors).length > 0)}>{saving ? 'Saving...' : editingItem ? 'Save Changes' : 'Create Location'}</Button>
             </div>
           </form>
         </div>
@@ -252,11 +425,14 @@ export default function LocationManagement() {
   );
 }
 
-function Field({ children, className = '', label }) {
+function Field({ children, className = '', label, error }) {
   return (
     <div className={className}>
       <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
       {children}
+      {error && <p className="mt-1.5 text-[11px] font-bold text-red-500 italic pl-1 flex items-center gap-1">
+        <span className="h-1 w-1 rounded-full bg-red-500 animate-pulse" /> {error}
+      </p>}
     </div>
   );
 }

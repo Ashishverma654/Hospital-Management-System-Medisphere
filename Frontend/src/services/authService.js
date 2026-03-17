@@ -80,6 +80,10 @@ export const forgotPassword = async (email) => {
   return await rateLimitedPost('/auth/password/forgot', { email });
 };
 
+export const verifyResetOtp = async (email, otp) => {
+  return await rateLimitedPost('/auth/password/verify-otp', { email, otp });
+};
+
 export const resetPassword = async (email, otp, newPassword, newPin) => {
   return await rateLimitedPost('/auth/password/reset', { email, otp, newPassword, newPin });
 };

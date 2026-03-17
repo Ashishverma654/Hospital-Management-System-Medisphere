@@ -10,7 +10,9 @@ import Prescription from "../models/Prescription.js";
 import LabOrder from "../models/LabOrder.js";
 import Specialization from "../models/Specialization.js";
 import User from "../models/User.js";
-import { normalizeSystemRole } from "../constants/roles.js";
+import { normalizeSystemRole, ID_PREFIXES } from "../constants/roles.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { generateUniqueId } from "../utils/idGenerator.js";
 
 const parseStringArray = (value) => {
   if (Array.isArray(value)) {
@@ -75,17 +77,6 @@ const sanitizeLocationFees = (value) =>
     }))
     .filter((item) => item.locationId && item.fee >= 0);
 
-const generateEmployeeId = async () => {
-  let employeeId;
-  let exists = true;
-
-  while (exists) {
-    employeeId = `EMP-${Math.floor(100000 + Math.random() * 900000)}`;
-    exists = await User.findOne({ employeeId });
-  }
-
-  return employeeId;
-};
 
 const generateTemporaryPassword = () => `Doc@${crypto.randomBytes(4).toString("hex")}`;
 
@@ -188,11 +179,22 @@ const buildDoctorPayload = (doctor) => ({
   hospitalLocations: doctor.hospitalLocations,
   locationFees: doctor.locationFees || [],
   profileImage: doctor.profileImage,
+  education: doctor.education || [],
+  certifications: doctor.certifications || [],
+  licenseNumber: doctor.licenseNumber,
+  licenseExpiryDate: doctor.licenseExpiryDate,
+  joiningDate: doctor.joiningDate,
+  roomNumber: doctor.roomNumber,
+  emergencyContactName: doctor.emergencyContactName,
+  emergencyContactNumber: doctor.emergencyContactNumber,
+  emergencyContactRelationship: doctor.emergencyContactRelationship,
+  docLicense: doctor.docLicense,
+  docEducation: doctor.docEducation,
+  docAdditional: doctor.docAdditional,
   isActive: doctor.isActive,
   isPublished: doctor.isPublished,
-  isFeatured: doctor.isFeatured,
-  featureOrder: doctor.featureOrder,
   onboardingStatus: doctor.onboardingStatus,
+  history: doctor.history || [],
   createdAt: doctor.createdAt,
   updatedAt: doctor.updatedAt,
   userId: doctor.userId,
@@ -203,14 +205,34 @@ export const createDoctor = async (req, res) => {
 
   try {
     const {
-      name,
+      firstName,
+      middleName,
+      lastName,
       email,
       phone,
+      alternativeContact,
+      bloodGroup,
+      address,
+      city,
+      state,
+      postalCode,
       departmentId,
       specializationIds,
       hospitalLocations,
       title,
       qualifications,
+      education,
+      certifications,
+      licenseNumber,
+      licenseExpiryDate,
+      joiningDate,
+      roomNumber,
+      emergencyContactName,
+      emergencyContactNumber,
+      emergencyContactRelationship,
+      docLicense,
+      docEducation,
+      docAdditional,
       experienceYears,
       consultationFee,
       consultationFeeVideo,
@@ -223,12 +245,13 @@ export const createDoctor = async (req, res) => {
       profileImage,
       isPublished = false,
       isActive = true,
-      isFeatured = false,
-      featureOrder = 0,
     } = req.body;
 
-    if (!name || !email || !departmentId) {
-      return res.status(400).json({ message: "Name, email, and department are required." });
+    if ((!firstName || !lastName) && !req.body.name) {
+      return res.status(400).json({ message: "First name, last name, email, and department are required." });
+    }
+    if (!email || !departmentId) {
+      return res.status(400).json({ message: "Email and department are required." });
     }
 
     const existingUser = await User.findOne({ email });
@@ -248,12 +271,21 @@ export const createDoctor = async (req, res) => {
 
     const temporaryPassword = generateTemporaryPassword();
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
-    const employeeId = await generateEmployeeId();
+    const employeeId = await generateUniqueId(User, "employeeId", ID_PREFIXES.doctor);
 
     user = await User.create({
-      name,
+      name: req.body.name || `${firstName} ${lastName}`.trim(),
+      firstName: firstName || req.body.name?.split(' ')[0],
+      middleName,
+      lastName: lastName || req.body.name?.split(' ').slice(1).join(' '),
       email,
       phone,
+      alternativeContact,
+      bloodGroup,
+      address,
+      city,
+      state,
+      postalCode,
       password: hashedPassword,
       role: "doctor",
       employeeId,
@@ -271,6 +303,18 @@ export const createDoctor = async (req, res) => {
       hospitalLocations: validated.locationIds,
       title: title || "Consultant",
       qualifications: parseStringArray(qualifications),
+      education: parseStringArray(education),
+      certifications: parseStringArray(certifications),
+      licenseNumber,
+      licenseExpiryDate,
+      joiningDate,
+      roomNumber,
+      emergencyContactName,
+      emergencyContactNumber,
+      emergencyContactRelationship,
+      docLicense,
+      docEducation,
+      docAdditional,
       experienceYears: Number(experienceYears) || 0,
       consultationFee: Number(consultationFee) || 0,
       consultationFeeVideo: consultationFeeVideo !== undefined && consultationFeeVideo !== null ? Number(consultationFeeVideo) || 0 : null,
@@ -283,9 +327,18 @@ export const createDoctor = async (req, res) => {
       profileImage: profileImage || user.profileImage,
       isActive,
       isPublished: Boolean(isPublished),
-      isFeatured: Boolean(isFeatured),
-      featureOrder: Number(featureOrder) || 0,
       onboardingStatus: "created",
+      history: [
+        {
+          action: "created",
+          performedBy: {
+            id: req.user.id,
+            name: req.user.name || "System",
+            role: normalizeSystemRole(req.user.role),
+          },
+          details: "Doctor profile created by Admin",
+        },
+      ],
     });
 
     doctor.onboardingStatus = determineDoctorOnboardingStatus(doctor);
@@ -320,6 +373,31 @@ export const createDoctor = async (req, res) => {
       .populate("specializationIds", "name departmentId")
       .populate("hospitalLocations", "name city state");
 
+    // Send welcome email with credentials
+    const emailSubject = `Welcome to Mediflow Hospital - Your Doctor Account`;
+    const emailBody = `Dear Dr. ${user.lastName || user.firstName},
+
+Your doctor account has been successfully created in Mediflow Hospital Management System.
+
+Here are your login credentials:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Username: ${user.email}
+Password: ${temporaryPassword}
+Employee ID: ${user.employeeId}
+Role: Doctor
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Important: Please change your password after your first login.
+
+To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
+
+If you have any questions or issues, please contact the IT support team.
+
+Best regards,
+Mediflow Hospital Management System`;
+
+    await sendEmail(user.email, emailSubject, emailBody);
+
     return res.status(201).json({
       message: "Doctor created successfully.",
       doctor: buildDoctorPayload(populatedDoctor),
@@ -340,7 +418,7 @@ export const createDoctor = async (req, res) => {
 export const getDoctorsAdmin = async (req, res) => {
   try {
     const { search, departmentId, isActive, isPublished, onboardingStatus } = req.query;
-    const filter = {};
+    const filter = { isDeleted: { $ne: true } };
 
     if (departmentId) filter.departmentId = departmentId;
     if (typeof isActive === "string" && isActive !== "") filter.isActive = isActive === "true";
@@ -364,6 +442,28 @@ export const getDoctorsAdmin = async (req, res) => {
       .populate("departmentId", "name")
       .populate("specializationIds", "name")
       .populate("hospitalLocations", "name city state")
+      .sort({ createdAt: -1 });
+
+    return res.json(doctors.map(buildDoctorPayload));
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDoctorsForBooking = async (req, res) => {
+  try {
+    const { departmentId } = req.query;
+    const filter = { isActive: true, isDeleted: { $ne: true } };
+
+    if (departmentId) {
+      filter.departmentId = departmentId;
+    }
+
+    const doctors = await Doctor.find(filter)
+      .populate("userId", "name email phone profileImage")
+      .populate("departmentId", "name")
+      .populate("specializationIds", "name")
+      .populate("hospitalLocations", "name city")
       .sort({ createdAt: -1 });
 
     return res.json(doctors.map(buildDoctorPayload));
@@ -398,14 +498,34 @@ export const updateDoctorAdmin = async (req, res) => {
     }
 
     const {
-      name,
+      firstName,
+      middleName,
+      lastName,
       email,
       phone,
+      alternativeContact,
+      bloodGroup,
+      address,
+      city,
+      state,
+      postalCode,
       departmentId,
       specializationIds,
       hospitalLocations,
       title,
       qualifications,
+      education,
+      certifications,
+      licenseNumber,
+      licenseExpiryDate,
+      joiningDate,
+      roomNumber,
+      emergencyContactName,
+      emergencyContactNumber,
+      emergencyContactRelationship,
+      docLicense,
+      docEducation,
+      docAdditional,
       experienceYears,
       consultationFee,
       consultationFeeVideo,
@@ -418,8 +538,6 @@ export const updateDoctorAdmin = async (req, res) => {
       profileImage,
       isPublished,
       isActive,
-      isFeatured,
-      featureOrder,
     } = req.body;
 
     const nextDepartmentId = departmentId || doctor.departmentId;
@@ -433,6 +551,15 @@ export const updateDoctorAdmin = async (req, res) => {
       return res.status(400).json({ message: validated.error });
     }
 
+    if (firstName !== undefined) doctor.userId.firstName = firstName;
+    if (middleName !== undefined) doctor.userId.middleName = middleName;
+    if (lastName !== undefined) doctor.userId.lastName = lastName;
+    
+    if (req.body.name !== undefined) {
+      doctor.userId.name = req.body.name;
+    } else if (firstName !== undefined || lastName !== undefined) {
+      doctor.userId.name = `${firstName ?? doctor.userId.firstName} ${lastName ?? doctor.userId.lastName}`.trim();
+    }
     if (email && email !== doctor.userId.email) {
       const duplicate = await User.findOne({ _id: { $ne: doctor.userId._id }, email });
       if (duplicate) {
@@ -441,8 +568,13 @@ export const updateDoctorAdmin = async (req, res) => {
       doctor.userId.email = email;
     }
 
-    if (name) doctor.userId.name = name;
     if (phone !== undefined) doctor.userId.phone = phone;
+    if (alternativeContact !== undefined) doctor.userId.alternativeContact = alternativeContact;
+    if (bloodGroup !== undefined) doctor.userId.bloodGroup = bloodGroup;
+    if (address !== undefined) doctor.userId.address = address;
+    if (city !== undefined) doctor.userId.city = city;
+    if (state !== undefined) doctor.userId.state = state;
+    if (postalCode !== undefined) doctor.userId.postalCode = postalCode;
     if (profileImage !== undefined) {
       doctor.userId.profileImage = profileImage;
       doctor.profileImage = profileImage;
@@ -458,6 +590,18 @@ export const updateDoctorAdmin = async (req, res) => {
     doctor.hospitalLocations = validated.locationIds;
     doctor.title = title ?? doctor.title;
     if (qualifications !== undefined) doctor.qualifications = parseStringArray(qualifications);
+    if (education !== undefined) doctor.education = parseStringArray(education);
+    if (certifications !== undefined) doctor.certifications = parseStringArray(certifications);
+    if (licenseNumber !== undefined) doctor.licenseNumber = licenseNumber;
+    if (licenseExpiryDate !== undefined) doctor.licenseExpiryDate = licenseExpiryDate;
+    if (joiningDate !== undefined) doctor.joiningDate = joiningDate;
+    if (roomNumber !== undefined) doctor.roomNumber = roomNumber;
+    if (emergencyContactName !== undefined) doctor.emergencyContactName = emergencyContactName;
+    if (emergencyContactNumber !== undefined) doctor.emergencyContactNumber = emergencyContactNumber;
+    if (emergencyContactRelationship !== undefined) doctor.emergencyContactRelationship = emergencyContactRelationship;
+    if (docLicense !== undefined) doctor.docLicense = docLicense;
+    if (docEducation !== undefined) doctor.docEducation = docEducation;
+    if (docAdditional !== undefined) doctor.docAdditional = docAdditional;
     if (experienceYears !== undefined) doctor.experienceYears = Number(experienceYears) || 0;
     if (consultationFee !== undefined) doctor.consultationFee = Number(consultationFee) || 0;
     if (consultationFeeVideo !== undefined) doctor.consultationFeeVideo = consultationFeeVideo === null || consultationFeeVideo === '' ? null : Number(consultationFeeVideo) || 0;
@@ -468,8 +612,16 @@ export const updateDoctorAdmin = async (req, res) => {
     if (media !== undefined) doctor.media = sanitizeMedia(media);
     if (locationFees !== undefined) doctor.locationFees = sanitizeLocationFees(locationFees);
     if (typeof isPublished === "boolean") doctor.isPublished = isPublished;
-    if (typeof isFeatured === "boolean") doctor.isFeatured = isFeatured;
-    if (featureOrder !== undefined) doctor.featureOrder = Number(featureOrder) || 0;
+
+    doctor.history.push({
+      action: "updated",
+      performedBy: {
+        id: req.user.id,
+        name: req.user.name || "System",
+        role: normalizeSystemRole(req.user.role),
+      },
+      details: "Doctor profile updated by Admin",
+    });
 
     doctor.onboardingStatus = determineDoctorOnboardingStatus(doctor);
     if (doctor.onboardingStatus !== "published") {
@@ -516,6 +668,16 @@ export const toggleDoctorActive = async (req, res) => {
       doctor.isPublished = false;
     }
 
+    doctor.history.push({
+      action: doctor.isActive ? "activated" : "deactivated",
+      performedBy: {
+        id: req.user.id,
+        name: req.user.name || "System",
+        role: normalizeSystemRole(req.user.role),
+      },
+      details: `Doctor status changed to ${doctor.isActive ? "Active" : "Inactive"}`,
+    });
+
     await doctor.userId.save();
     await doctor.save();
 
@@ -553,12 +715,60 @@ export const toggleDoctorPublished = async (req, res) => {
     doctor.isPublished = nextPublished;
     doctor.onboardingStatus = determineDoctorOnboardingStatus(doctor);
     doctor.userId.onboardingStatus = doctor.isPublished ? "active" : doctor.userId.onboardingStatus;
+    doctor.history.push({
+      action: doctor.isPublished ? "published" : "unpublished",
+      performedBy: {
+        id: req.user.id,
+        name: req.user.name || "System",
+        role: normalizeSystemRole(req.user.role),
+      },
+      details: `Doctor visibility changed to ${doctor.isPublished ? "Published" : "Unpublished"}`,
+    });
+
     await doctor.userId.save();
     await doctor.save();
 
     return res.json({
       message: `Doctor ${doctor.isPublished ? "published" : "unpublished"} successfully.`,
       doctor: buildDoctorPayload(doctor),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const softDeleteDoctor = async (req, res) => {
+  try {
+    const doctor = await Doctor.findById(req.params.id).populate("userId");
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found." });
+    }
+
+    doctor.isDeleted = true;
+    doctor.isActive = false;
+    doctor.isPublished = false;
+
+    if (doctor.userId) {
+      doctor.userId.isActive = false;
+      doctor.userId.onboardingStatus = "suspended";
+      await doctor.userId.save();
+    }
+
+    doctor.history.push({
+      action: "deleted",
+      performedBy: {
+        id: req.user.id,
+        name: req.user.name || "System",
+        role: normalizeSystemRole(req.user.role),
+      },
+      details: "Doctor soft-deleted from the system",
+    });
+
+    await doctor.save();
+
+    return res.json({
+      message: "Doctor soft-deleted successfully.",
+      id: doctor._id,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -592,12 +802,12 @@ export const uploadDoctorProfileImage = async (req, res) => {
 
 export const getDoctors = async (req, res) => {
   try {
-    const doctors = await Doctor.find({ isActive: true, isPublished: true })
+    const doctors = await Doctor.find({ isActive: true, isPublished: true, isDeleted: { $ne: true } })
       .populate("userId", "name email phone profileImage")
       .populate("departmentId", "name")
       .populate("specializationIds", "name")
       .populate("hospitalLocations", "name city")
-      .sort({ isFeatured: -1, featureOrder: 1, createdAt: -1 });
+      .sort({ createdAt: -1 });
 
     res.status(200).json(doctors);
   } catch (error) {

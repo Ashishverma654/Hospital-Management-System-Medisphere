@@ -1,0 +1,177 @@
+[93m[4mUnused files[24m[39m (32)
+postcss.config.js                              
+src/App.css                                    
+src/components/PlaceholderPage.jsx             
+src/components/layout/PublicLayout.jsx         
+src/components/ui/LocationSelectionModal.jsx   
+src/components/ui/progress.jsx                 
+src/components/ui/separator.jsx                
+src/components/ui/sheet.jsx                    
+src/components/ui/sonner.jsx                   
+src/components/ui/tooltip.jsx                  
+src/modules/analytics/Analytics.jsx            
+src/modules/appointments/AppointmentBooking.jsx
+src/modules/beds/Beds.jsx                      
+src/modules/billing/Billing.jsx                
+src/modules/patient/Appointments.jsx           
+src/modules/patient/LabReports.jsx             
+src/modules/patient/Prescriptions.jsx          
+src/modules/patient/Profile.jsx                
+src/modules/pharmacy/Pharmacy.jsx              
+src/pages/admin/AppointmentManagement.jsx      
+src/pages/admin/Dashboard.jsx                  
+src/pages/auth/EmployeeForgotPassword.jsx      
+src/pages/auth/Login.jsx                       
+src/pages/auth/Register.jsx                    
+src/pages/doctor/DoctorProfile.jsx             
+src/pages/employee/EmployeeProfileShell.jsx    
+src/pages/employee/EmployeeSettingsShell.jsx   
+src/pages/patient/PatientSectionPage.jsx       
+src/pages/patient/PortalShell.jsx              
+src/pages/public/BookingOverlay.jsx            
+src/pages/receptionist/Appointments.jsx        
+src/pages/superadmin/Dashboard.jsx             
+[93m[4mUnused dependencies[24m[39m (5)
+@fontsource-variable/geist  package.json:14:6
+next-themes                 package.json:23:6
+react-hot-toast             package.json:26:6
+react-is                    package.json:28:6
+recharts                    package.json:31:6
+[93m[4mUnused devDependencies[24m[39m (2)
+@tailwindcss/postcss  package.json:40:6
+autoprefixer          package.json:45:6
+[93m[4mUnused exports[24m[39m (122)
+PATIENT_ROLE                         src/auth/constants.js:1:14               
+BILLING_STAFF_ROLES                  src/auth/constants.js:52:14              
+SUBADMIN_ONLY_ROLES                  src/auth/constants.js:53:14              
+getDefaultRouteForSession            src/auth/constants.js:134:14             
+DialogClose                          src/components/ui/dialog.jsx:146:3       
+DialogOverlay                        src/components/ui/dialog.jsx:151:3       
+DialogPortal                         src/components/ui/dialog.jsx:152:3       
+DialogTrigger                        src/components/ui/dialog.jsx:154:3       
+buttonVariants                       src/components/ui/button.jsx:58:18       
+ConfirmDialog              function  src/components/ConfirmDialog.jsx:8:17    
+default                              src/components/ConfirmDialog.jsx:41:16   
+TableFooter                          src/components/ui/table.jsx:116:3        
+TableCaption                         src/components/ui/table.jsx:120:3        
+DataTable                  function  src/components/DataTable.jsx:17:17       
+FormDialog                 function  src/components/FormDialog.jsx:17:17      
+InfoCard                   function  src/components/InfoCard.jsx:7:17         
+default                              src/components/InfoCard.jsx:22:16        
+EmptyState                 function  src/components/StateComponents.jsx:55:17 
+ConfirmDialog                        src/components/index.js:6:21             
+InfoCard                             src/components/index.js:7:21             
+EmptyState                           src/components/index.js:9:39             
+CardFooter                           src/components/ui/card.jsx:109:3         
+CardAction                           src/components/ui/card.jsx:111:3         
+spring                               src/lib/animation-variants.js:7:14       
+gentleSpring                         src/lib/animation-variants.js:8:14       
+snappySpring                         src/lib/animation-variants.js:9:14       
+fadeIn                               src/lib/animation-variants.js:19:14      
+fadeInDown                           src/lib/animation-variants.js:29:14      
+scaleIn                              src/lib/animation-variants.js:45:14      
+popIn                                src/lib/animation-variants.js:50:14      
+staggerFast                          src/lib/animation-variants.js:63:14      
+staggerSlow                          src/lib/animation-variants.js:70:14      
+staggerItemScale                     src/lib/animation-variants.js:83:14      
+cardHover                            src/lib/animation-variants.js:89:14      
+buttonTap                            src/lib/animation-variants.js:98:14      
+iconSpin                             src/lib/animation-variants.js:100:14     
+slideInLeft                          src/lib/animation-variants.js:105:14     
+slideInRight                         src/lib/animation-variants.js:111:14     
+slideInUp                            src/lib/animation-variants.js:117:14     
+counterTransition                    src/lib/animation-variants.js:125:14     
+navbarVariants                       src/lib/animation-variants.js:128:14     
+formatCurrency                       src/utils/formatters.js:29:14            
+formatPhone                          src/utils/formatters.js:43:14            
+getInitials                          src/utils/formatters.js:59:14            
+hasRole                              src/utils/formatters.js:75:14            
+checkAccess                          src/utils/formatters.js:87:14            
+getRoleLabel                         src/utils/formatters.js:96:14            
+isValidEmail                         src/utils/formatters.js:146:14           
+isValidPhone                         src/utils/formatters.js:156:14           
+default                              src/utils/formatters.js:161:16           
+useAuth                              src/hooks/useAuth.js:8:14                
+useApi                               src/hooks/useApi.js:7:14                 
+default                              src/hooks/useApi.js:47:16                
+useApi                               src/hooks/index.js:5:21                  
+PATIENT_PORTAL_NAV_ITEMS             src/patient/constants.js:1:14            
+loginUser                            src/services/apiServices.js:4:14         
+resetPassword                        src/services/apiServices.js:197:14       
+getServices                          src/services/apiServices.js:209:14       
+getPackages                          src/services/apiServices.js:210:14       
+loginUser                            src/services/authService.js:59:14        
+registerUser                         src/services/authService.js:92:14        
+appointmentSlice                     src/store/appointmentSlice.js:10:14      
+setAppointments                      src/store/appointmentSlice.js:42:3       
+addAppointment                       src/store/appointmentSlice.js:43:3       
+updateAppointment                    src/store/appointmentSlice.js:44:3       
+deleteAppointment                    src/store/appointmentSlice.js:45:3       
+setSelectedAppointment               src/store/appointmentSlice.js:46:3       
+setLoading                           src/store/appointmentSlice.js:47:3       
+setError                             src/store/appointmentSlice.js:48:3       
+authSlice                            src/store/authSlice.js:24:14             
+billingSlice                         src/store/billingSlice.js:11:14          
+setInvoices                          src/store/billingSlice.js:46:3           
+addInvoice                           src/store/billingSlice.js:47:3           
+updateInvoice                        src/store/billingSlice.js:48:3           
+deleteInvoice                        src/store/billingSlice.js:49:3           
+setSelectedInvoice                   src/store/billingSlice.js:50:3           
+setTotalRevenue                      src/store/billingSlice.js:51:3           
+setLoading                           src/store/billingSlice.js:52:3           
+setError                             src/store/billingSlice.js:53:3           
+doctorSlice                          src/store/departmentSlice.js:10:14       
+setDoctors                           src/store/departmentSlice.js:42:3        
+addDoctor                            src/store/departmentSlice.js:43:3        
+updateDoctor                         src/store/departmentSlice.js:44:3        
+deleteDoctor                         src/store/departmentSlice.js:45:3        
+setSelectedDoctor                    src/store/departmentSlice.js:46:3        
+setLoading                           src/store/departmentSlice.js:47:3        
+setError                             src/store/departmentSlice.js:48:3        
+departmentSlice                      src/store/departmentStoreSlice.js:10:14  
+setDepartments                       src/store/departmentStoreSlice.js:42:3   
+addDepartment                        src/store/departmentStoreSlice.js:43:3   
+updateDepartment                     src/store/departmentStoreSlice.js:44:3   
+deleteDepartment                     src/store/departmentStoreSlice.js:45:3   
+setSelectedDepartment                src/store/departmentStoreSlice.js:46:3   
+setLoading                           src/store/departmentStoreSlice.js:47:3   
+setError                             src/store/departmentStoreSlice.js:48:3   
+userSlice                            src/store/userSlice.js:10:14             
+setUsers                             src/store/userSlice.js:42:3              
+addUser                              src/store/userSlice.js:43:3              
+updateUser                           src/store/userSlice.js:44:3              
+deleteUser                           src/store/userSlice.js:45:3              
+setSelectedUser                      src/store/userSlice.js:46:3              
+setLoading                           src/store/userSlice.js:47:3              
+setError                             src/store/userSlice.js:48:3              
+AvatarGroup                          src/components/ui/avatar.jsx:104:3       
+AvatarGroupCount                     src/components/ui/avatar.jsx:105:3       
+AvatarBadge                          src/components/ui/avatar.jsx:106:3       
+DropdownMenuPortal                   src/components/ui/dropdown-menu.jsx:236:3
+DropdownMenuGroup                    src/components/ui/dropdown-menu.jsx:239:3
+DropdownMenuCheckboxItem             src/components/ui/dropdown-menu.jsx:242:3
+DropdownMenuRadioGroup               src/components/ui/dropdown-menu.jsx:243:3
+DropdownMenuRadioItem                src/components/ui/dropdown-menu.jsx:244:3
+DropdownMenuShortcut                 src/components/ui/dropdown-menu.jsx:246:3
+DropdownMenuSub                      src/components/ui/dropdown-menu.jsx:247:3
+DropdownMenuSubTrigger               src/components/ui/dropdown-menu.jsx:248:3
+DropdownMenuSubContent               src/components/ui/dropdown-menu.jsx:249:3
+SelectGroup                          src/components/ui/select.jsx:181:3       
+SelectLabel                          src/components/ui/select.jsx:183:3       
+SelectScrollDownButton               src/components/ui/select.jsx:184:3       
+SelectScrollUpButton                 src/components/ui/select.jsx:185:3       
+SelectSeparator                      src/components/ui/select.jsx:186:3       
+Skeleton                             src/components/ui/skeleton.jsx:64:10     
+SkeletonTable                        src/components/ui/skeleton.jsx:64:34     
+[93m[4mDuplicate exports[24m[39m (10)
+ConfirmDialog|default         src/components/ConfirmDialog.jsx
+DataTable|default             src/components/DataTable.jsx    
+FormDialog|default            src/components/FormDialog.jsx   
+StatusBadge|default           src/components/StatusBadge.jsx  
+InfoCard|default              src/components/InfoCard.jsx     
+useAuth|default               src/hooks/useAuth.js            
+useApi|default                src/hooks/useApi.js             
+api|default                   src/lib/api.js                  
+loginPatient|loginUser        src/services/authService.js     
+registerPatient|registerUser  src/services/authService.js     
+[33m[4mConfiguration hints[24m (1)[39m

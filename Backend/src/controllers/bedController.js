@@ -121,13 +121,29 @@ export const createBed = async (req, res) => {
       return res.status(404).json({ message: "Ward not found." });
     }
 
-    const existing = await Bed.findOne({ bedNumber: req.body.bedNumber });
-    if (existing) {
-      return res.status(400).json({ message: "Bed number already exists." });
+    let bedNumber = req.body.bedNumber?.trim();
+
+    // Auto-generate bed number if not provided
+    if (!bedNumber) {
+      const code = ward.wardCode || ward.wardNumber;
+      const existingCount = await Bed.countDocuments({ wardId: ward._id });
+      bedNumber = `BED-${code}-${existingCount + 1}`;
+
+      // Ensure uniqueness
+      let counter = existingCount + 1;
+      while (await Bed.findOne({ bedNumber })) {
+        counter++;
+        bedNumber = `BED-${code}-${counter}`;
+      }
+    } else {
+      const existing = await Bed.findOne({ bedNumber });
+      if (existing) {
+        return res.status(400).json({ message: "Bed number already exists." });
+      }
     }
 
     const bed = await Bed.create({
-      bedNumber: req.body.bedNumber,
+      bedNumber,
       ward: ward.name,
       wardId: ward._id,
       type: ward.wardType,
@@ -186,14 +202,6 @@ export const updateBed = async (req, res) => {
     }
 
     await bed.save();
-
-    await logAudit({
-      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
-      action: "patient_admitted",
-      entityType: "Bed",
-      entityId: bed._id,
-      details: { wardId: bed.wardId?._id, patientId: user._id },
-    });
 
     const populated = await Bed.findById(bed._id)
       .populate("wardId", "name wardNumber wardType defaultPrice")
@@ -411,12 +419,17 @@ export const assignBed = async (req, res) => {
 
     await bed.save();
 
+    // Sync ward occupiedBeds
+    if (bed.wardId?._id) {
+      await Ward.findByIdAndUpdate(bed.wardId._id, { $inc: { occupiedBeds: 1 } });
+    }
+
     await logAudit({
       actor: { id: req.user.id, name: req.user.name, role: req.user.role },
-      action: "patient_discharged",
+      action: "patient_admitted",
       entityType: "Bed",
       entityId: bed._id,
-      details: { dischargedAt: bed.dischargedAt },
+      details: { bedNumber: bed.bedNumber, patientId: user._id },
     });
 
     const populated = await Bed.findById(bed._id)
@@ -459,6 +472,11 @@ export const dischargePatient = async (req, res) => {
     bed.patientProfileId = null;
 
     await bed.save();
+
+    // Sync ward occupiedBeds
+    if (bed.wardId) {
+      await Ward.findByIdAndUpdate(bed.wardId, { $inc: { occupiedBeds: -1 } });
+    }
 
     res.json({
       message: "Patient discharged successfully.",

@@ -1,0 +1,25 @@
+[93m[4mUnused files[24m[39m (5)
+queryUser.js                        
+seed.js                             
+tmpQueryUser.js                     
+src/middlewares/requireSuperAdmin.js
+src/utils/AppError.js               
+[93m[4mUnused dependencies[24m[39m (1)
+crypto  package.json:18:6
+[93m[4mUnused exports[24m[39m (14)
+isDatabaseConnected          src/config/database.js:21:14                
+ROLE_LABELS                  src/constants/roles.js:20:14                
+findPatientProfileByUserId   src/utils/patientContext.js:55:14           
+createNotification           src/services/notificationService.js:6:14    
+notifyEmployee               src/services/notificationService.js:83:14   
+LAB_STATUS_ORDER             src/utils/labWorkflow.js:1:14               
+LEGACY_LAB_ORDER_STATUS_MAP  src/utils/labWorkflow.js:15:14              
+LEGACY_LAB_ITEM_STATUS_MAP   src/utils/labWorkflow.js:21:14              
+isPaidPaymentStatus          src/utils/labWorkflow.js:33:14              
+normalizePaymentStatus       src/utils/pharmacyWorkflow.js:32:14         
+LAB_ITEM_WORKFLOW_STATUSES   src/controllers/labOrderController.js:567:10
+LAB_WORKFLOW_STATUSES        src/controllers/labOrderController.js:567:38
+ORDER_STATUSES               src/constants/modelEnums.js:81:14           
+ENTITY_STATUSES              src/constants/modelEnums.js:91:14           
+[93m[4mDuplicate exports[24m[39m (1)
+PHARMACY_ORDER_STATUSES|ORDER_STATUSES  src/constants/modelEnums.js

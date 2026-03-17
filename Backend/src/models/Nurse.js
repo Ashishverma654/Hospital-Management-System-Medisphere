@@ -29,6 +29,18 @@ const nurseSchema = new mongoose.Schema(
         ref: "Doctor",
       },
     ],
+    qualifications: [String],
+    education: [String],
+    certifications: [String],
+    licenseNumber: String,
+    licenseExpiryDate: Date,
+    joiningDate: Date,
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+    about: String,
+    skills: [String],
     isActive: {
       type: Boolean,
       default: true,

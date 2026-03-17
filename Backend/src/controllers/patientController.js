@@ -618,26 +618,18 @@ export const updateMyPatientProfile = async (req, res) => {
     }
 
     const {
-      name,
       phone,
       address,
       gender,
-      dateOfBirth,
       bloodGroup,
       emergencyContact,
       allergies,
       chronicDiseases,
     } = req.body;
 
-    if (name !== undefined) currentPatient.userId.name = name;
     if (phone !== undefined) currentPatient.userId.phone = phone;
     if (address !== undefined) currentPatient.userId.address = address;
     if (gender !== undefined) currentPatient.userId.gender = gender;
-    if (dateOfBirth !== undefined) {
-      currentPatient.dateOfBirth = dateOfBirth || null;
-      currentPatient.userId.dob = dateOfBirth || null;
-      currentPatient.age = calculateAge(dateOfBirth);
-    }
     if (gender !== undefined) currentPatient.gender = gender;
     if (bloodGroup !== undefined) currentPatient.bloodGroup = bloodGroup || undefined;
     if (emergencyContact !== undefined) currentPatient.emergencyContact = emergencyContact || {};

@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { appointmentApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All statuses' },
@@ -47,7 +47,7 @@ export default function PatientAppointments() {
 
   useEffect(() => {
     loadAppointments();
-  }, [filters.status, filters.startDate, filters.endDate]);
+  }, [filters.status, filters.startDate, filters.endDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const upcoming = appointments.filter((item) => isUpcoming(item, today));

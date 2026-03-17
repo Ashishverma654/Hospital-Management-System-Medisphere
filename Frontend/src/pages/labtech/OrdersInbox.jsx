@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { labTechApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const emptyFilters = {
   search: '',
@@ -83,7 +83,7 @@ export default function LabTechOrdersInbox({
 
   useEffect(() => {
     loadOrders();
-  }, [filters.status, filters.urgency, filters.paymentStatus, filters.date]);
+  }, [filters.status, filters.urgency, filters.paymentStatus, filters.date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadOrderDetail(selectedOrderId);

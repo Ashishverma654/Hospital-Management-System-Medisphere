@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialTaskForm = {
   patientId: '',
@@ -39,7 +39,7 @@ export default function NurseTasks() {
 
   useEffect(() => {
     load();
-  }, [filters.status, filters.patientId, filters.type]);
+  }, [filters.status, filters.patientId, filters.type]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!taskForm.patientId && patients.length) {

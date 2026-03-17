@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function NursePatients() {
   const [patients, setPatients] = useState([]);
@@ -25,7 +25,7 @@ export default function NursePatients() {
     };
 
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredPatients = useMemo(() => {
     const query = search.toLowerCase();

@@ -19,6 +19,17 @@ const pharmacistSchema = new mongoose.Schema(
       enum: ["morning", "afternoon", "night"],
       default: "morning",
     },
+    qualifications: [String],
+    education: [String],
+    certifications: [String],
+    licenseExpiryDate: Date,
+    joiningDate: Date,
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+    about: String,
+    skills: [String],
     isActive: {
       type: Boolean,
       default: true,

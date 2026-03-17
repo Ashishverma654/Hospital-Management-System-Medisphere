@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { MapPin, Search, ArrowRight, Sparkles } from 'lucide-react';
 import { getDepartments, getDoctors, getLocations, getSpecializations } from '../../services/apiServices.js';
 import { SkeletonCard } from '../../components/ui/skeleton.jsx';

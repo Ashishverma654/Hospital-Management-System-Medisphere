@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { labReportApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 import { Button } from '../../components/ui/button.jsx';
 import { UploadCloud } from 'lucide-react';
 

@@ -4,8 +4,8 @@ import { patientApi, userApi } from '../../services/apiServices.js';
 import { useDispatch } from 'react-redux';
 import { updateUser } from '../../store/authSlice.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const parseList = (value) =>
   value
@@ -16,6 +16,8 @@ const parseList = (value) =>
 export default function PatientProfile() {
   const dispatch = useDispatch();
   const [profile, setProfile] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalForm, setOriginalForm] = useState(null);
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -38,7 +40,7 @@ export default function PatientProfile() {
       const patient = data?.patient;
       setProfile(patient);
       if (patient) {
-        setForm({
+        const formData = {
           name: patient.user?.name || '',
           phone: patient.user?.phone || '',
           address: patient.address || '',
@@ -50,7 +52,9 @@ export default function PatientProfile() {
           emergencyName: patient.emergencyContact?.name || '',
           emergencyPhone: patient.emergencyContact?.phone || '',
           emergencyRelation: patient.emergencyContact?.relation || '',
-        });
+        };
+        setForm(formData);
+        setOriginalForm(formData);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load profile.');
@@ -60,6 +64,11 @@ export default function PatientProfile() {
   useEffect(() => {
     loadProfile();
   }, []);
+
+  const handleCancel = () => {
+    setForm(originalForm);
+    setIsEditing(false);
+  };
 
   const updateProfile = async (event) => {
     event.preventDefault();
@@ -81,7 +90,25 @@ export default function PatientProfile() {
         },
       };
       const data = await patientApi.updateMyProfile(payload);
-      setProfile(data?.patient);
+      const patient = data?.patient;
+      setProfile(patient);
+      
+      const updatedFormData = {
+        name: patient.user?.name || '',
+        phone: patient.user?.phone || '',
+        address: patient.address || '',
+        gender: patient.gender || '',
+        dateOfBirth: patient.dateOfBirth ? patient.dateOfBirth.split('T')[0] : '',
+        bloodGroup: patient.bloodGroup || '',
+        allergies: (patient.allergies || []).join(', '),
+        chronicDiseases: (patient.chronicDiseases || []).join(', '),
+        emergencyName: patient.emergencyContact?.name || '',
+        emergencyPhone: patient.emergencyContact?.phone || '',
+        emergencyRelation: patient.emergencyContact?.relation || '',
+      };
+      setForm(updatedFormData);
+      setOriginalForm(updatedFormData);
+      setIsEditing(false);
       toast.success('Profile updated.');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update profile.');
@@ -120,55 +147,71 @@ export default function PatientProfile() {
 
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
-      <div className="rounded-2xl bg-card p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Profile</p>
-        <h2 className="mt-2 text-3xl font-semibold text-foreground">Your patient profile</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Keep your demographic and medical basics up to date so care teams can support you faster.
-        </p>
+      <div className="rounded-2xl bg-card p-8 shadow-sm flex justify-between items-start">
+        <div>
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Profile</p>
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Your patient profile</h2>
+          <p className="mt-2 max-w-3xl text-muted-foreground">
+            Keep your demographic and medical basics up to date so care teams can support you faster.
+          </p>
+        </div>
+        {!isEditing ? (
+          <Button type="button" onClick={() => setIsEditing(true)}>Edit Profile</Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>
+            <Button type="submit" form="profile-form" disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </Button>
+          </div>
+        )}
       </div>
 
-      <form onSubmit={updateProfile} className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+      <form id="profile-form" onSubmit={updateProfile} className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
         <section className="rounded-2xl bg-card p-6 shadow-sm space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Full name" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} />
-            <Field label="Phone" value={form.phone} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} />
+            <Field label="Full name" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} readOnly />
+            <Field label="Phone" value={form.phone} onChange={(value) => setForm((current) => ({ ...current, phone: value }))} readOnly={!isEditing} />
           </div>
-          <Field label="Address" value={form.address} onChange={(value) => setForm((current) => ({ ...current, address: value }))} />
+          <Field label="Address" value={form.address} onChange={(value) => setForm((current) => ({ ...current, address: value }))} readOnly={!isEditing} />
           <div className="grid gap-4 md:grid-cols-2">
-            <SelectField label="Gender" value={form.gender} onChange={(value) => setForm((current) => ({ ...current, gender: value }))} options={['', 'male', 'female', 'other', 'unknown']} />
-            <Field label="Date of birth" type="date" value={form.dateOfBirth} onChange={(value) => setForm((current) => ({ ...current, dateOfBirth: value }))} />
+            <SelectField label="Gender" value={form.gender} onChange={(value) => setForm((current) => ({ ...current, gender: value }))} options={['', 'male', 'female', 'other', 'unknown']} disabled={!isEditing} />
+            <Field label="Date of birth" type="date" value={form.dateOfBirth} onChange={(value) => setForm((current) => ({ ...current, dateOfBirth: value }))} readOnly />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Blood group" value={form.bloodGroup} onChange={(value) => setForm((current) => ({ ...current, bloodGroup: value }))} />
+            <Field label="Blood group" value={form.bloodGroup} onChange={(value) => setForm((current) => ({ ...current, bloodGroup: value }))} readOnly={!isEditing} />
             <Field label="Medical record number" value={profile?.user?.patientId || ''} readOnly />
           </div>
           <Field
             label="Allergies (comma separated)"
             value={form.allergies}
             onChange={(value) => setForm((current) => ({ ...current, allergies: value }))}
+            readOnly={!isEditing}
           />
           <Field
             label="Chronic conditions (comma separated)"
             value={form.chronicDiseases}
             onChange={(value) => setForm((current) => ({ ...current, chronicDiseases: value }))}
+            readOnly={!isEditing}
           />
         </section>
 
         <section className="rounded-2xl bg-card p-6 shadow-sm space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Emergency contact</h3>
-          <Field label="Contact name" value={form.emergencyName} onChange={(value) => setForm((current) => ({ ...current, emergencyName: value }))} />
-          <Field label="Contact phone" value={form.emergencyPhone} onChange={(value) => setForm((current) => ({ ...current, emergencyPhone: value }))} />
-          <Field label="Relation" value={form.emergencyRelation} onChange={(value) => setForm((current) => ({ ...current, emergencyRelation: value }))} />
+          <Field label="Contact name" value={form.emergencyName} onChange={(value) => setForm((current) => ({ ...current, emergencyName: value }))} readOnly={!isEditing} />
+          <Field label="Contact phone" value={form.emergencyPhone} onChange={(value) => setForm((current) => ({ ...current, emergencyPhone: value }))} readOnly={!isEditing} />
+          <Field label="Relation" value={form.emergencyRelation} onChange={(value) => setForm((current) => ({ ...current, emergencyRelation: value }))} readOnly={!isEditing} />
 
           <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
             <p className="font-semibold text-foreground">Account email</p>
             <p className="mt-1">{profile?.user?.email || '—'}</p>
           </div>
 
-          <Button type="submit" className="w-full" disabled={saving}>
-            {saving ? 'Saving...' : 'Save changes'}
-          </Button>
+          {isEditing && (
+            <Button type="submit" className="w-full" disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </Button>
+          )}
         </section>
       </form>
 

@@ -10,6 +10,7 @@ import {
   loginWithOtp,
   findAccountForHelp,
   forgotPassword,
+  verifyResetOtp,
   resetPassword
 } from "../controllers/authController.js";
 
@@ -25,6 +26,7 @@ router.post("/login/otp/send", sendLoginOtp);
 router.post("/login/otp/verify", loginWithOtp);
 router.post("/account/find", findAccountForHelp);
 router.post("/password/forgot", forgotPassword);
+router.post("/password/verify-otp", verifyResetOtp);
 router.post("/password/reset", resetPassword);
 
 export default router;

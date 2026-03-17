@@ -11,6 +11,8 @@ import {
   updateDoctorAdmin,
   uploadDoctorProfileImage,
   getDoctorDashboard,
+  getDoctorsForBooking,
+  softDeleteDoctor,
 } from "../controllers/doctorController.js";
 
 import { getDoctorSlots } from "../controllers/slotController.js";
@@ -33,6 +35,14 @@ router.put("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"
 router.put("/admin/:id/toggle-active", verifyAccessToken, authorizeRoles("superadmin", "admin"), toggleDoctorActive);
 router.put("/admin/:id/toggle-published", verifyAccessToken, authorizeRoles("superadmin", "admin"), toggleDoctorPublished);
 router.put("/admin/:id/profile-image", verifyAccessToken, authorizeRoles("superadmin", "admin"), upload.single("profileImage"), uploadDoctorProfileImage);
+router.put("/admin/:id/soft-delete", verifyAccessToken, authorizeRoles("superadmin", "admin"), softDeleteDoctor);
+
+router.get(
+  "/booking",
+  verifyAccessToken,
+  authorizeRoles("patient", "receptionist", "admin", "superadmin"),
+  getDoctorsForBooking
+);
 
 router.get("/", function(req, res) {
   getDoctors(req, res);

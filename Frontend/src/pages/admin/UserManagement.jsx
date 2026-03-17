@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { adminApi, departmentApi, doctorApi, locationApi, specializationApi } from '../../services/apiServices';
 import { toast } from 'sonner';
@@ -20,11 +20,12 @@ const initialForm = {
   departmentId: '',
   specializationIds: [],
   hospitalLocations: [],
-  qualifications: '',
+  qualifications: [],
   experienceYears: '',
   consultationFee: '',
+  consultationFeeVideo: '',
   about: '',
-  expertise: '',
+  expertise: [],
   profileImage: '',
   isPublished: false,
   isFeatured: false,
@@ -32,6 +33,7 @@ const initialForm = {
 };
 
 export default function UserManagement() {
+  const navigate = useNavigate();
   const { user: currentUser } = useSelector((state) => state.auth);
   const location = useLocation();
   const [users, setUsers] = useState([]);
@@ -47,6 +49,7 @@ export default function UserManagement() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [form, setForm] = useState(initialForm);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -135,24 +138,29 @@ export default function UserManagement() {
   const resetForm = () => {
     setForm(initialForm);
     setShowForm(false);
+    setSubmitAttempted(false);
   };
 
   const handleCreateUser = async (event) => {
     event.preventDefault();
+    setSubmitAttempted(true);
 
-    const needsManualPassword = form.role !== 'doctor';
-
-    if (!form.name || !form.email || !form.role || (needsManualPassword && !form.password)) {
+    if (!form.name || !form.email || !form.role) {
       toast.error(
-        needsManualPassword
-          ? 'Name, email, password, and role are required.'
-          : 'Name, email, role, and department are required for doctor creation.'
+        form.role === 'doctor'
+          ? 'Name, email, and department are required for doctor creation.'
+          : 'Name, email, and role are required.'
       );
       return;
     }
 
     if (form.role === 'doctor' && !form.departmentId) {
       toast.error('Department is required for doctor creation.');
+      return;
+    }
+
+    if (form.phone && !/^\d{10}$/.test(form.phone)) {
+      toast.error('Phone number must be exactly 10 digits.');
       return;
     }
 
@@ -170,6 +178,7 @@ export default function UserManagement() {
           qualifications: form.qualifications,
           experienceYears: Number(form.experienceYears) || 0,
           consultationFee: Number(form.consultationFee) || 0,
+          consultationFeeVideo: Number(form.consultationFeeVideo) || 0,
           about: form.about,
           expertise: form.expertise,
           profileImage: form.profileImage,
@@ -234,7 +243,7 @@ export default function UserManagement() {
           <Button variant="outline" size="sm" onClick={loadHistory}>
             <History className="mr-2 h-4 w-4" /> History
           </Button>
-          <Button size="sm" onClick={() => setShowForm(true)}>
+          <Button size="sm" onClick={() => navigate('/employee/manage-roles/add')}>
             <Plus className="mr-2 h-4 w-4" /> Create User
           </Button>
         </div>
@@ -427,9 +436,6 @@ export default function UserManagement() {
               {[
                 { name: 'name', label: 'Full Name', type: 'text', placeholder: 'John Doe' },
                 { name: 'email', label: 'Email', type: 'email', placeholder: 'user@hospital.com' },
-                ...(form.role === 'doctor'
-                  ? []
-                  : [{ name: 'password', label: 'Password', type: 'password', placeholder: 'Min 6 characters' }]),
                 { name: 'phone', label: 'Phone (Optional)', type: 'text', placeholder: '9876543210' },
               ].map((field) => (
                 <div key={field.name}>
@@ -438,17 +444,23 @@ export default function UserManagement() {
                     type={field.type}
                     placeholder={field.placeholder}
                     value={form[field.name]}
-                    onChange={(event) => setForm((current) => ({ ...current, [field.name]: event.target.value }))}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    onChange={(event) => {
+                      let val = event.target.value;
+                      if (field.name === 'phone') val = val.replace(/\D/g, '').slice(0, 10);
+                      setForm((current) => ({ ...current, [field.name]: val }));
+                    }}
+                    maxLength={field.name === 'phone' ? 10 : undefined}
+                    className={`w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring ${(submitAttempted && field.name !== 'phone' && !form[field.name] && field.name !== 'address') ? 'border-red-500' : 'border-border'}`}
                   />
+                  {submitAttempted && field.name === 'phone' && form.phone && !/^\d{10}$/.test(form.phone) && (
+                    <p className="mt-1 text-[10px] font-bold text-red-500 italic">Enter exactly 10 digits</p>
+                  )}
                 </div>
               ))}
 
-              {form.role === 'doctor' && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  A secure temporary password will be generated automatically for this doctor account.
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary font-medium">
+                  A secure temporary password will be auto-generated and sent to the user's email.
                 </div>
-              )}
 
               <div>
                 <label className="mb-1 block text-sm font-medium">Date of Birth</label>
@@ -484,11 +496,11 @@ export default function UserManagement() {
                             departmentId: '',
                             specializationIds: [],
                             hospitalLocations: [],
-                            qualifications: '',
+                            qualifications: [],
                             experienceYears: '',
                             consultationFee: '',
                             about: '',
-                            expertise: '',
+                            expertise: [],
                             profileImage: '',
                             isPublished: false,
                             isFeatured: false,
@@ -555,7 +567,7 @@ export default function UserManagement() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Consultation Fee</label>
+                    <label className="mb-1 block text-sm font-medium">Consultation Fee (In-Hospital)</label>
                     <input
                       type="number"
                       value={form.consultationFee}
@@ -564,26 +576,68 @@ export default function UserManagement() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium">Qualifications</label>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Consultation Fee (Video)</label>
                     <input
-                      type="text"
-                      value={form.qualifications}
-                      onChange={(event) => setForm((current) => ({ ...current, qualifications: event.target.value }))}
-                      placeholder="MBBS, MD"
+                      type="number"
+                      value={form.consultationFeeVideo}
+                      onChange={(event) => setForm((current) => ({ ...current, consultationFeeVideo: event.target.value }))}
                       className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium">Expertise</label>
-                    <input
-                      type="text"
-                      value={form.expertise}
-                      onChange={(event) => setForm((current) => ({ ...current, expertise: event.target.value }))}
-                      placeholder="Cardiac imaging, preventive cardiology"
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
+                  <div className="md:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Qualifications</label>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setForm(current => ({ ...current, qualifications: [...(current.qualifications || []), ''] }))}>Add</Button>
+                    </div>
+                    {(form.qualifications || []).map((qual, index) => (
+                      <div key={`qual-${index}`} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={qual}
+                          onChange={(e) => {
+                            const next = [...(form.qualifications || [])];
+                            next[index] = e.target.value;
+                            setForm(current => ({ ...current, qualifications: next }));
+                          }}
+                          placeholder="MBBS, MD"
+                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <Button type="button" variant="destructive" size="sm" onClick={() => {
+                          const next = [...(form.qualifications || [])];
+                          next.splice(index, 1);
+                          setForm(current => ({ ...current, qualifications: next }));
+                        }}>✕</Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="md:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Expertise</label>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setForm(current => ({ ...current, expertise: [...(current.expertise || []), ''] }))}>Add</Button>
+                    </div>
+                    {(form.expertise || []).map((exp, index) => (
+                      <div key={`exp-${index}`} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={exp}
+                          onChange={(e) => {
+                            const next = [...(form.expertise || [])];
+                            next[index] = e.target.value;
+                            setForm(current => ({ ...current, expertise: next }));
+                          }}
+                          placeholder="Cardiac surgery"
+                          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                        <Button type="button" variant="destructive" size="sm" onClick={() => {
+                          const next = [...(form.expertise || [])];
+                          next.splice(index, 1);
+                          setForm(current => ({ ...current, expertise: next }));
+                        }}>✕</Button>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="md:col-span-2">
@@ -595,32 +649,7 @@ export default function UserManagement() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="mb-1 block text-sm font-medium">Specializations</label>
-                    <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm">
-                      {specializations.length === 0 ? (
-                        <p className="text-muted-foreground">Select a department to load specializations.</p>
-                      ) : (
-                        specializations.map((item) => (
-                          <label key={item._id} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={form.specializationIds.includes(item._id)}
-                              onChange={() =>
-                                setForm((current) => ({
-                                  ...current,
-                                  specializationIds: current.specializationIds.includes(item._id)
-                                    ? current.specializationIds.filter((id) => id !== item._id)
-                                    : [...current.specializationIds, item._id],
-                                }))
-                              }
-                            />
-                            {item.name}
-                          </label>
-                        ))
-                      )}
-                    </div>
-                  </div>
+
 
                   <div className="md:col-span-2">
                     <label className="mb-1 block text-sm font-medium">Hospital Locations</label>

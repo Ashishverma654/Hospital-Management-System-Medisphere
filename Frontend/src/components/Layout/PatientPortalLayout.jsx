@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import {
   LayoutDashboard, Calendar, FileText, Pill, FlaskConical, ClipboardList,
   CreditCard, Clock, User, Bell, LogOut, Heart, ChevronRight, Menu, X,

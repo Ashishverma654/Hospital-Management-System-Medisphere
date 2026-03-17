@@ -16,6 +16,10 @@ export default function EmployeeRoute({ allowedRoles }) {
     return <Navigate to="/patient" replace />;
   }
 
+  if (user?.mustResetPassword && location.pathname !== '/force-password-change') {
+    return <Navigate to="/force-password-change" replace />;
+  }
+
   if (allowedRoles?.length) {
     const normalizedAllowed = allowedRoles.map((role) => normalizeRole(role));
     if (!normalizedAllowed.includes(normalizedRole)) {

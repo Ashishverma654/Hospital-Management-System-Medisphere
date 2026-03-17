@@ -1,24 +1,40 @@
 import Award from "../models/Award.js";
 import Doctor from "../models/Doctor.js";
+import AuditLog from "../models/AuditLog.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const normalizeText = (value = "") => value.trim().replace(/\s+/g, " ");
 
 export const createAward = async (req, res) => {
   try {
-    const { type, doctorId, title, organization, year, description, image, isActive = true } = req.body;
+    const { 
+      type, 
+      doctorId, 
+      title, 
+      category,
+      organization, 
+      issuedByType,
+      awardDate, 
+      location,
+      description, 
+      certificateUrl,
+      isPublic,
+      featured,
+      displayOrder,
+      status 
+    } = req.body;
 
-    if (!type || !title || !organization) {
-      return res.status(400).json({ message: "Type, title, and organization are required." });
+    if (!type || !title || !category || !organization || !issuedByType || !awardDate || !description) {
+      return res.status(400).json({ message: "Mandatory fields are missing." });
+    }
+
+    if (!req.file && !req.body.image) {
+      return res.status(400).json({ message: "Award image is required." });
     }
 
     if (type === "doctor") {
       if (!doctorId) {
         return res.status(400).json({ message: "Doctor award requires a valid doctor." });
-      }
-
-      const doctor = await Doctor.findById(doctorId);
-      if (!doctor) {
-        return res.status(400).json({ message: "Doctor not found for this award." });
       }
     }
 
@@ -26,17 +42,34 @@ export const createAward = async (req, res) => {
       type,
       doctorId: type === "doctor" ? doctorId : undefined,
       title: normalizeText(title),
+      category,
       organization: normalizeText(organization),
-      year: year ? Number(year) : undefined,
+      issuedByType,
+      awardDate: new Date(awardDate),
+      location: location || undefined,
       description,
-      image,
-      isActive: Boolean(isActive),
+      image: req.file ? req.file.path : req.body.image,
+      certificateUrl,
+      isPublic: isPublic === "true" || isPublic === true,
+      featured: featured === "true" || featured === true,
+      displayOrder: Number(displayOrder) || 0,
+      status: status || "Active",
+      createdBy: req.user?.id,
+      updatedBy: req.user?.id,
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "award_created",
+      entityType: "Award",
+      entityId: award._id,
+      details: { title: award.title, type: award.type },
     });
 
     const populatedAward = await Award.findById(award._id).populate({
       path: "doctorId",
       populate: { path: "userId", select: "name" },
-    });
+    }).populate("location", "name city");
 
     return res.status(201).json({
       message: "Award created successfully.",
@@ -47,16 +80,31 @@ export const createAward = async (req, res) => {
   }
 };
 
+export const getPublicAwards = async (req, res) => {
+  try {
+    const awards = await Award.find({ isPublic: true, status: "Active" })
+      .populate({
+        path: "doctorId",
+        populate: { path: "userId", select: "name" },
+      })
+      .populate("location", "name city")
+      .sort({ featured: -1, displayOrder: 1, awardDate: -1 });
+
+    return res.json(awards);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 export const getAllAwards = async (req, res) => {
   try {
-    const { type, isActive, doctorId, search = "" } = req.query;
+    const { type, status, category, search = "" } = req.query;
     const filter = {};
 
     if (type) filter.type = type;
-    if (doctorId) filter.doctorId = doctorId;
-    if (typeof isActive === "string" && isActive !== "") {
-      filter.isActive = isActive === "true";
-    }
+    if (status) filter.status = status;
+    if (category) filter.category = category;
+
     if (search) {
       filter.$or = [
         { title: { $regex: search.trim(), $options: "i" } },
@@ -69,7 +117,8 @@ export const getAllAwards = async (req, res) => {
         path: "doctorId",
         populate: { path: "userId", select: "name" },
       })
-      .sort({ year: -1, createdAt: -1 });
+      .populate("location", "name city")
+      .sort({ createdAt: -1 });
 
     return res.json(awards);
   } catch (error) {
@@ -84,41 +133,60 @@ export const updateAward = async (req, res) => {
       return res.status(404).json({ message: "Award not found." });
     }
 
-    const { type, doctorId, title, organization, year, description, image, isActive } = req.body;
+    const { 
+      type, 
+      doctorId, 
+      title, 
+      category,
+      organization, 
+      issuedByType,
+      awardDate, 
+      location,
+      description, 
+      certificateUrl,
+      isPublic,
+      featured,
+      displayOrder,
+      status 
+    } = req.body;
 
-    const nextType = type || award.type;
-    if (nextType === "doctor") {
-      const targetDoctorId = doctorId || award.doctorId;
-      if (!targetDoctorId) {
-        return res.status(400).json({ message: "Doctor award requires a doctor." });
-      }
-
-      const doctor = await Doctor.findById(targetDoctorId);
-      if (!doctor) {
-        return res.status(400).json({ message: "Doctor not found for this award." });
-      }
-
-      award.doctorId = targetDoctorId;
-    } else {
+    if (type) award.type = type;
+    if (type === "doctor") {
+      award.doctorId = doctorId || award.doctorId;
+    } else if (type === "hospital") {
       award.doctorId = undefined;
     }
 
-    award.type = nextType;
-    award.title = title ? normalizeText(title) : award.title;
-    award.organization = organization ? normalizeText(organization) : award.organization;
-    award.year = year !== undefined ? Number(year) || undefined : award.year;
-    award.description = description ?? award.description;
-    award.image = image ?? award.image;
-    if (typeof isActive === "boolean") {
-      award.isActive = isActive;
-    }
-
+    if (title) award.title = normalizeText(title);
+    if (category) award.category = category;
+    if (organization) award.organization = normalizeText(organization);
+    if (issuedByType) award.issuedByType = issuedByType;
+    if (awardDate) award.awardDate = new Date(awardDate);
+    if (location !== undefined) award.location = location || undefined;
+    if (description) award.description = description;
+    if (req.file) award.image = req.file.path;
+    if (certificateUrl !== undefined) award.certificateUrl = certificateUrl;
+    
+    if (isPublic !== undefined) award.isPublic = isPublic === "true" || isPublic === true;
+    if (featured !== undefined) award.featured = featured === "true" || featured === true;
+    if (displayOrder !== undefined) award.displayOrder = Number(displayOrder) || 0;
+    if (status) award.status = status;
+    award.updatedBy = req.user?.id;
+ 
     await award.save();
+ 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "award_updated",
+      entityType: "Award",
+      entityId: award._id,
+      details: { title: award.title, type: award.type },
+    });
 
     const populatedAward = await Award.findById(award._id).populate({
       path: "doctorId",
       populate: { path: "userId", select: "name" },
-    });
+    }).populate("location", "name city");
 
     return res.json({
       message: "Award updated successfully.",
@@ -136,13 +204,36 @@ export const toggleAwardStatus = async (req, res) => {
       return res.status(404).json({ message: "Award not found." });
     }
 
-    award.isActive = !award.isActive;
+    award.status = award.status === "Active" ? "Hidden" : "Active";
+    award.updatedBy = req.user?.id;
     await award.save();
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: award.status === "Active" ? "award_activated" : "award_hidden",
+      entityType: "Award",
+      entityId: award._id,
+      details: { status: award.status, title: award.title },
+    });
+
     return res.json({
-      message: `Award ${award.isActive ? "activated" : "deactivated"} successfully.`,
+      message: `Award is now ${award.status.toLowerCase()}.`,
       award,
     });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getAwardHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const logs = await AuditLog.find({
+      entityType: "Award",
+      entityId: id,
+    }).sort({ createdAt: -1 });
+
+    return res.json(logs);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

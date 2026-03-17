@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { bedApi, wardApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialBedForm = {
   wardId: '',
@@ -66,7 +66,7 @@ export default function BedManagement() {
 
   useEffect(() => {
     loadBeds();
-  }, [search, filterWard, filterStatus]);
+  }, [search, filterWard, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (showAdmitForm) {
@@ -269,17 +269,20 @@ export default function BedManagement() {
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <Field label="Ward">
-                <select value={bedForm.wardId} onChange={(event) => setBedForm((current) => ({ ...current, wardId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
+                <select value={bedForm.wardId} onChange={(event) => {
+                  const selectedWard = wards.find(w => w._id === event.target.value);
+                  setBedForm((current) => ({ ...current, wardId: event.target.value, _wardCode: selectedWard?.wardCode || selectedWard?.wardNumber || '' }));
+                }} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                   <option value="">Select ward</option>
                   {wards.map((ward) => (
                     <option key={ward._id} value={ward._id}>
-                      {ward.name} ({ward.wardNumber})
+                      {ward.name} ({ward.wardCode || ward.wardNumber})
                     </option>
                   ))}
                 </select>
               </Field>
-              <Field label="Bed number">
-                <input type="text" value={bedForm.bedNumber} onChange={(event) => setBedForm((current) => ({ ...current, bedNumber: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+              <Field label={`Bed Number ${editingBed ? '' : '(optional – auto-generated if empty)'}`}>
+                <input type="text" value={bedForm.bedNumber} onChange={(event) => setBedForm((current) => ({ ...current, bedNumber: event.target.value }))} placeholder={bedForm._wardCode ? `e.g. BED-${bedForm._wardCode}-N` : 'Auto-generated'} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
               </Field>
               <Field label="Status">
                 <select value={bedForm.status} onChange={(event) => setBedForm((current) => ({ ...current, status: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">

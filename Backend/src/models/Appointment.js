@@ -46,6 +46,12 @@ const appointmentSchema = new mongoose.Schema(
       default: "booked",
     },
 
+    paymentStatus: {
+      type: String,
+      enum: ["paid", "pending", "payLater"],
+      default: "pending",
+    },
+
     reasonForVisit: {
       type: String,
     },

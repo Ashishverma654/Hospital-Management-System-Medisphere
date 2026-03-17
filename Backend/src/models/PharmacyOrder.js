@@ -117,13 +117,12 @@ const pharmacyOrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-pharmacyOrderSchema.pre("save", function computeTotals(next) {
+pharmacyOrderSchema.pre("save", function computeTotals() {
   this.subtotal = Array.isArray(this.items)
     ? this.items.reduce((sum, item) => sum + (item.lineTotal || 0), 0)
     : 0;
   this.total = this.subtotal;
   this.lastStatusUpdatedAt = new Date();
-  next();
 });
 
 export default mongoose.model("PharmacyOrder", pharmacyOrderSchema);

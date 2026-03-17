@@ -48,6 +48,7 @@ export default function Sidebar({ isOpen }) {
     ],
     patient: [
       { name: 'Dashboard', path: '/patient/dashboard', icon: FiGrid },
+      { name: 'Book Appointment', path: '/patient/book-appointment', icon: FiCalendar },
       { name: 'My Appointments', path: '/patient/appointments', icon: FiCalendar },
       { name: 'Prescriptions', path: '/patient/prescriptions', icon: FiFileText },
       { name: 'Medicine Orders', path: '/patient/medicine-orders', icon: FiFileText },

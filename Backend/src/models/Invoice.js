@@ -165,7 +165,7 @@ const invoiceSchema = new mongoose.Schema({
     { timestamps: true }
 );
 
-invoiceSchema.pre("save", function computeTotals(next) {
+invoiceSchema.pre("save", function computeTotals() {
     if (!this.invoiceNumber) {
         const stamp = Date.now().toString().slice(-8);
         const suffix = Math.floor(100 + Math.random() * 900);
@@ -179,7 +179,6 @@ invoiceSchema.pre("save", function computeTotals(next) {
 
     this.subtotal = lineItemSubtotal || legacySubtotal;
     this.totalAmount = this.subtotal;
-    next();
 });
 
 export default mongoose.model("Invoice", invoiceSchema);

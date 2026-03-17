@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Menu, X } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { PUBLIC_NAV_ITEMS } from '../../patient/constants.js';

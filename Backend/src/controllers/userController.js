@@ -7,9 +7,20 @@ const sanitizeUser = (user) => ({
     name: user.name,
     email: user.email,
     role: normalizeSystemRole(user.role),
+    firstName: user.firstName,
+    middleName: user.middleName,
+    lastName: user.lastName,
     phone: user.phone,
     gender: user.gender,
     address: user.address,
+    city: user.city,
+    state: user.state,
+    postalCode: user.postalCode,
+    maritalStatus: user.maritalStatus,
+    nationality: user.nationality,
+    emergencyContactName: user.emergencyContactName,
+    emergencyContactPhone: user.emergencyContactPhone,
+    emergencyContactRelationship: user.emergencyContactRelationship,
     profileImage: user.profileImage,
     patientId: user.patientId,
     employeeId: user.employeeId,
@@ -66,7 +77,12 @@ export const getMyProfile = async (req, res) => {
 
 export const updateMyProfile = async (req, res) => {
     try {
-        const allowedFields = ["name", "phone", "gender", "address"];
+        const allowedFields = [
+            "phone", "alternativeContact", "gender",
+            "bloodGroup", "maritalStatus", "nationality",
+            "address", "city", "state", "postalCode",
+            "emergencyContactName", "emergencyContactPhone", "emergencyContactRelationship"
+        ];
         const updates = {};
 
         for (const field of allowedFields) {

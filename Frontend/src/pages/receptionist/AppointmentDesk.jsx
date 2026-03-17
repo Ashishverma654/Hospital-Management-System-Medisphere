@@ -4,14 +4,13 @@ import { Button } from '../../components/ui/button';
 import { appointmentApi, billingApi, receptionistApi, slotApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Calendar, RefreshCw, Search } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialBooking = {
   patientId: '',
   doctorId: '',
   departmentId: '',
-  specializationId: '',
   date: new Date().toISOString().split('T')[0],
   slot: '',
   visitType: 'newConsultation',
@@ -40,8 +39,11 @@ export default function AppointmentDesk() {
   const [patients, setPatients] = useState([]);
   const [patientQuery, setPatientQuery] = useState('');
   const [booking, setBooking] = useState({ ...initialBooking, patientId: preselectedPatientId });
-  const [options, setOptions] = useState({ departments: [], specializations: [], doctors: [] });
+  const [options, setOptions] = useState({ departments: [], doctors: [] });
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [allSlots, setAllSlots] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [slotLoading, setSlotLoading] = useState(false);
   const [queue, setQueue] = useState([]);
   const [queueSummary, setQueueSummary] = useState(null);
   const [filterDoctor, setFilterDoctor] = useState('');
@@ -67,7 +69,6 @@ export default function AppointmentDesk() {
     try {
       const response = await receptionistApi.getBookingOptions({
         departmentId: booking.departmentId || undefined,
-        specializationId: booking.specializationId || undefined,
       });
       setOptions(response);
     } catch (error) {
@@ -91,7 +92,7 @@ export default function AppointmentDesk() {
 
   useEffect(() => {
     loadPatients(preselectedPatientId || patientQuery);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -105,24 +106,33 @@ export default function AppointmentDesk() {
 
   useEffect(() => {
     loadOptions();
-  }, [booking.departmentId, booking.specializationId]);
+  }, [booking.departmentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadQueue();
-  }, [queueDate, filterDoctor, filterStatus]);
+  }, [queueDate, filterDoctor, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const loadSlots = async () => {
       if (!booking.doctorId || !booking.date) {
         setAvailableSlots([]);
+        setAllSlots([]);
+        setBookedSlots([]);
         return;
       }
 
+      setSlotLoading(true);
       try {
         const response = await slotApi.getByDoctor(booking.doctorId, booking.date);
         setAvailableSlots(response.availableSlots || []);
+        setAllSlots(response?.allSlots || response?.availableSlots || []);
+        setBookedSlots(response?.bookedSlots || []);
       } catch {
         setAvailableSlots([]);
+        setAllSlots([]);
+        setBookedSlots([]);
+      } finally {
+        setSlotLoading(false);
       }
     };
 
@@ -351,17 +361,9 @@ export default function AppointmentDesk() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Department">
-                <select value={booking.departmentId} onChange={(event) => setBooking((current) => ({ ...current, departmentId: event.target.value, specializationId: '', doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
+                <select value={booking.departmentId} onChange={(event) => setBooking((current) => ({ ...current, departmentId: event.target.value, doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                   <option value="">Select department</option>
                   {(options.departments || []).map((item) => (
-                    <option key={item._id} value={item._id}>{item.name}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Specialization">
-                <select value={booking.specializationId} onChange={(event) => setBooking((current) => ({ ...current, specializationId: event.target.value, doctorId: '', slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
-                  <option value="">Select specialization</option>
-                  {(options.specializations || []).map((item) => (
                     <option key={item._id} value={item._id}>{item.name}</option>
                   ))}
                 </select>
@@ -370,7 +372,7 @@ export default function AppointmentDesk() {
                 <select value={booking.doctorId} onChange={(event) => setBooking((current) => ({ ...current, doctorId: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
                   <option value="">Select doctor</option>
                   {(options.doctors || []).map((item) => (
-                    <option key={item._id} value={item._id}>{item.userId?.name} • {item.departmentId?.name}</option>
+                    <option key={item._id} value={item._id}>{item.userId?.name || 'Doctor'} • {item.departmentId?.name || 'Department'}</option>
                   ))}
                 </select>
               </Field>
@@ -399,22 +401,30 @@ export default function AppointmentDesk() {
 
             <Field label="Available Slots">
               <div className="flex flex-wrap gap-2">
-                {availableSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setBooking((current) => ({ ...current, slot }))}
-                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                      booking.slot === slot
-                        ? 'bg-slate-900 text-white'
-                        : 'border border-border bg-card text-foreground'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
-                {booking.doctorId && availableSlots.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No available slots for the selected date.</p>
+                {slotLoading && <p className="text-sm text-muted-foreground">Loading slots...</p>}
+                {!slotLoading && (allSlots.length ? allSlots : availableSlots).map((slot) => {
+                  const isBooked = bookedSlots.includes(slot);
+                  const isSelected = booking.slot === slot;
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      disabled={isBooked}
+                      onClick={() => setBooking((current) => ({ ...current, slot }))}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                        isBooked
+                          ? 'bg-red-500/15 text-red-500 border border-red-500/30 cursor-not-allowed'
+                          : isSelected
+                            ? 'bg-primary text-primary-foreground'
+                            : 'border border-border bg-card text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+                {!slotLoading && booking.doctorId && (allSlots.length ? allSlots : availableSlots).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No slots published for the selected date.</p>
                 )}
               </div>
             </Field>

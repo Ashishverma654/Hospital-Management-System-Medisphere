@@ -13,6 +13,18 @@ export const EMPLOYEE_ROLES = [
 
 export const ALL_ROLES = [...EMPLOYEE_ROLES, PATIENT_ROLE];
 
+export const ID_PREFIXES = {
+  superadmin: "SADM",
+  admin: "ADM",
+  subadmin: "SBM",
+  doctor: "DOC",
+  nurse: "NURS",
+  receptionist: "RECP",
+  labTechnician: "LABT",
+  pharmacist: "PHRM",
+  patient: "PAT",
+};
+
 export const LEGACY_ROLE_MIGRATIONS = {
   superreceptionist: "subadmin",
 };

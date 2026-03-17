@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Calendar, FileText, Activity, CreditCard, ArrowRight, Bell, Pill, FlaskConical } from 'lucide-react';
@@ -88,6 +88,11 @@ export default function PatientDashboard() {
                 <Calendar className="h-4 w-4" /> My appointments
               </Link>
             </Button>
+            <Button asChild size="lg" variant="outline" className="px-6">
+              <Link to="/patient/book-appointment" className="inline-flex items-center gap-2 whitespace-nowrap">
+                <Calendar className="h-4 w-4" /> Book appointment
+              </Link>
+            </Button>
             <Button variant="outline" asChild size="lg" className="px-6">
               <Link to="/patient/bills" className="inline-flex items-center gap-2 whitespace-nowrap">
                 <CreditCard className="h-4 w-4" /> Billing & payments
@@ -157,7 +162,12 @@ export default function PatientDashboard() {
                 ))}
                 {upcomingAppointments.length === 0 && (
                   <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                    You have no upcoming appointments scheduled.
+                    <p>You have no upcoming appointments scheduled.</p>
+                    <Button variant="outline" size="sm" asChild className="mt-4">
+                      <Link to="/patient/book-appointment" className="inline-flex items-center gap-2">
+                        <Calendar className="h-4 w-4" /> Book an appointment
+                      </Link>
+                    </Button>
                   </div>
                 )}
                 <Button variant="outline" size="sm" asChild>

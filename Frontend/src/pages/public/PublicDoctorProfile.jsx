@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { MapPin, BriefcaseMedical, GraduationCap, IndianRupee, Trophy, ArrowLeft, Calendar, Video } from 'lucide-react';
 import { appointmentApi, getDoctorPublicById, slotApi } from '../../services/apiServices.js';
 import { SkeletonCard } from '../../components/ui/skeleton.jsx';
@@ -19,6 +19,8 @@ export default function PublicDoctorProfile() {
   const bookingRef = useRef(null);
   const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [allSlots, setAllSlots] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [slotLoading, setSlotLoading] = useState(false);
   const [bookingMode, setBookingMode] = useState('in-person');
@@ -42,8 +44,12 @@ export default function PublicDoctorProfile() {
       try {
         const response = await slotApi.getByDoctor(doctor._id, bookingDate);
         setAvailableSlots(response?.availableSlots || []);
-      } catch (err) {
+        setAllSlots(response?.allSlots || response?.availableSlots || []);
+        setBookedSlots(response?.bookedSlots || []);
+      } catch (err) { // eslint-disable-line no-unused-vars
         setAvailableSlots([]);
+        setAllSlots([]);
+        setBookedSlots([]);
       } finally {
         setSlotLoading(false);
       }
@@ -66,6 +72,12 @@ export default function PublicDoctorProfile() {
     }
     return fee;
   };
+
+  const slotsVisible = !(
+    bookingMode === 'in-person' &&
+    (doctor?.hospitalLocations || []).length > 0 &&
+    !bookingLocationId
+  );
 
   const handleBook = async () => {
     if (!selectedSlot) {
@@ -213,14 +225,29 @@ export default function PublicDoctorProfile() {
               <TabsContent value="inHospital">
                 <div className="space-y-4">
                   {(doctor.hospitalLocations || []).map((item) => (
-                    <div key={item._id} className="rounded-2xl border border-border p-4 transition-colors hover:bg-muted/30">
+                    <button
+                      key={item._id}
+                      type="button"
+                      onClick={() => {
+                        setBookingMode('in-person');
+                        setBookingLocationId(item._id);
+                        bookingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                      className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                        bookingLocationId === item._id
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border hover:bg-muted/30'
+                      }`}
+                    >
                       <p className="font-semibold text-foreground">{item.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Slots available • ₹{Number(doctor.consultationFee || 0).toLocaleString()}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {availableSlots.length} slots available • ₹{Number(doctor.consultationFee || 0).toLocaleString()}
+                      </p>
                       <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                         <MapPin className="h-3.5 w-3.5 text-primary" />
                         {[item.city, item.state].filter(Boolean).join(', ')}
                       </p>
-                    </div>
+                    </button>
                   ))}
                   {(doctor.hospitalLocations || []).length === 0 && (
                     <p className="text-sm text-muted-foreground">Hospital availability will be updated soon.</p>
@@ -277,22 +304,35 @@ export default function PublicDoctorProfile() {
                     <label className="mb-2 block text-sm font-medium text-foreground">Available slots</label>
                     <div className="flex flex-wrap gap-2">
                       {slotLoading && <span className="text-sm text-muted-foreground">Loading slots...</span>}
-                      {!slotLoading && availableSlots.map((slot) => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                            selectedSlot === slot
-                              ? 'bg-primary text-primary-foreground'
-                              : 'border border-border bg-card text-foreground hover:bg-muted'
-                          }`}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                      {!slotLoading && availableSlots.length === 0 && (
-                        <span className="text-sm text-muted-foreground">No available slots for this date.</span>
+                      {!slotLoading &&
+                        bookingMode === 'in-person' &&
+                        (doctor.hospitalLocations || []).length > 0 &&
+                        !bookingLocationId && (
+                          <span className="text-sm text-muted-foreground">Select a hospital location to view slots.</span>
+                        )}
+                      {!slotLoading && slotsVisible && (allSlots.length ? allSlots : availableSlots).map((slot) => {
+                        const isBooked = bookedSlots.includes(slot);
+                        const isSelected = selectedSlot === slot;
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            disabled={isBooked}
+                            onClick={() => setSelectedSlot(slot)}
+                            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                              isBooked
+                                ? 'bg-red-500/15 text-red-500 border border-red-500/30 cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'border border-border bg-card text-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {slot}
+                          </button>
+                        );
+                      })}
+                      {!slotLoading && slotsVisible && (allSlots.length ? allSlots : availableSlots).length === 0 && (
+                        <span className="text-sm text-muted-foreground">No slots published for this date.</span>
                       )}
                     </div>
                   </div>
@@ -397,7 +437,7 @@ export default function PublicDoctorProfile() {
   );
 }
 
-function QuickStat({ icon: Icon, label, value }) {
+function QuickStat({ icon: Icon, label, value }) { // eslint-disable-line no-unused-vars
   return (
     <motion.article variants={staggerItem} className="rounded-xl border border-border p-4 transition-colors hover:bg-muted/30">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">

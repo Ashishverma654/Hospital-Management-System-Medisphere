@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../services/apiServices.js';
 import { getRoleLabel } from '../../auth/constants.js';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function AuditHistoryPage() {
   const [logs, setLogs] = useState([]);

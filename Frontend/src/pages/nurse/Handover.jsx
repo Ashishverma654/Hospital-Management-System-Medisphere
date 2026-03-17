@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
   wardId: '',
@@ -47,7 +47,7 @@ export default function NurseHandover() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (event) => {
     event.preventDefault();

@@ -4,8 +4,8 @@ import { Button } from '../../components/ui/button';
 import { receptionistApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Search } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
   name: '',
@@ -56,6 +56,12 @@ export default function PatientRegistration() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (form.phone && !/^\d{10}$/.test(form.phone)) {
+      toast.error('Phone number must be exactly 10 digits.');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -137,7 +143,7 @@ export default function PatientRegistration() {
           <Field label="Full Name"><input type="text" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
           <Field label="Email"><input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
           <Field label="Phone"><input type="text" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
-          <Field label="Date of Birth"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
+          <Field label="Date of Birth"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required max={new Date().toISOString().split('T')[0]} /></Field>
           <Field label="Gender">
             <select value={form.gender} onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
               <option value="unknown">Unknown</option>

@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
 
     password: {
@@ -25,22 +27,41 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    firstName: String,
+    middleName: String,
+    lastName: String,
     phone: String,
+    alternativeContact: String,
+    bloodGroup: String,
+    city: String,
+    state: String,
+    postalCode: String,
     gender: String,
     address: String,
+    maritalStatus: String,
+    nationality: String,
     profileImage: String,
-    
+
+    // Emergency Contact
+    emergencyContactName: String,
+    emergencyContactPhone: String,
+    emergencyContactRelationship: String,
+
     // Additional fields for Login/Recovery flows
     patientId: {
       type: String,
       unique: true,
-      sparse: true // Allows nulls/undefined for non-patient users
+      sparse: true, // Allows nulls/undefined for non-patient users
+      uppercase: true,
+      trim: true,
     },
-    
+
     employeeId: {
       type: String,
       unique: true,
-      sparse: true // Allows nulls/undefined for patient users
+      sparse: true, // Allows nulls/undefined for patient users
+      uppercase: true,
+      trim: true,
     },
 
     pin: {

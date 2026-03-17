@@ -4,6 +4,10 @@ import Invoice from "../models/Invoice.js";
 import Bed from "../models/Bed.js";
 import Doctor from "../models/Doctor.js";
 import User from "../models/User.js";
+import Nurse from "../models/Nurse.js";
+import Pharmacist from "../models/Pharmacist.js";
+import LabTechnician from "../models/LabTechnician.js";
+import Receptionist from "../models/Receptionist.js";
 import CreationLog from "../models/CreationLog.js";
 import AuditLog from "../models/AuditLog.js";
 import bcrypt from "bcryptjs";
@@ -15,6 +19,9 @@ import {
 } from "../constants/roles.js";
 import HospitalSettings from "../models/HospitalSettings.js";
 import { logAudit } from "../services/auditLogService.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { generateUniqueId } from "../utils/idGenerator.js";
+import { ID_PREFIXES } from "../constants/roles.js";
 
 const MANAGEABLE_ROLE_OVERRIDES = {
   superadmin: ["admin", "subadmin", "doctor", "nurse", "receptionist", "labTechnician", "pharmacist", "patient"],
@@ -40,16 +47,6 @@ const buildUserSummary = (user) => ({
 });
 
 // Helper: Generate unique Employee ID (e.g., EMP-123456)
-const generateEmployeeId = async () => {
-  let isUnique = false;
-  let newId;
-  while (!isUnique) {
-    newId = `EMP-${Math.floor(100000 + Math.random() * 900000)}`;
-    const existing = await User.findOne({ employeeId: newId });
-    if (!existing) isUnique = true;
-  }
-  return newId;
-};
 
 // 1. Dashboard Stats
 export const getDashboardStats = async (req, res) => {
@@ -150,14 +147,29 @@ export const getDashboardStats = async (req, res) => {
 // 2. Create Staff User (hierarchy-aware)
 export const createStaffUser = async (req, res) => {
   try {
-    const { name, email, password, role, phone, dob, gender, address } = req.body;
+    const { 
+      name, email, password, role, 
+      firstName, middleName, lastName, 
+      phone, alternativeContact, dob, gender, bloodGroup,
+      address, city, state, postalCode, maritalStatus, nationality,
+      profileImage,
+      
+      // Professional fields
+      title, departmentId, joiningDate, roomNumber, experienceYears,
+      qualifications, education, certifications, skills,
+      licenseNumber, licenseExpiryDate, shift, specialization,
+      emergencyContactName, emergencyContactNumber, emergencyContactRelationship,
+      labSection
+    } = req.body;
+
     const creatorRole = normalizeSystemRole(req.user.role);
     const creatorId = req.user.id;
     const normalizedTargetRole = normalizeSystemRole(role);
 
     // Validate required fields
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ message: "name, email, password, and role are required." });
+    const fullName = name || `${firstName || ''} ${lastName || ''}`.trim();
+    if (!fullName || !email || !normalizedTargetRole) {
+      return res.status(400).json({ message: "name, email, and role are required." });
     }
 
     // Check hierarchy permissions
@@ -174,26 +186,102 @@ export const createStaffUser = async (req, res) => {
       return res.status(400).json({ message: "Email already exists." });
     }
 
-    // Hash password
-    const hashed = await bcrypt.hash(password, 10);
+    // Auto-generate temporary password if not provided
+    const tempPassword = password || Math.random().toString(36).slice(-12) + 'A1';
+    const hashed = await bcrypt.hash(tempPassword, 10);
 
     // Generate employee ID
-    const employeeId = await generateEmployeeId();
+    const employeeId = await generateUniqueId(User, "employeeId", ID_PREFIXES[normalizedTargetRole] || "EMP");
 
     // Create user
     const user = await User.create({
-      name,
+      name: fullName,
       email,
       password: hashed,
       role: normalizedTargetRole,
+      firstName,
+      middleName,
+      lastName,
       phone,
-      dob,
+      alternativeContact,
+      bloodGroup,
+      city,
+      state,
+      postalCode,
       gender,
       address,
+      maritalStatus,
+      nationality,
+      profileImage,
+      dob,
       employeeId,
       createdBy: creatorId,
-      onboardingStatus: "active",
+      onboardingStatus: "passwordResetPending",
+      mustResetPassword: true,
     });
+
+    // Create role-specific profile
+    const profileData = {
+      joiningDate: joiningDate || undefined,
+      experienceYears: experienceYears ? Number(experienceYears) : 0,
+      qualifications: qualifications || [],
+      education: education || [],
+      certifications: certifications || [],
+      skills: skills || [],
+      title: title || (normalizedTargetRole.charAt(0).toUpperCase() + normalizedTargetRole.slice(1)),
+      emergencyContact: {
+        name: emergencyContactName,
+        phone: emergencyContactNumber,
+        relationship: emergencyContactRelationship
+      }
+    };
+
+    if (normalizedTargetRole === "nurse") {
+      await Nurse.create({
+        ...profileData,
+        userId: user._id,
+        departmentId: departmentId || undefined,
+        licenseNumber,
+        licenseExpiryDate: licenseExpiryDate || undefined,
+        shift,
+        specialization,
+      });
+    } else if (normalizedTargetRole === "pharmacist") {
+      await Pharmacist.create({
+        ...profileData,
+        userId: user._id,
+        licenseNumber,
+        licenseExpiryDate: licenseExpiryDate || undefined,
+        shift,
+      });
+    } else if (normalizedTargetRole === "labTechnician") {
+      await LabTechnician.create({
+        ...profileData,
+        userId: user._id,
+        departmentId: departmentId || undefined,
+        licenseNumber,
+        licenseExpiryDate: licenseExpiryDate || undefined,
+        labSection: req.body.labSection,
+      });
+    } else if (normalizedTargetRole === "receptionist") {
+      await Receptionist.create({
+        ...profileData,
+        user: user._id,
+        employeeId: user.employeeId,
+        department: departmentId || undefined,
+      });
+    } else if (normalizedTargetRole === "doctor") {
+      // Create doctor profile if called from here (though usually called via doctorController)
+      await Doctor.create({
+        userId: user._id,
+        departmentId: departmentId || undefined,
+        title: title || "Consultant",
+        qualifications: qualifications || [],
+        experienceYears: experienceYears ? Number(experienceYears) : 0,
+        about: req.body.about || "",
+        onboardingStatus: "created",
+      });
+    }
 
     // Log the creation
     const creator = await User.findById(creatorId).select("name role");
@@ -216,11 +304,39 @@ export const createStaffUser = async (req, res) => {
       details: { role: user.role, email: user.email },
     });
 
+    // Send welcome email with credentials
+    const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
+    const emailBody = `Dear ${user.name},
+
+Your account has been successfully created in Mediflow Hospital Management System.
+
+Here are your login credentials:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Username: ${user.email}
+Password: ${tempPassword}
+Role: ${getRoleLabel(normalizedTargetRole)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Important: Please change your password after your first login.
+
+To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
+
+If you have any questions or issues, please contact the IT support team.
+
+Best regards,
+Mediflow Hospital Management System`;
+
+    await sendEmail(user.email, emailSubject, emailBody);
+
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,
       user: {
         ...buildUserSummary(user),
         createdBy: creator?.name,
+      },
+      temporaryCredential: {
+        temporaryPassword: tempPassword,
+        email: user.email,
       },
     });
   } catch (error) {

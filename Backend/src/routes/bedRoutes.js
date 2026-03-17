@@ -17,60 +17,56 @@ import {
 
 const router = express.Router();
 
-
 // ADD BED
 router.post(
     "/",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     createBed
 );
-
 
 // GET ALL BEDS
 router.get(
     "/",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     getBeds
 );
 
 router.get(
     "/admission-candidates",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     getAdmissionCandidates
 );
 
 router.get(
     "/admissions/current",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     getCurrentAdmissions
 );
 
 router.put(
     "/:id",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     updateBed
 );
-
 
 // ASSIGN BED
 router.put(
     "/assign/:id",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     assignBed
 );
-
 
 // DISCHARGE PATIENT
 router.put(
     "/discharge/:id",
     verifyAccessToken,
-    authorizeRoles("admin"),
+    authorizeRoles("superadmin", "admin", "subadmin"),
     dischargePatient
 );
 

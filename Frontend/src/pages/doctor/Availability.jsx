@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -12,11 +12,12 @@ import {
 } from '../../components/ui/select';
 import { FormDialog, LoadingSkeleton, ErrorState } from '../../components';
 import { availabilityApi } from '../../services/apiServices';
+
 import { useAuth } from '../../hooks';
 import { toast } from 'sonner';
 import { Clock, Plus, Edit2 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const DAYS_OF_WEEK = [
   'Sunday',
@@ -30,6 +31,8 @@ const DAYS_OF_WEEK = [
 
 export default function DoctorAvailability() {
   const { user } = useAuth();
+  const canEdit = ['admin', 'superadmin'].includes(user?.role);
+
   const [availabilities, setAvailabilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -40,9 +43,9 @@ export default function DoctorAvailability() {
     if (user?.id) {
       fetchAvailabilities();
     }
-  }, [user?.id]);
+  }, [user?.id, fetchAvailabilities]);
 
-  const fetchAvailabilities = async () => {
+  const fetchAvailabilities = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -53,9 +56,13 @@ export default function DoctorAvailability() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   const handleSubmit = async (formData) => {
+    if (!canEdit) {
+      toast.error('Availability is managed by the hospital admin.');
+      return;
+    }
     try {
       const submitData = {
         ...formData,
@@ -110,17 +117,21 @@ export default function DoctorAvailability() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Your Availability</h2>
-          <p className="text-muted-foreground">Set your working hours and appointment slots</p>
+          <p className="text-muted-foreground">
+            {canEdit ? 'Set your working hours and appointment slots' : 'Availability is managed by the hospital admin team.'}
+          </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingId(null);
-            setShowForm(true);
-          }}
-          className="shadow-md shadow-primary/20"
-        >
-          <Plus className="h-4 w-4 mr-2" /> Add Schedule
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={() => {
+              setEditingId(null);
+              setShowForm(true);
+            }}
+            className="shadow-md shadow-primary/20"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Schedule
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -143,17 +154,19 @@ export default function DoctorAvailability() {
                     <div className="text-xs text-muted-foreground">
                       Slot: {dayAvailability.slotDuration} mins
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-2 text-xs"
-                      onClick={() => {
-                        setEditingId(dayAvailability._id);
-                        setShowForm(true);
-                      }}
-                    >
-                      <Edit2 className="h-3 w-3 mr-1" /> Edit
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-2 text-xs"
+                        onClick={() => {
+                          setEditingId(dayAvailability._id);
+                          setShowForm(true);
+                        }}
+                      >
+                        <Edit2 className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <div className="text-xs text-muted-foreground text-center py-4">

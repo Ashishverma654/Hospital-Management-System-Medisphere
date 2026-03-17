@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { departmentApi, specializationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
   name: '',
@@ -46,7 +46,7 @@ export default function SpecializationManagement() {
 
   useEffect(() => {
     loadData();
-  }, [search, filterDepartment, filterStatus]);
+  }, [search, filterDepartment, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetForm = () => {
     setForm(initialForm);

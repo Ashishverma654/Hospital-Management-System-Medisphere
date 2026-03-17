@@ -4,7 +4,7 @@ const normalizeName = (value = "") => value.trim().replace(/\s+/g, " ");
 
 export const createLocation = async (req, res) => {
   try {
-    const { name, city, state, address, phone, email, mapUrl, locationType } = req.body;
+    const { name, city, state, address, pincode, phone, email, mapUrl, locationType } = req.body;
     const normalizedName = normalizeName(name);
 
     if (!normalizedName || !city || !address) {
@@ -21,6 +21,7 @@ export const createLocation = async (req, res) => {
       city: normalizeName(city),
       state: state?.trim?.() || "",
       address: address.trim(),
+      pincode,
       phone,
       email,
       mapUrl,
@@ -68,7 +69,7 @@ export const getAllLocations = async (req, res) => {
 export const updateLocation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, city, state, address, phone, email, mapUrl, locationType } = req.body;
+    const { name, city, state, address, pincode, phone, email, mapUrl, locationType } = req.body;
 
     const location = await HospitalLocation.findById(id);
     if (!location) {
@@ -90,6 +91,7 @@ export const updateLocation = async (req, res) => {
     location.city = city ? normalizeName(city) : location.city;
     location.state = state ?? location.state;
     location.address = address ?? location.address;
+    location.pincode = pincode ?? location.pincode;
     location.phone = phone ?? location.phone;
     location.email = email ?? location.email;
     location.mapUrl = mapUrl ?? location.mapUrl;

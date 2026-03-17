@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Award, MapPin, Stethoscope, ArrowRight, Users, Building2, Heart, Clock, Shield, Sparkles } from 'lucide-react';
 import { getHomepageContent } from '../../services/apiServices.js';
 import { staggerContainer, staggerItem, fadeInUp, fadeInLeft, fadeInRight } from '../../lib/animation-variants.js';
@@ -31,7 +31,8 @@ export default function Home() {
         });
         setError('');
       } catch (err) {
-        setError(err.response?.data?.message || 'Unable to load homepage content.');
+        console.error('Homepage Load Error:', err);
+        setError(err.response?.data?.message || 'Unable to connect to the healthcare server. Please ensure the backend is running.');
       } finally {
         setLoading(false);
       }
@@ -327,17 +328,54 @@ export default function Home() {
               </div>
               <div className="space-y-3">
                 {content.awards.map((award) => (
-                  <div key={award._id} className="rounded-xl border border-border bg-card p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-foreground">{award.title}</p>
-                        <p className="mt-0.5 text-sm text-muted-foreground">{award.organization}</p>
-                      </div>
-                      {award.year && (
-                        <span className="shrink-0 rounded-full bg-chart-5/10 px-2.5 py-1 text-xs font-semibold text-chart-5">
-                          {award.year}
-                        </span>
+                  <div key={award._id} className="group rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md hover:border-chart-5/30">
+                    <div className="flex gap-4">
+                      {award.image && (
+                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                          <img 
+                            src={award.image} 
+                            alt={award.title} 
+                            className="h-full w-full object-cover transition-transform group-hover:scale-110" 
+                          />
+                        </div>
                       )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground">{award.title}</p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                              <p className="text-sm text-muted-foreground">{award.organization}</p>
+                              {award.issuedByType && (
+                                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                  {award.issuedByType}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-center gap-2">
+                              <p className="text-xs text-primary font-medium">{award.category}</p>
+                              {award.year && (
+                                <span className="text-xs text-muted-foreground">•</span>
+                              )}
+                              {award.year && (
+                                <span className="text-xs text-muted-foreground">{award.year}</span>
+                              )}
+                            </div>
+                            {award.description && (
+                              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{award.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        {award.certificateUrl && (
+                          <a 
+                            href={award.certificateUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-chart-5 hover:underline"
+                          >
+                            View Certificate
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -418,7 +456,7 @@ export default function Home() {
   );
 }
 
-function SpotlightCard({ icon: Icon, title, description, ctaLabel, ctaTo }) {
+function SpotlightCard({ icon: Icon, title, description, ctaLabel, ctaTo }) { // eslint-disable-line no-unused-vars
   return (
     <motion.article
       variants={staggerItem}

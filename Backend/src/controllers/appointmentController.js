@@ -17,6 +17,13 @@ import { logAudit } from "../services/auditLogService.js";
 
 const OCCUPIED_SLOT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed"];
 
+const buildSlotsForDay = (availabilities = []) => {
+  const slots = availabilities
+    .flatMap((range) => generateSlots(range.startTime, range.endTime, range.slotDuration))
+    .filter(Boolean);
+  return Array.from(new Set(slots)).sort();
+};
+
 const resolveConsultationFee = ({ doctor, consultationMode, hospitalLocationId }) => {
   if (!doctor) return 0;
   if (consultationMode === "video" && doctor.consultationFeeVideo != null) {
@@ -99,7 +106,7 @@ export const bookAppointment = async (req, res) => {
     const actualDoctorId = doctor._id;
 
     // Check if slot is valid for doctor's availability
-    const dateObj = new Date(`${date}T00:00:00Z`);
+    const dateObj = new Date(`${date}T00:00:00`);
     const days = [
       "Sunday",
       "Monday",
@@ -109,24 +116,20 @@ export const bookAppointment = async (req, res) => {
       "Friday",
       "Saturday",
     ];
-    const day = days[dateObj.getUTCDay()];
+    const day = days[dateObj.getDay()];
 
-    const availability = await DoctorAvailability.findOne({
+    const availability = await DoctorAvailability.find({
       doctorId: actualDoctorId,
       dayOfWeek: day,
     });
 
-    if (!availability) {
+    if (!availability || availability.length === 0) {
       return res
         .status(400)
         .json({ message: `Doctor not available on ${day}` });
     }
 
-    const allSlots = generateSlots(
-      availability.startTime,
-      availability.endTime,
-      availability.slotDuration,
-    );
+    const allSlots = buildSlotsForDay(availability);
 
     if (!allSlots.includes(slot)) {
       return res
@@ -560,24 +563,20 @@ export const rescheduleAppointment = async (req, res) => {
       return res.status(400).json({ message: "Cannot reschedule to a past date." });
     }
 
-    const dateObj = new Date(`${date}T00:00:00Z`);
+    const dateObj = new Date(`${date}T00:00:00`);
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const day = days[dateObj.getUTCDay()];
+    const day = days[dateObj.getDay()];
 
-    const availability = await DoctorAvailability.findOne({
+    const availability = await DoctorAvailability.find({
       doctorId: appointment.doctorId,
       dayOfWeek: day,
     });
 
-    if (!availability) {
+    if (!availability || availability.length === 0) {
       return res.status(400).json({ message: `Doctor not available on ${day}` });
     }
 
-    const allSlots = generateSlots(
-      availability.startTime,
-      availability.endTime,
-      availability.slotDuration,
-    );
+    const allSlots = buildSlotsForDay(availability);
 
     if (!allSlots.includes(slot)) {
       return res.status(400).json({ message: "Invalid slot time for this doctor." });

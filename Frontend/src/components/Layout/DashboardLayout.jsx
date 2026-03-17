@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { AnimatePresence } from 'framer-motion';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 
 export default function DashboardLayout({ allowedRoles }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

@@ -34,8 +34,8 @@ export const getDoctorSlots = async (req, res) => {
     // Always use the internal doctor _id for availability lookup
     const actualDoctorId = doctor._id;
 
-    // Use a UTC date to be timezone-agnostic
-    const dateObj = new Date(`${date}T00:00:00Z`);
+    // Use local date to align with hospital operating day
+    const dateObj = new Date(`${date}T00:00:00`);
 
     if (isNaN(dateObj.getTime())) {
       return res
@@ -53,26 +53,28 @@ export const getDoctorSlots = async (req, res) => {
       "Saturday",
     ];
 
-    const day = days[dateObj.getUTCDay()];
+    const day = days[dateObj.getDay()];
 
-    const availability = await DoctorAvailability.findOne({
+    const availability = await DoctorAvailability.find({
       doctorId: actualDoctorId,
       dayOfWeek: day,
     });
 
-    if (!availability) {
+    if (!availability || availability.length === 0) {
       return res.status(404).json({
         message: `Doctor not available on ${day} `,
         date,
       });
     }
 
-    // Generate all potential slots
-    const allSlots = generateSlots(
-      availability.startTime,
-      availability.endTime,
-      availability.slotDuration,
-    );
+    // Generate all potential slots across multiple ranges
+    const allSlots = availability
+      .flatMap((range) =>
+        generateSlots(range.startTime, range.endTime, range.slotDuration),
+      )
+      .filter(Boolean);
+
+    const uniqueSlots = Array.from(new Set(allSlots)).sort();
 
     // Get already booked appointments for this doctor on this date
     const bookedAppointments = await Appointment.find(
@@ -87,11 +89,11 @@ export const getDoctorSlots = async (req, res) => {
     const bookedSlots = bookedAppointments.map((app) => app.slot);
 
     // Filter out booked slots
-    const availableSlots = allSlots.filter(
+    const availableSlots = uniqueSlots.filter(
       (slot) => !bookedSlots.includes(slot),
     );
 
-    res.json({ doctorId: actualDoctorId, date, availableSlots });
+    res.json({ doctorId: actualDoctorId, date, availableSlots, bookedSlots, allSlots: uniqueSlots });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

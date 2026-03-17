@@ -1,9 +1,9 @@
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Toaster } from 'sonner';
-import PublicPatientLayout from './components/Layout/PublicPatientLayout.jsx';
-import PatientPortalLayout from './components/Layout/PatientPortalLayout.jsx';
-import EmployeeAppLayout from './components/Layout/EmployeeAppLayout.jsx';
+import PublicPatientLayout from './components/layout/PublicPatientLayout.jsx';
+import PatientPortalLayout from './components/layout/PatientPortalLayout.jsx';
+import EmployeeAppLayout from './components/layout/EmployeeAppLayout.jsx';
 import PatientRoute from './routes/guards/PatientRoute.jsx';
 import EmployeeRoute from './routes/guards/EmployeeRoute.jsx';
 import Home from './pages/public/Home.jsx';
@@ -13,6 +13,7 @@ import PublicDoctorProfile from './pages/public/PublicDoctorProfile.jsx';
 import PatientLogin from './pages/auth/PatientLogin.jsx';
 import PatientRegister from './pages/auth/PatientRegister.jsx';
 import EmployeeLogin from './pages/auth/EmployeeLogin.jsx';
+import EmployeeForgotPassword from './pages/auth/EmployeeForgotPassword.jsx';
 import PatientDashboard from './pages/patient/Dashboard.jsx';
 import PatientAppointments from './pages/patient/Appointments.jsx';
 import PatientPrescriptions from './pages/patient/Prescriptions.jsx';
@@ -21,7 +22,9 @@ import PatientLabTests from './pages/patient/LabTests.jsx';
 import PatientLabReports from './pages/patient/LabReports.jsx';
 import PatientBilling from './pages/patient/Billing.jsx';
 import PatientBookAppointment from './pages/patient/BookAppointment.jsx';
-import PatientProfile from './pages/patient/Profile.jsx';
+import PatientBookingPreview from './pages/patient/BookingPreview.jsx';
+import ProfilePage from './pages/shared/ProfilePage.jsx';
+import ForcePasswordChange from './pages/auth/ForcePasswordChange.jsx';
 import PatientNotifications from './pages/patient/Notifications.jsx';
 import PatientTimeline from './pages/patient/Timeline.jsx';
 import GovernanceDashboard from './pages/employee/GovernanceDashboard.jsx';
@@ -37,15 +40,16 @@ import BedManagement from './pages/admin/BedManagement.jsx';
 import AdmissionManagement from './pages/admin/AdmissionManagement.jsx';
 import UserManagement from './pages/admin/UserManagement.jsx';
 import DoctorManagement from './pages/admin/DoctorManagement.jsx';
+import DoctorAvailabilityManagement from './pages/admin/DoctorAvailabilityManagement.jsx';
 import AwardManagement from './pages/admin/AwardManagement.jsx';
 import DepartmentManagement from './pages/admin/DepartmentManagement.jsx';
-import SpecializationManagement from './pages/admin/SpecializationManagement.jsx';
 import LocationManagement from './pages/admin/LocationManagement.jsx';
+import AddUserPage from './pages/admin/AddUserPage.jsx';
 import ReceptionistDashboard from './pages/receptionist/Dashboard.jsx';
 import PatientRegistration from './pages/receptionist/PatientRegistration.jsx';
 import AppointmentDesk from './pages/receptionist/AppointmentDesk.jsx';
 import PatientSearch from './pages/receptionist/PatientSearch.jsx';
-import DashboardLayout from './components/Layout/DashboardLayout.jsx';
+import DashboardLayout from './components/layout/DashboardLayout.jsx';
 import DoctorDashboard from './pages/doctor/Dashboard.jsx';
 import DoctorAppointments from './pages/doctor/Appointments.jsx';
 import DoctorPatients from './pages/doctor/Patients.jsx';
@@ -122,6 +126,10 @@ function App() {
               element={<PatientBookAppointment />}
             />
             <Route
+              path="/patient/booking-preview"
+              element={<PatientBookingPreview />}
+            />
+            <Route
               path="/patient/prescriptions"
               element={<PatientPrescriptions />}
             />
@@ -143,7 +151,7 @@ function App() {
             />
             <Route
               path="/patient/profile"
-              element={<PatientProfile />}
+              element={<ProfilePage />}
             />
             <Route
               path="/patient/notifications"
@@ -157,6 +165,8 @@ function App() {
         </Route>
 
         <Route path="/employee/login" element={<EmployeeLogin />} />
+        <Route path="/employee/forgot-password" element={<EmployeeForgotPassword />} />
+        <Route path="/force-password-change" element={<ForcePasswordChange />} />
         <Route path="/employee/unauthorized" element={<Unauthorized />} />
         <Route element={<EmployeeRoute allowedRoles={EMPLOYEE_ROLES} />}>
           <Route element={<EmployeeAppLayout />}>
@@ -204,12 +214,13 @@ function App() {
               <Route path="/employee/pharmacist/inventory" element={<PharmacistInventory />} />
               <Route path="/employee/pharmacist/history" element={<PharmacistHistory />} />
             </Route>
-            <Route path="/employee/profile" element={<AdminProfilePage />} />
+            <Route path="/employee/profile" element={<ProfilePage />} />
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'receptionist']} />}>
               <Route path="/employee/billing" element={<BillingManagement />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/doctors" element={<DoctorManagement />} />
+              <Route path="/employee/doctor-availability" element={<DoctorAvailabilityManagement />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/patients" element={<PatientManagement />} />
@@ -218,7 +229,6 @@ function App() {
               <Route path="/employee/admissions" element={<AdmissionManagement />} />
               <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
-              <Route path="/employee/specializations" element={<SpecializationManagement />} />
               <Route path="/employee/locations" element={<LocationManagement />} />
               <Route path="/employee/audit" element={<AuditHistoryPage />} />
               <Route path="/employee/settings" element={<HospitalSettingsPage />} />
@@ -226,6 +236,7 @@ function App() {
             <Route element={<EmployeeRoute allowedRoles={STAFF_MANAGEMENT_ROLES} />}>
               <Route path="/employee/users" element={<Navigate to="/employee/manage-roles" replace />} />
               <Route path="/employee/manage-roles" element={<UserManagement />} />
+              <Route path="/employee/manage-roles/add" element={<AddUserPage />} />
             </Route>
           </Route>
         </Route>
@@ -246,7 +257,7 @@ function App() {
 
         <Route path="/login" element={<Navigate to="/patient/login" replace />} />
         <Route path="/register" element={<Navigate to="/patient/register" replace />} />
-        <Route path="/forgot-password" element={<Navigate to="/employee/login" replace />} />
+        <Route path="/forgot-password" element={<Navigate to="/employee/forgot-password" replace />} />
         <Route path="/superadmin/*" element={<LegacyRoleRedirect role="superadmin" />} />
         <Route path="/admin/*" element={<LegacyRoleRedirect role="admin" />} />
         <Route path="/doctor/*" element={<LegacyRoleRedirect role="doctor" />} />

@@ -7,8 +7,8 @@ import { StatusBadge, DataTable, LoadingSkeleton, ErrorState } from '../../compo
 import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function DoctorAppointments() {
   const navigate = useNavigate();

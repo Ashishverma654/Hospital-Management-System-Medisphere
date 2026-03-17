@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { MapPin, Award, Building2, Users, Heart, Shield, Sparkles } from 'lucide-react';
 import { getAwards, getLocations } from '../../services/apiServices.js';
 import { SkeletonCard } from '../../components/ui/skeleton.jsx';
@@ -16,7 +16,7 @@ export default function PublicAbout() {
         const [awardData, locationData] = await Promise.all([getAwards(), getLocations()]);
         setAwards(Array.isArray(awardData) ? awardData : []);
         setLocations(Array.isArray(locationData) ? locationData : []);
-      } catch { } finally { setLoading(false); }
+      } catch { /* awards/locations are optional – silently degrade */ } finally { setLoading(false); }
     };
     loadData();
   }, []);
@@ -169,7 +169,7 @@ export default function PublicAbout() {
   );
 }
 
-function ValueCard({ icon: Icon, title, description }) {
+function ValueCard({ icon: Icon, title, description }) { // eslint-disable-line no-unused-vars
   return (
     <motion.article variants={staggerItem} className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">

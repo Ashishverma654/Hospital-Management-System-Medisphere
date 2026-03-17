@@ -4,8 +4,8 @@ import { toast } from 'sonner';
 import { updateUser } from '../../store/authSlice.js';
 import { getRoleLabel } from '../../auth/constants.js';
 import { userApi } from '../../services/apiServices.js';
-import { motion } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const initialForm = {
   name: '',

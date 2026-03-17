@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars -- used as motion.section in JSX
 import { Shield, Loader2, User, Stethoscope, Heart, FlaskConical, Pill, ClipboardList, Settings, Building2 } from 'lucide-react';
 import { EMPLOYEE_ROLE_OPTIONS, getEmployeeHomeRoute } from '../../auth/constants.js';
 import { loginEmployee } from '../../services/authService.js';
@@ -29,17 +29,20 @@ export default function EmployeeLogin() {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [cooldownNow, setCooldownNow] = useState(Date.now());
 
-  if (isAuthenticated && sessionType === 'employee') {
-    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
-  }
-
-  const updateField = (field, value) => setFormData((c) => ({ ...c, [field]: value }));
-
   useEffect(() => {
     if (!cooldownUntil) return;
     const timer = setInterval(() => setCooldownNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [cooldownUntil]);
+
+  if (isAuthenticated && sessionType === 'employee') {
+    if (user?.mustResetPassword) {
+      return <Navigate to="/force-password-change" replace />;
+    }
+    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
+  }
+
+  const updateField = (field, value) => setFormData((c) => ({ ...c, [field]: value }));
 
   const cooldownSeconds = Math.max(0, Math.ceil((cooldownUntil - cooldownNow) / 1000));
 
@@ -62,6 +65,12 @@ export default function EmployeeLogin() {
       dispatch(loginSuccess(auth));
       localStorage.setItem('mediflow_auth', JSON.stringify(auth));
       toast.success(`Signed in as ${auth.user.role}.`);
+
+      if (auth.user.mustResetPassword) {
+        navigate('/force-password-change', { replace: true });
+        return;
+      }
+
       const fallback = location.state?.from?.pathname?.startsWith('/employee')
         ? location.state.from.pathname
         : getEmployeeHomeRoute(auth.user.role);
@@ -145,6 +154,15 @@ export default function EmployeeLogin() {
                 onChange={(e) => updateField('password', e.target.value)} required
                 className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-white/30 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => navigate('/employee/forgot-password')}
+                  className="text-xs font-medium text-primary/80 hover:text-primary hover:underline transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
             </div>
 
             <button

@@ -1,4 +1,6 @@
 import Department from "../models/Department.js";
+import { logAudit } from "../services/auditLogService.js";
+import AuditLog from "../models/AuditLog.js";
 
 const normalizeName = (value = "") => value.trim().replace(/\s+/g, " ");
 
@@ -27,6 +29,14 @@ export const createDepartment = async (req, res) => {
       featureOrder: Number(featureOrder) || 0,
       createdBy: req.user?.id,
       updatedBy: req.user?.id,
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "department_created",
+      entityType: "Department",
+      entityId: department._id,
+      details: { name: department.name, code: department.code },
     });
 
     return res.status(201).json({
@@ -100,6 +110,14 @@ export const updateDepartment = async (req, res) => {
 
     await department.save();
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "department_updated",
+      entityType: "Department",
+      entityId: department._id,
+      details: { name: department.name, code: department.code },
+    });
+
     return res.json({
       message: "Department updated successfully.",
       department,
@@ -122,10 +140,32 @@ export const toggleDepartmentStatus = async (req, res) => {
     department.updatedBy = req.user?.id;
     await department.save();
 
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: department.isActive ? "department_activated" : "department_deactivated",
+      entityType: "Department",
+      entityId: department._id,
+      details: { isActive: department.isActive, name: department.name },
+    });
+
     return res.json({
       message: `Department ${department.isActive ? "activated" : "deactivated"} successfully.`,
       department,
     });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDepartmentHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const logs = await AuditLog.find({
+      entityType: "Department",
+      entityId: id,
+    }).sort({ createdAt: -1 });
+
+    return res.json(logs);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

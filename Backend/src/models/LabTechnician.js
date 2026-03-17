@@ -20,6 +20,17 @@ const labTechnicianSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    qualifications: [String],
+    education: [String],
+    joiningDate: Date,
+    experienceYears: {
+      type: Number,
+      default: 0,
+    },
+    about: String,
+    skills: [String],
+    licenseNumber: String,
+    licenseExpiryDate: Date,
     isActive: {
       type: Boolean,
       default: true,

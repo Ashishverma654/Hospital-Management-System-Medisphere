@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Heart, Phone, Mail, KeyRound, HelpCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import {
   findAccountForHelp,
@@ -67,6 +67,7 @@ export default function PatientLogin() {
   };
 
   if (isAuthenticated) {
+    if (user?.mustResetPassword) return <Navigate to="/force-password-change" replace />;
     if (sessionType === 'patient' && user?.role === 'patient') return <Navigate to="/patient/dashboard" replace />;
     return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
   }
@@ -75,6 +76,12 @@ export default function PatientLogin() {
     dispatch(loginSuccess({ user, token, sessionType }));
     localStorage.setItem('mediflow_auth', JSON.stringify({ user, token, sessionType }));
     toast.success(`Welcome back, ${user.name}!`);
+
+    if (user.mustResetPassword) {
+      navigate('/force-password-change', { replace: true });
+      return;
+    }
+
     const fallback = location.state?.from?.pathname?.startsWith('/patient') ? location.state.from.pathname : '/patient';
     navigate(fallback, { replace: true });
   };

@@ -32,6 +32,7 @@ import nurseRoutes from "./routes/nurseRoutes.js";
 import labTechRoutes from "./routes/labTechRoutes.js";
 import pharmacistRoutes from "./routes/pharmacistRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import fileRoutes from "./routes/fileRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import limiter from "./middlewares/rateLimiter.js";
 
@@ -137,6 +138,7 @@ app.use("/api/nurses", nurseRoutes);
 app.use("/api/lab-techs", labTechRoutes);
 app.use("/api/pharmacists", pharmacistRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/files", fileRoutes);
 app.use(errorHandler);
 
 export default app;
