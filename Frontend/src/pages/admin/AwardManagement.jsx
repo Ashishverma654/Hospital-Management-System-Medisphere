@@ -3,8 +3,8 @@ import { Button } from '../../components/ui/button';
 import { awardApi, doctorApi, locationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, Eye, EyeOff, Star, ArrowUpRight, Award as AwardIcon, History, Clock, User as UserIcon } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { staggerContainer } from '../../lib/animation-variants.js';
 
 const initialForm = {
   type: 'hospital',

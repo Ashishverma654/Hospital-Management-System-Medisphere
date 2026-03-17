@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { KeyRound, Lock, Loader2, ShieldCheck, ArrowRight } from 'lucide-react';
 import { userApi } from '../../services/apiServices';
 import { updateUser, logout } from '../../store/authSlice';

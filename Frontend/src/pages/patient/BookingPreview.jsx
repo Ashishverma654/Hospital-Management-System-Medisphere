@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { appointmentApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer } from '../../lib/animation-variants.js';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card.jsx';
 

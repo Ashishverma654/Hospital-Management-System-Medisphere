@@ -53,7 +53,7 @@ export default function UserManagement() {
   const [formLoading, setFormLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [specializations, setSpecializations] = useState([]);
+  const [, setSpecializations] = useState([]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

@@ -171,7 +171,7 @@ export default function WardManagement() {
 
   useEffect(() => {
     loadWardDetail(selectedWardId);
-  }, [selectedWardId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedWardId]);  
 
   const resetForm = () => {
     setForm(initialForm);

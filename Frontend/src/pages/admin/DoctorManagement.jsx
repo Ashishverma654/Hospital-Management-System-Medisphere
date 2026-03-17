@@ -95,13 +95,6 @@ export default function DoctorManagement() {
     setShowForm(false);
   };
 
-  const startCreate = () => {
-    setLastCredential(null);
-    setEditingDoctor(null);
-    setForm(initialForm);
-    setShowForm(true);
-  };
-
   const startEdit = (doctor) => {
     setLastCredential(null);
     setEditingDoctor(doctor);
@@ -607,8 +600,8 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
   };
 
   const [newSpecName, setNewSpecName] = useState('');
-  const [creatingSpec, setCreatingSpec] = useState(false);
 
+  // eslint-disable-next-line no-unused-vars
   const handleCreateSpecialization = async () => {
     if (!form.departmentId) {
       toast.error('Select a department first.');
@@ -618,16 +611,12 @@ function DoctorFormModal({ departments, form, locations, onChange, onClose, onSu
       toast.error('Enter a specialization name.');
       return;
     }
-    setCreatingSpec(true);
     try {
       await specializationApi.create({ name: newSpecName.trim(), departmentId: form.departmentId });
       toast.success('Specialization created.');
       setNewSpecName('');
-      await onRefreshSpecializations?.(form.departmentId);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to create specialization.');
-    } finally {
-      setCreatingSpec(false);
     }
   };
 

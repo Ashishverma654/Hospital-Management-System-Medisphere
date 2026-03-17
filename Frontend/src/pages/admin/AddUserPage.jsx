@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { 
   UserPlus, 
   Stethoscope, 
@@ -331,7 +331,7 @@ export default function AddUserPage() {
     </div>
   );
 
-  const renderSectionTab = (section, Icon) => (
+  const renderSectionTab = (section, Icon) => ( // eslint-disable-line no-unused-vars
     <button
       type="button"
       onClick={() => setActiveSection(section)}
@@ -1074,8 +1074,8 @@ function ArrayField({ label, placeholder, items = [], onAdd, onRemove, onChange 
   );
 }
 
-function UploadBox({ label, subtitle, icon: Icon, value, onSelect }) {
-  const fileInputRef = import.meta.env.PROD ? null : { current: null }; // placeholder
+function UploadBox({ label, subtitle, icon: Icon, value, onSelect }) { // eslint-disable-line no-unused-vars
+
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];

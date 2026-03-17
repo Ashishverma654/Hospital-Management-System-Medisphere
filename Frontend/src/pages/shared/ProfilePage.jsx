@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { 
   User, Mail, Phone, MapPin, Calendar, Droplets, 
   Shield, CreditCard, Save, Camera, Lock, Loader2,
@@ -89,6 +89,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
   const handleCancel = () => {
@@ -458,7 +459,7 @@ function SelectField({ label, value, onChange, options, disabled = false }) {
   );
 }
 
-function Badge({ icon: Icon, label }) {
+function Badge({ icon: Icon, label }) { // eslint-disable-line no-unused-vars
   return (
     <div className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-muted-foreground">
       <Icon className="h-4 w-4" />
@@ -467,7 +468,7 @@ function Badge({ icon: Icon, label }) {
   );
 }
 
-function StatusRow({ label, value, icon: Icon }) {
+function StatusRow({ label, value, icon: Icon }) { // eslint-disable-line no-unused-vars
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3 text-sm text-muted-foreground">

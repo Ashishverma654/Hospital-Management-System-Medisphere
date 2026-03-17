@@ -88,7 +88,7 @@ export default function DepartmentManagement() {
     try {
       const logs = await departmentApi.getHistory(item._id);
       setHistoryLogs(Array.isArray(logs) ? logs : []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load history.');
     } finally {
       setLoadingHistory(false);

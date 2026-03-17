@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/button';
 import { locationApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search, UserCheck, UserX, History, Clock, User, Calendar, Shield } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion'; 
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer } from '../../lib/animation-variants.js'; 
 import { INDIAN_STATES, STATE_DISTRICTS } from '../../utils/locationData.js';
 
