@@ -9,7 +9,7 @@ import { authorizeRoles, verifyAccessToken } from "../middlewares/authMiddleware
 
 const router = express.Router();
 
-router.get("/", verifyAccessToken, authorizeRoles("superadmin", "admin"), getAllLocations);
+router.get("/", verifyAccessToken, authorizeRoles("superadmin", "admin", "subadmin"), getAllLocations);
 router.post("/", verifyAccessToken, authorizeRoles("superadmin", "admin"), createLocation);
 router.put("/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), updateLocation);
 router.put("/:id/toggle-active", verifyAccessToken, authorizeRoles("superadmin", "admin"), toggleLocationStatus);

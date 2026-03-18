@@ -4,7 +4,7 @@ import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware
 
 const router = express.Router();
 
-router.get("/", verifyAccessToken, authorizeRoles("superadmin", "admin"), getAllDepartment);
+router.get("/", verifyAccessToken, authorizeRoles("superadmin", "admin", "subadmin"), getAllDepartment);
 router.post("/", verifyAccessToken, authorizeRoles("superadmin", "admin"), createDepartment);
 router.get("/:id/history", verifyAccessToken, authorizeRoles("superadmin", "admin"), getDepartmentHistory);
 router.put("/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), updateDepartment);
