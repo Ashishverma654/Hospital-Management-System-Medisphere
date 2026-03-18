@@ -23,6 +23,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import { generateUniqueId } from "../utils/idGenerator.js";
 import { ID_PREFIXES } from "../constants/roles.js";
 import mongoose from "mongoose";
+import logger from "../utils/logger.js";
 
 const MANAGEABLE_ROLE_OVERRIDES = {
   superadmin: ["admin", "subadmin", "doctor", "nurse", "receptionist", "labTechnician", "pharmacist", "patient"],
@@ -189,6 +190,7 @@ export const createStaffUser = async (req, res) => {
     if (!fullName || !email || !normalizedTargetRole) {
       return res.status(400).json({ message: "name, email, and role are required." });
     }
+    const normalizedEmail = email.trim().toLowerCase();
 
     // Check hierarchy permissions
     const allowedRoles = getCreatableRolesForRole(creatorRole);
@@ -199,7 +201,7 @@ export const createStaffUser = async (req, res) => {
     }
 
     // Check email uniqueness
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email: normalizedEmail });
     if (exists) {
       return res.status(400).json({ message: "Email already exists." });
     }
@@ -214,7 +216,7 @@ export const createStaffUser = async (req, res) => {
     console.log("CREATE_STAFF_USER: Creating base User document...");
     const user = await User.create({
       name: fullName,
-      email,
+      email: normalizedEmail,
       password: hashed,
       role: normalizedTargetRole,
       firstName,
@@ -351,42 +353,37 @@ export const createStaffUser = async (req, res) => {
     logCreation(); // Fire and forget
 
     // Send welcome email with credentials (non-blocking)
-    const triggerEmail = async () => {
-      // Add a small delay to ensure the request has responded first and doesn't interfere with networking
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      try {
-        console.log(`[BACKGROUND] Attempting to send email to ${user.email} for role ${normalizedTargetRole}...`);
+    try {
+      if (!user.email || !user.email.includes("@")) {
+        logger.error(`[EMAIL] Invalid email address: ${user.email}`);
+      } else {
+        logger.info(`[EMAIL] Attempting delivery to ${user.email} for role ${normalizedTargetRole}...`);
+
         const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
         const emailBody = `Dear ${user.name},
-    
-    Your account has been successfully created in Mediflow Hospital Management System.
-    
-    Here are your login credentials:
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    Username: ${user.email}
-    Password: ${tempPassword}
-    Role: ${getRoleLabel(normalizedTargetRole)}
-    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    
-    Important: Please change your password after your first login.
-    
-    To access your account, visit: ${process.env.FRONTEND_URL || 'https://hospital-management-system-beryl-two.vercel.app'}/employee/login
-    
-    If you have any questions or issues, please contact the IT support team.
-    
-    Best regards,
-    Mediflow Hospital Management System`;
-    
+
+Your account has been successfully created in Mediflow Hospital Management System.
+
+Here are your login credentials:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Username: ${user.email}
+Password: ${tempPassword}
+Role: ${getRoleLabel(normalizedTargetRole)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Important: Please change your password after your first login.
+
+To access your account, visit: ${process.env.FRONTEND_URL || "https://hospital-management-system-beryl-two.vercel.app"}/employee/login
+
+Best regards,
+Mediflow Hospital Management System`;
+
         await sendEmail(user.email, emailSubject, emailBody);
-        console.log(`[BACKGROUND] SUCCESS: Welcome email sent to: ${user.email}`);
-      } catch (emailErr) {
-        console.error(`[BACKGROUND] ERROR: Failed to send welcome email to ${user.email}:`, emailErr.message);
+        logger.info(`[EMAIL] SUCCESS: Welcome email sent to: ${user.email}`);
       }
-    };
-    
-    // Fire and forget
-    triggerEmail().catch(err => console.error("CRITICAL BACKGROUND EMAIL TASK FAILURE:", err));
+    } catch (emailErr) {
+      logger.error(`[EMAIL] FAILED for ${user.email}: ${emailErr.message}`);
+    }
 
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,

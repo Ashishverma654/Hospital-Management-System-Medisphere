@@ -11,12 +11,22 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+import { fileURLToPath } from "url";
+
 const logEmail = (message) => {
-  const logDir = path.join(process.cwd(), "logs");
-  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
-  const logFile = path.join(logDir, "email.log");
-  const timestamp = new Date().toISOString();
-  fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`);
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const logDir = path.resolve(__dirname, "../../logs");
+    
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+    const logFile = path.join(logDir, "email.log");
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logFile, `[${timestamp}] ${message}\n`);
+    console.log(`[EMAIL_LOGGER] ${message}`);
+  } catch (err) {
+    console.error("FAILED TO WRITE EMAIL LOG:", err.message);
+  }
 };
 
 export const sendEmail = async (to, subject, text) => {
