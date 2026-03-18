@@ -255,7 +255,9 @@ export default function AddUserPage() {
     setSubmitAttempted(true);
 
     if (Object.keys(errors).length > 0) {
-      toast.error('Please fix the errors before processing');
+      const firstError = Object.values(errors)[0];
+      toast.error(`Please fix errors: ${firstError}`);
+      console.log('Validation errors:', errors);
       return;
     }
 

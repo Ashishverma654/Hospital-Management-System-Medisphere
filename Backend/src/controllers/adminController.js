@@ -284,49 +284,59 @@ export const createStaffUser = async (req, res) => {
     }
 
     // Log the creation
-    const creator = await User.findById(creatorId).select("name role");
-    await CreationLog.create({
-      creatorId,
-      creatorName: creator?.name || "System",
-      creatorRole,
-      createdUserId: user._id,
-      createdUserName: user.name,
-      createdUserEmail: user.email,
-      createdUserRole: user.role,
-      action: "created",
-    });
+    try {
+      const creator = await User.findById(creatorId).select("name role");
+      await CreationLog.create({
+        creatorId,
+        creatorName: creator?.name || "System",
+        creatorRole,
+        createdUserId: user._id,
+        createdUserName: user.name,
+        createdUserEmail: user.email,
+        createdUserRole: user.role,
+        action: "created",
+      });
 
-    await logAudit({
-      actor: { id: creatorId, name: creator?.name, role: creatorRole },
-      action: "user_created",
-      entityType: "User",
-      entityId: user._id,
-      details: { role: user.role, email: user.email },
-    });
+      await logAudit({
+        actor: { id: creatorId, name: creator?.name, role: creatorRole },
+        action: "user_created",
+        entityType: "User",
+        entityId: user._id,
+        details: { role: user.role, email: user.email },
+      });
+      console.log(`Creation Log & Audit Log created for user: ${user.email}`);
+    } catch (logErr) {
+      console.error("SECONDARY LOGGING ERROR (NON-BLOCKING):", logErr);
+    }
 
     // Send welcome email with credentials
-    const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
-    const emailBody = `Dear ${user.name},
-
-Your account has been successfully created in Mediflow Hospital Management System.
-
-Here are your login credentials:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Username: ${user.email}
-Password: ${tempPassword}
-Role: ${getRoleLabel(normalizedTargetRole)}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Important: Please change your password after your first login.
-
-To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
-
-If you have any questions or issues, please contact the IT support team.
-
-Best regards,
-Mediflow Hospital Management System`;
-
-    await sendEmail(user.email, emailSubject, emailBody);
+    try {
+      const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
+      const emailBody = `Dear ${user.name},
+  
+  Your account has been successfully created in Mediflow Hospital Management System.
+  
+  Here are your login credentials:
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Username: ${user.email}
+  Password: ${tempPassword}
+  Role: ${getRoleLabel(normalizedTargetRole)}
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  Important: Please change your password after your first login.
+  
+  To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
+  
+  If you have any questions or issues, please contact the IT support team.
+  
+  Best regards,
+  Mediflow Hospital Management System`;
+  
+      await sendEmail(user.email, emailSubject, emailBody);
+      console.log(`Welcome email sent to: ${user.email}`);
+    } catch (emailErr) {
+      console.error("EMAIL SENDING ERROR (NON-BLOCKING):", emailErr);
+    }
 
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,
