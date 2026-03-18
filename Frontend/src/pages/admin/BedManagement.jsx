@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { bedApi, wardApi } from '../../services/apiServices.js';
+import { bedApi, wardApi, departmentApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -16,7 +16,9 @@ const initialBedForm = {
 export default function BedManagement() {
   const [beds, setBeds] = useState([]);
   const [wards, setWards] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [filterWard, setFilterWard] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showBedForm, setShowBedForm] = useState(false);
@@ -38,6 +40,15 @@ export default function BedManagement() {
     }
   };
 
+  const loadDepartments = async () => {
+    try {
+      const data = await departmentApi.getAll({ isActive: true });
+      setDepartments(Array.isArray(data) ? data : []);
+    } catch {
+      setDepartments([]);
+    }
+  };
+
   const loadBeds = async () => {
     try {
       const data = await bedApi.getAll({
@@ -45,7 +56,12 @@ export default function BedManagement() {
         wardId: filterWard || undefined,
         status: filterStatus || undefined,
       });
-      setBeds(Array.isArray(data) ? data : []);
+      let list = Array.isArray(data) ? data : [];
+      if (filterDepartment && !filterWard) {
+        const wardIdSet = new Set(wardOptions.map((ward) => ward._id));
+        list = list.filter((bed) => wardIdSet.has(bed.wardId?._id || bed.wardId));
+      }
+      setBeds(list);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load beds.');
     }
@@ -62,11 +78,23 @@ export default function BedManagement() {
 
   useEffect(() => {
     loadWards();
+    loadDepartments();
   }, []);
 
   useEffect(() => {
     loadBeds();
-  }, [search, filterWard, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterWard, filterStatus, filterDepartment]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const getDepartmentId = (ward) => ward.departmentId?._id || ward.departmentId || '';
+  const wardOptions = filterDepartment
+    ? wards.filter((ward) => getDepartmentId(ward) === filterDepartment)
+    : wards;
+
+  useEffect(() => {
+    if (filterWard && !wardOptions.some((ward) => ward._id === filterWard)) {
+      setFilterWard('');
+    }
+  }, [filterDepartment, wards]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (showAdmitForm) {
@@ -181,9 +209,22 @@ export default function BedManagement() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search bed number or ward" className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary" />
         </div>
+        <select
+          value={filterDepartment}
+          onChange={(event) => {
+            setFilterDepartment(event.target.value);
+            setFilterWard('');
+          }}
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+        >
+          <option value="">All departments</option>
+          {departments.map((dept) => (
+            <option key={dept._id} value={dept._id}>{dept.name}</option>
+          ))}
+        </select>
         <select value={filterWard} onChange={(event) => setFilterWard(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All wards</option>
-          {wards.map((ward) => (
+          {wardOptions.map((ward) => (
             <option key={ward._id} value={ward._id}>
               {ward.name}
             </option>

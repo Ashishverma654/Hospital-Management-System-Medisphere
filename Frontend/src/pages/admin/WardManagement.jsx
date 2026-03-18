@@ -42,6 +42,8 @@ export default function WardManagement() {
   const [selectedWardDetail, setSelectedWardDetail] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterWardId, setFilterWardId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -113,8 +115,13 @@ export default function WardManagement() {
       });
       const list = Array.isArray(data) ? data : [];
       setWards(list);
-      if (!selectedWardId && list.length) {
-        setSelectedWardId(list[0]._id);
+      const nextList = list.filter((ward) => {
+        if (filterDepartment && (ward.departmentId?._id || ward.departmentId) !== filterDepartment) return false;
+        if (filterWardId && ward._id !== filterWardId) return false;
+        return true;
+      });
+      if (!selectedWardId && nextList.length) {
+        setSelectedWardId(nextList[0]._id);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load wards.');
@@ -163,6 +170,17 @@ export default function WardManagement() {
     }
   };
 
+  const getDepartmentId = (ward) => ward.departmentId?._id || ward.departmentId || '';
+  const wardOptions = filterDepartment
+    ? wards.filter((ward) => getDepartmentId(ward) === filterDepartment)
+    : wards;
+
+  const filteredWards = wards.filter((ward) => {
+    if (filterDepartment && getDepartmentId(ward) !== filterDepartment) return false;
+    if (filterWardId && ward._id !== filterWardId) return false;
+    return true;
+  });
+
   useEffect(() => {
     loadWards();
     loadLocations();
@@ -171,8 +189,19 @@ export default function WardManagement() {
   }, [search, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (filterWardId && !wardOptions.some((ward) => ward._id === filterWardId)) {
+      setFilterWardId('');
+    }
+  }, [filterDepartment, wards]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (selectedWardId && !filteredWards.some((ward) => ward._id === selectedWardId)) {
+      const nextWardId = filteredWards[0]?._id || '';
+      setSelectedWardId(nextWardId);
+      return;
+    }
     loadWardDetail(selectedWardId);
-  }, [selectedWardId]);  
+  }, [selectedWardId, filterDepartment, filterWardId, wards]); // eslint-disable-line react-hooks/exhaustive-deps  
 
   const resetForm = () => {
     setForm(initialForm);
@@ -282,6 +311,29 @@ export default function WardManagement() {
             className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
+        <select
+          value={filterDepartment}
+          onChange={(event) => {
+            setFilterDepartment(event.target.value);
+            setFilterWardId('');
+          }}
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+        >
+          <option value="">All departments</option>
+          {departments.map((dept) => (
+            <option key={dept._id} value={dept._id}>{dept.name}</option>
+          ))}
+        </select>
+        <select
+          value={filterWardId}
+          onChange={(event) => setFilterWardId(event.target.value)}
+          className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary"
+        >
+          <option value="">All wards</option>
+          {wardOptions.map((ward) => (
+            <option key={ward._id} value={ward._id}>{ward.name}</option>
+          ))}
+        </select>
         <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
           <option value="">All statuses</option>
           <option value="true">Active</option>
@@ -312,12 +364,12 @@ export default function WardManagement() {
                     <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">Loading wards...</td>
                   </tr>
                 )}
-                {!loading && wards.length === 0 && (
+                {!loading && filteredWards.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">No wards found.</td>
                   </tr>
                 )}
-                {wards.map((ward) => (
+                {filteredWards.map((ward) => (
                   <tr key={ward._id} className="border-b border-border last:border-b-0">
                     <td className="px-4 py-3">
                       <button type="button" className="text-left" onClick={() => setSelectedWardId(ward._id)}>
