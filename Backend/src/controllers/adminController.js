@@ -340,6 +340,7 @@ Mediflow Hospital Management System`;
       },
     });
   } catch (error) {
+    console.error("ERROR IN CREATE_STAFF_USER:", error);
     return res.status(500).json({ message: error.message });
   }
 };
