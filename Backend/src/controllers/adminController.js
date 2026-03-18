@@ -22,6 +22,7 @@ import { logAudit } from "../services/auditLogService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { generateUniqueId } from "../utils/idGenerator.js";
 import { ID_PREFIXES } from "../constants/roles.js";
+import mongoose from "mongoose";
 
 const MANAGEABLE_ROLE_OVERRIDES = {
   superadmin: ["admin", "subadmin", "doctor", "nurse", "receptionist", "labTechnician", "pharmacist", "patient"],
@@ -47,6 +48,19 @@ const buildUserSummary = (user) => ({
 });
 
 // Helper: Generate unique Employee ID (e.g., EMP-123456)
+const sanitizeDate = (date) => {
+  if (!date || date === "" || date === "null" || date === "undefined") {
+    return undefined;
+  }
+  return date;
+};
+
+const sanitizeObjectId = (id) => {
+  if (!id || id === "" || id === "null" || id === "undefined" || !mongoose.Types.ObjectId.isValid(id)) {
+    return undefined;
+  }
+  return id;
+};
 
 // 1. Dashboard Stats
 export const getDashboardStats = async (req, res) => {
@@ -213,7 +227,7 @@ export const createStaffUser = async (req, res) => {
       maritalStatus,
       nationality,
       profileImage,
-      dob,
+      dob: sanitizeDate(dob),
       employeeId,
       createdBy: creatorId,
       onboardingStatus: "passwordResetPending",
@@ -222,7 +236,7 @@ export const createStaffUser = async (req, res) => {
 
     // Create role-specific profile
     const profileData = {
-      joiningDate: joiningDate || undefined,
+      joiningDate: sanitizeDate(joiningDate),
       experienceYears: experienceYears ? Number(experienceYears) : 0,
       qualifications: qualifications || [],
       education: education || [],
@@ -240,9 +254,9 @@ export const createStaffUser = async (req, res) => {
       await Nurse.create({
         ...profileData,
         userId: user._id,
-        departmentId: departmentId || undefined,
+        departmentId: sanitizeObjectId(departmentId),
         licenseNumber,
-        licenseExpiryDate: licenseExpiryDate || undefined,
+        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
         shift,
         specialization,
       });
@@ -251,16 +265,16 @@ export const createStaffUser = async (req, res) => {
         ...profileData,
         userId: user._id,
         licenseNumber,
-        licenseExpiryDate: licenseExpiryDate || undefined,
+        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
         shift,
       });
     } else if (normalizedTargetRole === "labTechnician") {
       await LabTechnician.create({
         ...profileData,
         userId: user._id,
-        departmentId: departmentId || undefined,
+        departmentId: sanitizeObjectId(departmentId),
         licenseNumber,
-        licenseExpiryDate: licenseExpiryDate || undefined,
+        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
         labSection: req.body.labSection,
       });
     } else if (normalizedTargetRole === "receptionist") {
@@ -268,18 +282,21 @@ export const createStaffUser = async (req, res) => {
         ...profileData,
         user: user._id,
         employeeId: user.employeeId,
-        department: departmentId || undefined,
+        department: sanitizeObjectId(departmentId),
       });
     } else if (normalizedTargetRole === "doctor") {
       // Create doctor profile if called from here (though usually called via doctorController)
       await Doctor.create({
         userId: user._id,
-        departmentId: departmentId || undefined,
+        departmentId: sanitizeObjectId(departmentId) || undefined,
         title: title || "Consultant",
         qualifications: qualifications || [],
         experienceYears: experienceYears ? Number(experienceYears) : 0,
         about: req.body.about || "",
         onboardingStatus: "created",
+        joiningDate: sanitizeDate(joiningDate),
+        licenseNumber,
+        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
       });
     }
 
