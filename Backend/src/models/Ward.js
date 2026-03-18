@@ -109,9 +109,15 @@ wardSchema.pre("validate", function (next) {
     this.wardCode = this.wardNumber.toUpperCase().replace(/\s+/g, "-");
   }
   if (this.occupiedBeds > this.bedCount) {
-    return next(new Error("Occupied beds cannot exceed total bed count."));
+    const err = new Error("Occupied beds cannot exceed total bed count.");
+    if (typeof next === "function") {
+      return next(err);
+    }
+    throw err;
   }
-  next();
+  if (typeof next === "function") {
+    return next();
+  }
 });
 
 export default mongoose.model("Ward", wardSchema);

@@ -26,6 +26,7 @@ import ThemeToggle from '../ThemeToggle.jsx';
 const buildNavItems = (role, homeRoute) => {
   const canManageUsers = STAFF_MANAGEMENT_ROLES.includes(role);
   const canAccessGovernance = ['superadmin', 'admin'].includes(role);
+  const canManageWardsBeds = ['superadmin', 'admin', 'subadmin'].includes(role);
   const canManageDoctors = ['superadmin', 'admin'].includes(role);
 
   const sections = [];
@@ -101,6 +102,16 @@ const buildNavItems = (role, homeRoute) => {
         { to: '/employee/doctor-availability', label: 'Doctor Availability', icon: Calendar },
         ...(canAccessGovernance ? [{ to: '/employee/patients', label: 'Patients', icon: Users }] : []),
         ...(canAccessGovernance ? [{ to: '/employee/billing', label: 'Billing', icon: CreditCard }] : []),
+      ],
+    });
+  }
+
+  if (canManageWardsBeds && !canAccessGovernance) {
+    sections.push({
+      label: 'Operations',
+      items: [
+        { to: '/employee/wards', label: 'Wards', icon: BedDouble },
+        { to: '/employee/beds', label: 'Beds', icon: BedDouble },
       ],
     });
   }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Award, MapPin, Stethoscope, ArrowRight, Users, Building2, Heart, Clock, Shield, Sparkles } from 'lucide-react';
 import { getHomepageContent } from '../../services/apiServices.js';
-import { staggerContainer, staggerItem, fadeInUp, fadeInLeft, fadeInRight } from '../../lib/animation-variants.js';
+import { staggerContainer, staggerItem, fadeInUp, fadeInLeft } from '../../lib/animation-variants.js';
 import { SkeletonCard } from '../../components/ui/skeleton.jsx';
 
 export default function Home() {

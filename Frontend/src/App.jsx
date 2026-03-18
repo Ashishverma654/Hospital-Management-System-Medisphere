@@ -222,10 +222,12 @@ function App() {
               <Route path="/employee/doctors" element={<DoctorManagement />} />
               <Route path="/employee/doctor-availability" element={<DoctorAvailabilityManagement />} />
             </Route>
-            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
-              <Route path="/employee/patients" element={<PatientManagement />} />
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'subadmin']} />}>
               <Route path="/employee/wards" element={<WardManagement />} />
               <Route path="/employee/beds" element={<BedManagement />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
+              <Route path="/employee/patients" element={<PatientManagement />} />
               <Route path="/employee/admissions" element={<AdmissionManagement />} />
               <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
