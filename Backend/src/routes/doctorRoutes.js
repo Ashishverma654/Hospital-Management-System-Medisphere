@@ -28,7 +28,7 @@ const router = express.Router();
 // Doctor dashboard
 router.get("/dashboard", verifyAccessToken, authorizeRoles("doctor"), getDoctorDashboard);
 
-router.get("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin"), getDoctorsAdmin);
+router.get("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin", "subadmin"), getDoctorsAdmin);
 router.post("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin"), createDoctor);
 router.get("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), getDoctorAdminById);
 router.put("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), updateDoctorAdmin);
