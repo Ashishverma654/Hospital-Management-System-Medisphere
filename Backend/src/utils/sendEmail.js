@@ -2,14 +2,26 @@ import nodemailer from "nodemailer";
 import fs from "fs";
 import path from "path";
 
-// Initialize transporter once
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const getEmailAuth = () => {
+  const user = (process.env.EMAIL_USER || "").trim();
+  const passRaw = process.env.EMAIL_PASS || "";
+  // App passwords are commonly copied with spaces; strip them safely.
+  const pass = `${passRaw}`.replace(/\s+/g, "");
+
+  if (!user || !pass) {
+    throw new Error("Email credentials are missing. Set EMAIL_USER and EMAIL_PASS.");
+  }
+
+  return { user, pass };
+};
+
+const createTransporter = () => {
+  const { user, pass } = getEmailAuth();
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+};
 
 import { fileURLToPath } from "url";
 
@@ -31,8 +43,9 @@ const logEmail = (message) => {
 
 export const sendEmail = async (to, subject, text) => {
   try {
+    const transporter = createTransporter();
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: (process.env.EMAIL_USER || "").trim(),
       to,
       subject,
       text,
