@@ -353,10 +353,13 @@ export const createStaffUser = async (req, res) => {
     logCreation(); // Fire and forget
 
     // Send welcome email with credentials (non-blocking)
-    try {
-      if (!user.email || !user.email.includes("@")) {
-        logger.error(`[EMAIL] Invalid email address: ${user.email}`);
-      } else {
+    const triggerEmail = async () => {
+      try {
+        if (!user.email || !user.email.includes("@")) {
+          logger.error(`[EMAIL] Invalid email address: ${user.email}`);
+          return;
+        }
+
         logger.info(`[EMAIL] Attempting delivery to ${user.email} for role ${normalizedTargetRole}...`);
 
         const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
@@ -380,10 +383,17 @@ Mediflow Hospital Management System`;
 
         await sendEmail(user.email, emailSubject, emailBody);
         logger.info(`[EMAIL] SUCCESS: Welcome email sent to: ${user.email}`);
+      } catch (emailErr) {
+        logger.error(`[EMAIL] FAILED for ${user.email}: ${emailErr.message}`);
       }
-    } catch (emailErr) {
-      logger.error(`[EMAIL] FAILED for ${user.email}: ${emailErr.message}`);
-    }
+    };
+
+    // Fire-and-forget to keep the API response fast and avoid client timeouts
+    setImmediate(() => {
+      triggerEmail().catch((err) => {
+        logger.error(`[EMAIL] Background task failed for ${user.email}: ${err.message}`);
+      });
+    });
 
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,
