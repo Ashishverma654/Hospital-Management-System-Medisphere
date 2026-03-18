@@ -1,4 +1,5 @@
 import Bed from "../models/Bed.js";
+import Department from "../models/Department.js";
 import Doctor from "../models/Doctor.js";
 import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
@@ -32,6 +33,8 @@ const mapRecommendation = (prescription) =>
           : null,
       }
     : null;
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const buildBedFilter = ({ wardId, status, search, isActive }) => {
   const filter = {};
@@ -219,7 +222,50 @@ export const updateBed = async (req, res) => {
 
 export const getBeds = async (req, res) => {
   try {
-    const beds = await Bed.find(buildBedFilter(req.query))
+    const filter = buildBedFilter(req.query);
+    const departmentName = req.query.departmentName?.trim();
+    let departmentId = req.query.departmentId?.trim();
+    const wardName = req.query.wardName?.trim();
+
+    if (!departmentId && departmentName) {
+      const department = await Department.findOne({
+        name: { $regex: `^${escapeRegex(departmentName)}$`, $options: "i" },
+      }).select("_id");
+      if (!department) {
+        return res.json([]);
+      }
+      departmentId = department._id;
+    }
+
+    if (departmentId || wardName) {
+      const wardQuery = {};
+      if (departmentId) wardQuery.departmentId = departmentId;
+      if (wardName) {
+        const wardPattern = escapeRegex(wardName.trim());
+        wardQuery.$or = [
+          { name: { $regex: wardPattern, $options: "i" } },
+          { wardNumber: { $regex: wardPattern, $options: "i" } },
+          { wardCode: { $regex: wardPattern, $options: "i" } },
+        ];
+      }
+
+      const wardIds = (await Ward.find(wardQuery).select("_id")).map((ward) => String(ward._id));
+      if (!wardIds.length) {
+        return res.json([]);
+      }
+
+      if (filter.wardId) {
+        const wardIdValue = String(filter.wardId);
+        if (!wardIds.includes(wardIdValue)) {
+          return res.json([]);
+        }
+        filter.wardId = wardIdValue;
+      } else {
+        filter.wardId = { $in: wardIds };
+      }
+    }
+
+    const beds = await Bed.find(filter)
       .populate("wardId", "name wardNumber wardType defaultPrice")
       .populate("patientId", "name patientId")
       .populate({ path: "patientProfileId", populate: { path: "userId", select: "name email patientId" } })

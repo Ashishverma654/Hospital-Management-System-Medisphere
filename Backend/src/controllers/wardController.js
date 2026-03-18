@@ -1,7 +1,10 @@
 import Bed from "../models/Bed.js";
+import Department from "../models/Department.js";
 import Ward from "../models/Ward.js";
 import AuditLog from "../models/AuditLog.js";
 import { logAudit } from "../services/auditLogService.js";
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const buildWardFilter = ({ search, isActive, wardType }) => {
   const filter = {};
@@ -123,7 +126,25 @@ const generateBedsForWard = async (ward, count, startFrom = 1) => {
 
 export const listWards = async (req, res) => {
   try {
-    const wards = await Ward.find(buildWardFilter(req.query))
+    const filter = buildWardFilter(req.query);
+    const departmentName = req.query.departmentName?.trim();
+    let departmentId = req.query.departmentId?.trim();
+
+    if (!departmentId && departmentName) {
+      const department = await Department.findOne({
+        name: { $regex: `^${escapeRegex(departmentName)}$`, $options: "i" },
+      }).select("_id");
+      if (!department) {
+        return res.json([]);
+      }
+      departmentId = department._id;
+    }
+
+    if (departmentId) {
+      filter.departmentId = departmentId;
+    }
+
+    const wards = await Ward.find(filter)
       .populate("hospitalLocationId", "name city")
       .populate("departmentId", "name")
       .populate("wardInCharge", "name role")

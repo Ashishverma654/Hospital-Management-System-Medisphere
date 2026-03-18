@@ -33,7 +33,10 @@ export default function BedManagement() {
 
   const loadWards = async () => {
     try {
-      const data = await wardApi.getAll({ isActive: true });
+      const data = await wardApi.getAll({
+        isActive: true,
+        departmentId: filterDepartment || undefined,
+      });
       setWards(Array.isArray(data) ? data : []);
     } catch {
       setWards([]);
@@ -55,13 +58,9 @@ export default function BedManagement() {
         search,
         wardId: filterWard || undefined,
         status: filterStatus || undefined,
+        departmentId: filterDepartment || undefined,
       });
-      let list = Array.isArray(data) ? data : [];
-      if (filterDepartment && !filterWard) {
-        const wardIdSet = new Set(wardOptions.map((ward) => ward._id));
-        list = list.filter((bed) => wardIdSet.has(bed.wardId?._id || bed.wardId));
-      }
-      setBeds(list);
+      setBeds(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load beds.');
     }
@@ -79,7 +78,11 @@ export default function BedManagement() {
   useEffect(() => {
     loadWards();
     loadDepartments();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadWards();
+  }, [filterDepartment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadBeds();

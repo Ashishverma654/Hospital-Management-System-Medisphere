@@ -112,6 +112,7 @@ export default function WardManagement() {
       const data = await wardApi.getAll({
         search,
         isActive: filterStatus || undefined,
+        departmentId: filterDepartment || undefined,
       });
       const list = Array.isArray(data) ? data : [];
       setWards(list);
@@ -186,7 +187,7 @@ export default function WardManagement() {
     loadLocations();
     loadDepartments();
     loadDoctors();
-  }, [search, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filterStatus, filterDepartment]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (filterWardId && !wardOptions.some((ward) => ward._id === filterWardId)) {
