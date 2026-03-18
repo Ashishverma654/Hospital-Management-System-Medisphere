@@ -322,59 +322,65 @@ export const createStaffUser = async (req, res) => {
       // ignore
     }
 
-    // Log the creation
-    try {
-      await CreationLog.create({
-        creatorId,
-        creatorName,
-        creatorRole,
-        createdUserId: user._id,
-        createdUserName: user.name,
-        createdUserEmail: user.email,
-        createdUserRole: user.role,
-        action: "created",
-      });
+    // Log the creation (non-blocking)
+    const logCreation = async () => {
+      try {
+        await CreationLog.create({
+          creatorId,
+          creatorName,
+          creatorRole,
+          createdUserId: user._id,
+          createdUserName: user.name,
+          createdUserEmail: user.email,
+          createdUserRole: user.role,
+          action: "created",
+        });
 
-      await logAudit({
-        actor: { id: creatorId, name: creatorName, role: creatorRole },
-        action: "user_created",
-        entityType: "User",
-        entityId: user._id,
-        details: { role: user.role, email: user.email },
-      });
-      console.log(`Creation Log & Audit Log created for user: ${user.email}`);
-    } catch (logErr) {
-      console.error("SECONDARY LOGGING ERROR (NON-BLOCKING):", logErr);
-    }
+        await logAudit({
+          actor: { id: creatorId, name: creatorName, role: creatorRole },
+          action: "user_created",
+          entityType: "User",
+          entityId: user._id,
+          details: { role: user.role, email: user.email },
+        });
+        console.log(`Creation Log & Audit Log triggered in background for user: ${user.email}`);
+      } catch (logErr) {
+        console.error("SECONDARY LOGGING ERROR (BACKGROUND):", logErr);
+      }
+    };
+    logCreation(); // Fire and forget
 
-    // Send welcome email with credentials
-    try {
-      const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
-      const emailBody = `Dear ${user.name},
-  
-  Your account has been successfully created in Mediflow Hospital Management System.
-  
-  Here are your login credentials:
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Username: ${user.email}
-  Password: ${tempPassword}
-  Role: ${getRoleLabel(normalizedTargetRole)}
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  
-  Important: Please change your password after your first login.
-  
-  To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
-  
-  If you have any questions or issues, please contact the IT support team.
-  
-  Best regards,
-  Mediflow Hospital Management System`;
-  
-      await sendEmail(user.email, emailSubject, emailBody);
-      console.log(`Welcome email sent to: ${user.email}`);
-    } catch (emailErr) {
-      console.error("EMAIL SENDING ERROR (NON-BLOCKING):", emailErr);
-    }
+    // Send welcome email with credentials (non-blocking)
+    const triggerEmail = async () => {
+      try {
+        const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
+        const emailBody = `Dear ${user.name},
+    
+    Your account has been successfully created in Mediflow Hospital Management System.
+    
+    Here are your login credentials:
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    Username: ${user.email}
+    Password: ${tempPassword}
+    Role: ${getRoleLabel(normalizedTargetRole)}
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    Important: Please change your password after your first login.
+    
+    To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
+    
+    If you have any questions or issues, please contact the IT support team.
+    
+    Best regards,
+    Mediflow Hospital Management System`;
+    
+        await sendEmail(user.email, emailSubject, emailBody);
+        console.log(`Welcome email triggered in background for: ${user.email}`);
+      } catch (emailErr) {
+        console.error("EMAIL SENDING ERROR (BACKGROUND):", emailErr);
+      }
+    };
+    triggerEmail(); // Fire and forget
 
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,
