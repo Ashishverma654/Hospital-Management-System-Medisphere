@@ -352,7 +352,11 @@ export const createStaffUser = async (req, res) => {
 
     // Send welcome email with credentials (non-blocking)
     const triggerEmail = async () => {
+      // Add a small delay to ensure the request has responded first and doesn't interfere with networking
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       try {
+        console.log(`[BACKGROUND] Attempting to send email to ${user.email} for role ${normalizedTargetRole}...`);
         const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
         const emailBody = `Dear ${user.name},
     
@@ -367,7 +371,7 @@ export const createStaffUser = async (req, res) => {
     
     Important: Please change your password after your first login.
     
-    To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
+    To access your account, visit: ${process.env.FRONTEND_URL || 'https://hospital-management-system-beryl-two.vercel.app'}/employee/login
     
     If you have any questions or issues, please contact the IT support team.
     
@@ -375,12 +379,14 @@ export const createStaffUser = async (req, res) => {
     Mediflow Hospital Management System`;
     
         await sendEmail(user.email, emailSubject, emailBody);
-        console.log(`Welcome email triggered in background for: ${user.email}`);
+        console.log(`[BACKGROUND] SUCCESS: Welcome email sent to: ${user.email}`);
       } catch (emailErr) {
-        console.error("EMAIL SENDING ERROR (BACKGROUND):", emailErr);
+        console.error(`[BACKGROUND] ERROR: Failed to send welcome email to ${user.email}:`, emailErr.message);
       }
     };
-    triggerEmail(); // Fire and forget
+    
+    // Fire and forget
+    triggerEmail().catch(err => console.error("CRITICAL BACKGROUND EMAIL TASK FAILURE:", err));
 
     return res.status(201).json({
       message: `${getRoleLabel(role)} created successfully.`,
