@@ -283,12 +283,20 @@ export const createStaffUser = async (req, res) => {
       });
     }
 
-    // Log the creation
+    // Fetch creator info (used in logging + response)
+    let creatorName = "System";
     try {
       const creator = await User.findById(creatorId).select("name role");
+      creatorName = creator?.name || "System";
+    } catch {
+      // ignore
+    }
+
+    // Log the creation
+    try {
       await CreationLog.create({
         creatorId,
-        creatorName: creator?.name || "System",
+        creatorName,
         creatorRole,
         createdUserId: user._id,
         createdUserName: user.name,
@@ -298,7 +306,7 @@ export const createStaffUser = async (req, res) => {
       });
 
       await logAudit({
-        actor: { id: creatorId, name: creator?.name, role: creatorRole },
+        actor: { id: creatorId, name: creatorName, role: creatorRole },
         action: "user_created",
         entityType: "User",
         entityId: user._id,
@@ -342,7 +350,7 @@ export const createStaffUser = async (req, res) => {
       message: `${getRoleLabel(role)} created successfully.`,
       user: {
         ...buildUserSummary(user),
-        createdBy: creator?.name,
+        createdBy: creatorName,
       },
       temporaryCredential: {
         temporaryPassword: tempPassword,
