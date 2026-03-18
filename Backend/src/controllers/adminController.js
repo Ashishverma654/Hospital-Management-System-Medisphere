@@ -176,9 +176,13 @@ export const createStaffUser = async (req, res) => {
       labSection
     } = req.body;
 
+    console.log("CREATE_STAFF_USER: Incoming request", { body: req.body, user: req.user });
+    
     const creatorRole = normalizeSystemRole(req.user.role);
     const creatorId = req.user.id;
     const normalizedTargetRole = normalizeSystemRole(role);
+
+    console.log("CREATE_STAFF_USER: Normalized roles", { creatorRole, normalizedTargetRole, creatorId });
 
     // Validate required fields
     const fullName = name || `${firstName || ''} ${lastName || ''}`.trim();
@@ -207,7 +211,7 @@ export const createStaffUser = async (req, res) => {
     // Generate employee ID
     const employeeId = await generateUniqueId(User, "employeeId", ID_PREFIXES[normalizedTargetRole] || "EMP");
 
-    // Create user
+    console.log("CREATE_STAFF_USER: Creating base User document...");
     const user = await User.create({
       name: fullName,
       email,
@@ -233,8 +237,9 @@ export const createStaffUser = async (req, res) => {
       onboardingStatus: "passwordResetPending",
       mustResetPassword: true,
     });
+    console.log("CREATE_STAFF_USER: Base User created", { userId: user._id, employeeId: user.employeeId });
 
-    // Create role-specific profile
+    // Create role-specific profile object
     const profileData = {
       joiningDate: sanitizeDate(joiningDate),
       experienceYears: experienceYears ? Number(experienceYears) : 0,
@@ -250,54 +255,62 @@ export const createStaffUser = async (req, res) => {
       }
     };
 
-    if (normalizedTargetRole === "nurse") {
-      await Nurse.create({
-        ...profileData,
-        userId: user._id,
-        departmentId: sanitizeObjectId(departmentId),
-        licenseNumber,
-        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
-        shift,
-        specialization,
-      });
-    } else if (normalizedTargetRole === "pharmacist") {
-      await Pharmacist.create({
-        ...profileData,
-        userId: user._id,
-        licenseNumber,
-        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
-        shift,
-      });
-    } else if (normalizedTargetRole === "labTechnician") {
-      await LabTechnician.create({
-        ...profileData,
-        userId: user._id,
-        departmentId: sanitizeObjectId(departmentId),
-        licenseNumber,
-        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
-        labSection: req.body.labSection,
-      });
-    } else if (normalizedTargetRole === "receptionist") {
-      await Receptionist.create({
-        ...profileData,
-        user: user._id,
-        employeeId: user.employeeId,
-        department: sanitizeObjectId(departmentId),
-      });
-    } else if (normalizedTargetRole === "doctor") {
-      // Create doctor profile if called from here (though usually called via doctorController)
-      await Doctor.create({
-        userId: user._id,
-        departmentId: sanitizeObjectId(departmentId) || undefined,
-        title: title || "Consultant",
-        qualifications: qualifications || [],
-        experienceYears: experienceYears ? Number(experienceYears) : 0,
-        about: req.body.about || "",
-        onboardingStatus: "created",
-        joiningDate: sanitizeDate(joiningDate),
-        licenseNumber,
-        licenseExpiryDate: sanitizeDate(licenseExpiryDate),
-      });
+    console.log("CREATE_STAFF_USER: Creating role-specific profile for", normalizedTargetRole);
+    try {
+      if (normalizedTargetRole === "nurse") {
+        await Nurse.create({
+          ...profileData,
+          userId: user._id,
+          departmentId: sanitizeObjectId(departmentId),
+          licenseNumber,
+          licenseExpiryDate: sanitizeDate(licenseExpiryDate),
+          shift,
+          specialization,
+        });
+      } else if (normalizedTargetRole === "pharmacist") {
+        await Pharmacist.create({
+          ...profileData,
+          userId: user._id,
+          licenseNumber,
+          licenseExpiryDate: sanitizeDate(licenseExpiryDate),
+          shift,
+        });
+      } else if (normalizedTargetRole === "labTechnician") {
+        await LabTechnician.create({
+          ...profileData,
+          userId: user._id,
+          departmentId: sanitizeObjectId(departmentId),
+          licenseNumber,
+          licenseExpiryDate: sanitizeDate(licenseExpiryDate),
+          labSection: req.body.labSection,
+        });
+      } else if (normalizedTargetRole === "receptionist") {
+        await Receptionist.create({
+          ...profileData,
+          user: user._id,
+          employeeId: user.employeeId,
+          department: sanitizeObjectId(departmentId),
+        });
+      } else if (normalizedTargetRole === "doctor") {
+        await Doctor.create({
+          userId: user._id,
+          departmentId: sanitizeObjectId(departmentId) || undefined,
+          title: title || "Consultant",
+          qualifications: qualifications || [],
+          experienceYears: experienceYears ? Number(experienceYears) : 0,
+          about: req.body.about || "",
+          onboardingStatus: "created",
+          joiningDate: sanitizeDate(joiningDate),
+          licenseNumber,
+          licenseExpiryDate: sanitizeDate(licenseExpiryDate),
+        });
+      }
+      console.log("CREATE_STAFF_USER: Role-specific profile created successfully");
+    } catch (profileErr) {
+      console.error("CRITICAL ERROR: Role-specific profile creation failed", profileErr);
+      // If profile creation fails, we might want to delete the user to avoid orphaned records
+      // But for now, let's just throw the error so the 500 block catches it and we see it
+      throw new Error(`Profile creation failed: ${profileErr.message}`);
     }
 
     // Fetch creator info (used in logging + response)
@@ -376,7 +389,24 @@ export const createStaffUser = async (req, res) => {
     });
   } catch (error) {
     console.error("ERROR IN CREATE_STAFF_USER:", error);
-    return res.status(500).json({ message: error.message });
+    
+    let errorMessage = error.message;
+
+    // Handle Mongoose Validation Error
+    if (error.name === "ValidationError") {
+      errorMessage = Object.values(error.errors).map(val => val.message).join(", ");
+    } 
+    // Handle Mongoose Duplicate Key Error
+    else if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      errorMessage = `Duplicate value for field: ${field}. Please use another value.`;
+    }
+
+    return res.status(500).json({ 
+      success: false, 
+      message: errorMessage,
+      details: error.name === "ValidationError" ? error.errors : undefined
+    });
   }
 };
 

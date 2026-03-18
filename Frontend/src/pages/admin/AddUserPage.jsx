@@ -296,6 +296,7 @@ export default function AddUserPage() {
         navigate('/employee/manage-roles');
       }
     } catch (error) {
+      console.error('User creation failed:', error.response?.data || error.message);
       toast.error(error.response?.data?.message || 'Failed to create user');
     } finally {
       setLoading(false);
