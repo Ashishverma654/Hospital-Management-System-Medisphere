@@ -396,7 +396,21 @@ If you have any questions or issues, please contact the IT support team.
 Best regards,
 Mediflow Hospital Management System`;
 
-    await sendEmail(user.email, emailSubject, emailBody);
+    const triggerEmail = async () => {
+      try {
+        await sendEmail(user.email, emailSubject, emailBody);
+        console.log(`[EMAIL] Doctor welcome email sent to: ${user.email}`);
+      } catch (emailErr) {
+        console.error(`[EMAIL] Doctor welcome email failed for ${user.email}:`, emailErr?.message || emailErr);
+      }
+    };
+
+    // Fire-and-forget to avoid client timeouts
+    setImmediate(() => {
+      triggerEmail().catch((err) => {
+        console.error(`[EMAIL] Doctor welcome email background task failed for ${user.email}:`, err?.message || err);
+      });
+    });
 
     return res.status(201).json({
       message: "Doctor created successfully.",

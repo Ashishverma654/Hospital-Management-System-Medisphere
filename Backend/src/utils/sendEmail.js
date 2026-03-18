@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import https from "https";
 import fs from "fs";
 import path from "path";
 
@@ -23,6 +24,60 @@ const createTransporter = () => {
   });
 };
 
+const sendResendEmail = ({ to, subject, text }) =>
+  new Promise((resolve, reject) => {
+    const apiKey = (process.env.RESEND_API_KEY || "").trim();
+    const from =
+      (process.env.RESEND_FROM || process.env.EMAIL_USER || "").trim();
+
+    if (!apiKey) {
+      return reject(new Error("RESEND_API_KEY is missing."));
+    }
+    if (!from) {
+      return reject(new Error("RESEND_FROM (or EMAIL_USER) is missing."));
+    }
+
+    const payload = JSON.stringify({
+      from,
+      to,
+      subject,
+      text,
+    });
+
+    const request = https.request(
+      {
+        hostname: "api.resend.com",
+        path: "/emails",
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(payload),
+        },
+        timeout: 15000,
+      },
+      (response) => {
+        let body = "";
+        response.on("data", (chunk) => {
+          body += chunk;
+        });
+        response.on("end", () => {
+          if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
+            return resolve({ status: response.statusCode, body });
+          }
+          return reject(new Error(`Resend API error (${response.statusCode}): ${body}`));
+        });
+      }
+    );
+
+    request.on("timeout", () => {
+      request.destroy(new Error("Resend API request timeout"));
+    });
+    request.on("error", (err) => reject(err));
+    request.write(payload);
+    request.end();
+  });
+
 import { fileURLToPath } from "url";
 
 const logEmail = (message) => {
@@ -43,6 +98,12 @@ const logEmail = (message) => {
 
 export const sendEmail = async (to, subject, text) => {
   try {
+    if (process.env.RESEND_API_KEY) {
+      const info = await sendResendEmail({ to, subject, text });
+      logEmail(`SUCCESS: Resend email sent to ${to}. Status: ${info.status}`);
+      return info;
+    }
+
     const transporter = createTransporter();
     const mailOptions = {
       from: (process.env.EMAIL_USER || "").trim(),
