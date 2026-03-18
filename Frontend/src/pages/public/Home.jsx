@@ -261,10 +261,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Departments & Specializations ─────────────────────── */}
+      {/* ── Departments ─────────────────────── */}
       <section className="px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-2">
+          <div className="grid gap-10">
             {/* Departments */}
             <motion.div {...fadeInLeft}>
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Clinical</span>
@@ -285,25 +285,6 @@ export default function Home() {
                 ))}
                 {!loading && content.featuredDepartments.length === 0 && (
                   <p className="text-sm text-muted-foreground">Departments will appear here once published.</p>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Specializations */}
-            <motion.div {...fadeInRight}>
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Expertise</span>
-              <h2 className="mt-2 text-2xl font-bold text-foreground">Specializations</h2>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {content.specializations.map((item) => (
-                  <span
-                    key={item._id}
-                    className="rounded-full border border-border bg-card px-4 py-2 text-sm text-foreground transition-colors hover:bg-primary/5 hover:border-primary/30"
-                  >
-                    {item.name}
-                  </span>
-                ))}
-                {!loading && content.specializations.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Specializations will appear here once configured.</p>
                 )}
               </div>
             </motion.div>
