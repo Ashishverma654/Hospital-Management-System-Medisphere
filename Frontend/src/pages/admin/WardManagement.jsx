@@ -50,6 +50,7 @@ export default function WardManagement() {
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [bedPreview, setBedPreview] = useState([]);
+  const isObjectId = (value) => /^[a-fA-F0-9]{24}$/.test(String(value || ''));
 
   // Bed Preview Logic
   useEffect(() => {
@@ -218,7 +219,7 @@ export default function WardManagement() {
       hospitalLocationId: form.hospitalLocationId || undefined,
       departmentId: form.departmentId || undefined,
       wardInCharge: form.wardInCharge || undefined,
-      assignedDoctor: form.assignedDoctor || undefined,
+      assignedDoctor: isObjectId(form.assignedDoctor) ? form.assignedDoctor : undefined,
       lastSanitized: form.lastSanitized || undefined,
     };
 
@@ -355,7 +356,7 @@ export default function WardManagement() {
                               defaultPrice: ward.defaultPrice ?? '',
                               hospitalLocationId: ward.hospitalLocationId?._id || '',
                               wardInCharge: ward.wardInCharge?._id || ward.wardInCharge || '',
-                              assignedDoctor: ward.assignedDoctor?._id || ward.assignedDoctor || '',
+                              assignedDoctor: ward.assignedDoctor?._id || ward.assignedDoctor?.id || ward.assignedDoctor || '',
                               nurseCount: ward.nurseCount ?? '',
                               equipment: ward.equipment || [],
                               cleaningStatus: ward.cleaningStatus || 'clean',
@@ -580,10 +581,16 @@ export default function WardManagement() {
                 <input type="text" value={form.wardInCharge} onChange={(e) => setForm((c) => ({ ...c, wardInCharge: e.target.value }))} placeholder="User ID (optional)" className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
               </Field>
               <Field label="Assigned Doctor">
-                <select value={form.assignedDoctor} onChange={(e) => setForm((c) => ({ ...c, assignedDoctor: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                <select
+                  value={form.assignedDoctor}
+                  onChange={(e) => setForm((c) => ({ ...c, assignedDoctor: e.target.value }))}
+                  className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
+                >
                   <option value="">Select doctor</option>
                   {doctors.map((d) => (
-                    <option key={d._id} value={d._id}>{d.userId?.name || d.name || d._id}</option>
+                    <option key={d._id || d.id} value={d._id || d.id || ''}>
+                      {d.userId?.name || d.name || d._id}
+                    </option>
                   ))}
                 </select>
               </Field>
