@@ -4,7 +4,6 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { LoadingSkeleton, ErrorState, DataTable } from '../../components';
 import { labReportApi, appointmentApi } from '../../services/apiServices';
-import { toast } from 'sonner';
 import { FileText, RefreshCw } from 'lucide-react';
 
 export default function DoctorReports() {

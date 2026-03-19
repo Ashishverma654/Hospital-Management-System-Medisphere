@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -25,11 +25,7 @@ export default function DoctorAppointments() {
   const [endingCall, setEndingCall] = useState(false);
   const [viewMode, setViewMode] = useState('today');
 
-  useEffect(() => {
-    fetchAppointments();
-  }, [viewMode]);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -44,7 +40,11 @@ export default function DoctorAppointments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewMode]);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, [fetchAppointments]);
 
   const handleStartConsultation = async (appointmentId) => {
     try {
