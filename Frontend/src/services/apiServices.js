@@ -41,7 +41,6 @@ export const doctorApi = {
   getAll: () => api.get('/doctors'),
   getById: (id) => api.get(`/doctors/${id}`),
   getSlots: (doctorId) => api.get(`/doctors/${doctorId}/slots`),
-  create: (body) => api.post('/doctors', body),
   getBookingList: (params) => api.get('/doctors/booking', { params }),
   getAdminAll: (params) => api.get('/doctors/admin', { params }),
   getAdminById: (id) => api.get(`/doctors/admin/${id}`),
@@ -81,12 +80,14 @@ export const appointmentApi = {
   book: (body) => api.post('/appointments', body),
   getAll: (params) => api.get('/appointments', { params }),
   cancel: (id, body) => api.put(`/appointments/${id}/cancel`, body),
+  markNoShow: (id) => api.put(`/appointments/${id}/no-show`),
   getQueueToday: (params) => api.get('/appointments/queue/today', { params }),
   arrive: (id) => api.put(`/appointments/${id}/arrive`),
   reschedule: (id, body) => api.put(`/appointments/${id}/reschedule`, body),
   getDoctorToday: () => api.get('/appointments/doctor/today'),
   getDoctorAll: () => api.get('/appointments/doctor/all'),
   complete: (id) => api.put(`/appointments/${id}/complete`),
+  recommendAdmission: (id, body) => api.put(`/appointments/${id}/recommend-admission`, body),
   getPatientHistory: (patientId) => api.get(`/appointments/patient-history/${patientId}`),
   startConsultation: (appointmentId) => api.post(`/appointments/${appointmentId}/start-consultation`),
   getPatientSummary: (patientId) => api.get(`/appointments/patient/${patientId}/summary`),
@@ -166,6 +167,8 @@ export const labOrderApi = {
 
 export const labTechApi = {
   getDashboard: () => api.get('/lab-techs/dashboard'),
+  getProfile: () => api.get('/lab-techs/profile'),
+  updateProfile: (body) => api.put('/lab-techs/profile', body),
   getOrders: (params) => api.get('/lab-techs/orders', { params }),
   getOrder: (id) => api.get(`/lab-techs/orders/${id}`),
   getPendingReports: () => api.get('/lab-techs/pending-reports'),
@@ -196,7 +199,43 @@ export const bedApi = {
   getCurrentAdmissions: (params) => api.get('/beds/admissions/current', { params }),
   getAdmissionCandidates: (params) => api.get('/beds/admission-candidates', { params }),
   assign: (id, body) => api.put(`/beds/assign/${id}`, body),
+  assignAuto: (body) => api.post('/beds/assign', body),
   discharge: (id) => api.put(`/beds/discharge/${id}`),
+  transfer: (body) => api.put('/beds/transfer', body),
+};
+
+export const admissionApi = {
+  getAll: (params) => api.get('/admissions', { params }),
+  getById: (id) => api.get(`/admissions/${id}`),
+  create: (body) => api.post('/admissions', body),
+};
+
+export const shiftApi = {
+  getAll: (params) => api.get('/shifts', { params }),
+  getById: (id) => api.get(`/shifts/${id}`),
+  create: (body) => api.post('/shifts', body),
+  update: (id, body) => api.put(`/shifts/${id}`, body),
+  remove: (id) => api.delete(`/shifts/${id}`),
+};
+
+export const staffDutyApi = {
+  start: (body) => api.post('/staff-duty/start', body),
+  end: (body) => api.post('/staff-duty/end', body),
+  markLeave: (body) => api.post('/staff-duty/leave', body),
+  getStats: (params) => api.get('/staff-duty/stats', { params }),
+};
+
+export const nurseAssignmentApi = {
+  getAll: (params) => api.get('/nurse-assignments', { params }),
+  getById: (id) => api.get(`/nurse-assignments/${id}`),
+  create: (body) => api.post('/nurse-assignments', body),
+  update: (id, body) => api.put(`/nurse-assignments/${id}`, body),
+  remove: (id) => api.delete(`/nurse-assignments/${id}`),
+};
+
+export const staffAvailabilityApi = {
+  getAll: () => api.get('/staff-availability'),
+  getSummary: () => api.get('/staff-availability/summary'),
 };
 
 export const resetPassword = async (email, otp, newPassword, newPin) => {
@@ -220,6 +259,15 @@ export const reportApi = {
       headers: { 'Content-Type': 'multipart/form-data' } 
     }),
   getMy: () => api.get('/reports/my'),
+};
+
+export const analyticsApi = {
+  getRevenue: () => api.get('/analytics/revenue'),
+  getPatientFlow: () => api.get('/analytics/patient-flow'),
+  getDoctor: () => api.get('/analytics/doctor'),
+  getBedOccupancy: () => api.get('/analytics/bed-occupancy'),
+  getLab: () => api.get('/analytics/lab'),
+  getPharmacy: () => api.get('/analytics/pharmacy'),
 };
 
 export const adminApi = {
@@ -248,6 +296,7 @@ export const receptionistApi = {
   registerPatient: (body) => api.post('/receptionists/patients', body),
   searchPatients: (query) => api.get('/receptionists/patients/search', { params: { query } }),
   getBookingOptions: (params) => api.get('/receptionists/booking-options', { params }),
+  getPatientHistory: (patientId) => api.get(`/receptionists/patients/${patientId}/history`),
 };
 
 export const nurseApi = {
@@ -255,6 +304,7 @@ export const nurseApi = {
   getAssignments: () => api.get('/nurses/assignments'),
   getAssignedPatients: () => api.get('/nurses/patients'),
   getWardBoard: () => api.get('/nurses/ward-board'),
+  getRoster: () => api.get('/nurses/roster'),
   getTasks: (params) => api.get('/nurses/tasks', { params }),
   createTask: (body) => api.post('/nurses/tasks', body),
   updateTask: (id, body) => api.patch(`/nurses/tasks/${id}`, body),

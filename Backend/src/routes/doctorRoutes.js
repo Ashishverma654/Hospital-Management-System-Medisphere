@@ -22,6 +22,8 @@ import {
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
 import upload from "../middlewares/uploadMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createDoctorSchema } from "../validations/doctorValidation.js";
 
 const router = express.Router();
 
@@ -29,7 +31,7 @@ const router = express.Router();
 router.get("/dashboard", verifyAccessToken, authorizeRoles("doctor"), getDoctorDashboard);
 
 router.get("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin", "subadmin"), getDoctorsAdmin);
-router.post("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin"), createDoctor);
+router.post("/admin", verifyAccessToken, authorizeRoles("superadmin", "admin"), validate(createDoctorSchema), createDoctor);
 router.get("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), getDoctorAdminById);
 router.put("/admin/:id", verifyAccessToken, authorizeRoles("superadmin", "admin"), updateDoctorAdmin);
 router.put("/admin/:id/toggle-active", verifyAccessToken, authorizeRoles("superadmin", "admin"), toggleDoctorActive);

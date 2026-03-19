@@ -67,14 +67,68 @@ export default function NurseVitals() {
     });
   }, [selectedPatientId]);
 
+  const toNumber = (value) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  };
+
+  const sanitizeNumber = (value, { maxLength = 5, allowDecimal = false } = {}) => {
+    const raw = `${value || ''}`;
+    const cleaned = allowDecimal
+      ? raw.replace(/[^0-9.]/g, '')
+      : raw.replace(/[^0-9]/g, '');
+    if (allowDecimal) {
+      const parts = cleaned.split('.');
+      const merged = parts.length > 1 ? `${parts[0]}.${parts.slice(1).join('')}` : parts[0];
+      return merged.slice(0, maxLength);
+    }
+    return cleaned.slice(0, maxLength);
+  };
+
+  const validateRanges = (payload) => {
+    const ranges = [
+      ['systolicBp', 40, 260],
+      ['diastolicBp', 30, 180],
+      ['pulse', 30, 220],
+      ['temperature', 90, 110],
+      ['spo2', 70, 100],
+      ['respirationRate', 6, 60],
+      ['bloodSugar', 40, 600],
+      ['weight', 1, 300],
+    ];
+    for (const [key, min, max] of ranges) {
+      const value = payload[key];
+      if (value === undefined) continue;
+      if (Number.isFinite(value) && (value < min || value > max)) {
+        return `Invalid ${key}. Expected range ${min}-${max}.`;
+      }
+    }
+    return null;
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     try {
-      setSaving(true);
-      await nurseApi.recordVitals({
-        ...form,
+      const payload = {
         patientId: selectedPatientId,
-      });
+        systolicBp: toNumber(form.systolicBp),
+        diastolicBp: toNumber(form.diastolicBp),
+        pulse: toNumber(form.pulse),
+        temperature: toNumber(form.temperature),
+        spo2: toNumber(form.spo2),
+        respirationRate: toNumber(form.respirationRate),
+        bloodSugar: toNumber(form.bloodSugar),
+        weight: toNumber(form.weight),
+        notes: form.notes,
+      };
+      const rangeError = validateRanges(payload);
+      if (rangeError) {
+        toast.error(rangeError);
+        return;
+      }
+      setSaving(true);
+      await nurseApi.recordVitals(payload);
       toast.success('Vitals recorded successfully.');
       setForm((current) => ({ ...initialForm, patientId: current.patientId }));
       await loadHistory(selectedPatientId);
@@ -116,14 +170,62 @@ export default function NurseVitals() {
             </select>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <input value={form.systolicBp} onChange={(event) => setForm((current) => ({ ...current, systolicBp: event.target.value }))} placeholder="Systolic BP" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.diastolicBp} onChange={(event) => setForm((current) => ({ ...current, diastolicBp: event.target.value }))} placeholder="Diastolic BP" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.pulse} onChange={(event) => setForm((current) => ({ ...current, pulse: event.target.value }))} placeholder="Pulse" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.temperature} onChange={(event) => setForm((current) => ({ ...current, temperature: event.target.value }))} placeholder="Temperature" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.spo2} onChange={(event) => setForm((current) => ({ ...current, spo2: event.target.value }))} placeholder="Oxygen saturation" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.respirationRate} onChange={(event) => setForm((current) => ({ ...current, respirationRate: event.target.value }))} placeholder="Respiratory rate" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.bloodSugar} onChange={(event) => setForm((current) => ({ ...current, bloodSugar: event.target.value }))} placeholder="Sugar level" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <input value={form.weight} onChange={(event) => setForm((current) => ({ ...current, weight: event.target.value }))} placeholder="Weight" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+              <input
+                value={form.systolicBp}
+                onChange={(event) => setForm((current) => ({ ...current, systolicBp: sanitizeNumber(event.target.value, { maxLength: 3 }) }))}
+                placeholder="Systolic BP"
+                inputMode="numeric"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.diastolicBp}
+                onChange={(event) => setForm((current) => ({ ...current, diastolicBp: sanitizeNumber(event.target.value, { maxLength: 3 }) }))}
+                placeholder="Diastolic BP"
+                inputMode="numeric"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.pulse}
+                onChange={(event) => setForm((current) => ({ ...current, pulse: sanitizeNumber(event.target.value, { maxLength: 3 }) }))}
+                placeholder="Pulse"
+                inputMode="numeric"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.temperature}
+                onChange={(event) => setForm((current) => ({ ...current, temperature: sanitizeNumber(event.target.value, { maxLength: 5, allowDecimal: true }) }))}
+                placeholder="Temperature"
+                inputMode="decimal"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.spo2}
+                onChange={(event) => setForm((current) => ({ ...current, spo2: sanitizeNumber(event.target.value, { maxLength: 3 }) }))}
+                placeholder="Oxygen saturation"
+                inputMode="numeric"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.respirationRate}
+                onChange={(event) => setForm((current) => ({ ...current, respirationRate: sanitizeNumber(event.target.value, { maxLength: 3 }) }))}
+                placeholder="Respiratory rate"
+                inputMode="numeric"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.bloodSugar}
+                onChange={(event) => setForm((current) => ({ ...current, bloodSugar: sanitizeNumber(event.target.value, { maxLength: 4 }) }))}
+                placeholder="Sugar level"
+                inputMode="numeric"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+              <input
+                value={form.weight}
+                onChange={(event) => setForm((current) => ({ ...current, weight: sanitizeNumber(event.target.value, { maxLength: 4, allowDecimal: true }) }))}
+                placeholder="Weight"
+                inputMode="decimal"
+                className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+              />
             </div>
 
             <textarea

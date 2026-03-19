@@ -21,20 +21,38 @@ export const createNotification = async ({
 
   const normalizedRole = roleTarget ? normalizeSystemRole(roleTarget) : undefined;
   const resolvedKey = key || buildKey([recipientType, recipientId || normalizedRole, sourceType, sourceId, type, title]);
+  const resolvedRecipientId = recipientId || undefined;
+
+  const filter = resolvedRecipientId
+    ? {
+        $or: [
+          {
+            recipientType,
+            recipientId: resolvedRecipientId,
+            roleTarget: normalizedRole || undefined,
+            key: resolvedKey,
+          },
+          {
+            userId: resolvedRecipientId,
+            key: resolvedKey,
+          },
+        ],
+      }
+    : {
+        recipientType,
+        recipientId: resolvedRecipientId,
+        roleTarget: normalizedRole || undefined,
+        key: resolvedKey,
+      };
 
   return Notification.findOneAndUpdate(
-    {
-      recipientType,
-      recipientId: recipientId || undefined,
-      roleTarget: normalizedRole || undefined,
-      key: resolvedKey,
-    },
+    filter,
     {
       $set: {
         recipientType,
-        recipientId: recipientId || undefined,
+        recipientId: resolvedRecipientId,
         roleTarget: normalizedRole || undefined,
-        userId: recipientId || undefined,
+        userId: resolvedRecipientId,
         patientId: patientId || undefined,
         key: resolvedKey,
         type,
@@ -145,4 +163,3 @@ export const markAllReadForRecipient = async (filter) => {
 
 export const countUnreadForRecipient = async (filter) =>
   Notification.countDocuments({ ...filter, status: "unread" });
-

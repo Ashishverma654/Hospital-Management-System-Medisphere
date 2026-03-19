@@ -11,6 +11,8 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createPrescriptionSchema } from "../validations/nurseAssignmentPrescriptionNotificationValidation.js";
 
 const router = express.Router();
 
@@ -18,6 +20,7 @@ router.post(
   "/",
   verifyAccessToken,
   authorizeRoles("doctor"),
+  validate(createPrescriptionSchema),
   createPrescription,
 );
 

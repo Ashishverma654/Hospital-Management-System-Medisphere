@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { appointmentApi, billingApi, receptionistApi, slotApi } from '../../services/apiServices.js';
+import { admissionApi, appointmentApi, billingApi, receptionistApi, slotApi } from '../../services/apiServices.js';
+import { connectSocket } from '../../services/socket.js';
 import { toast } from 'sonner';
 import { Calendar, RefreshCw, Search } from 'lucide-react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -16,6 +17,7 @@ const initialBooking = {
   visitType: 'newConsultation',
   consultationMode: 'in-person',
   reasonForVisit: '',
+  priority: 'Normal',
 };
 
 const initialWalkIn = {
@@ -23,6 +25,7 @@ const initialWalkIn = {
   email: '',
   phone: '',
   dateOfBirth: '',
+  age: '',
   gender: 'unknown',
   address: '',
   bloodGroup: '',
@@ -47,7 +50,9 @@ export default function AppointmentDesk() {
   const [queue, setQueue] = useState([]);
   const [queueSummary, setQueueSummary] = useState(null);
   const [filterDoctor, setFilterDoctor] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterAdmissionOnly, setFilterAdmissionOnly] = useState(false);
   const [queueDate, setQueueDate] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
   const [bookingMode, setBookingMode] = useState('existing');
@@ -55,6 +60,10 @@ export default function AppointmentDesk() {
   const [walkInCredential, setWalkInCredential] = useState(null);
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', slot: '' });
+  const [queueDepartments, setQueueDepartments] = useState([]);
+  const [admissionTarget, setAdmissionTarget] = useState(null);
+  const [admissionForm, setAdmissionForm] = useState({ departmentId: '', doctorId: '', reason: '', notes: '' });
+  const [admissionDoctors, setAdmissionDoctors] = useState([]);
 
   const loadPatients = async (query = '') => {
     try {
@@ -76,11 +85,12 @@ export default function AppointmentDesk() {
     }
   };
 
-  const loadQueue = async () => {
+  const loadQueue = useCallback(async () => {
     try {
       const response = await appointmentApi.getQueueToday({
         date: queueDate,
         doctorId: filterDoctor || undefined,
+        departmentId: filterDepartment || undefined,
         status: filterStatus || undefined,
       });
       setQueue(response.appointments || []);
@@ -88,7 +98,7 @@ export default function AppointmentDesk() {
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load today queue.');
     }
-  };
+  }, [filterDepartment, filterDoctor, filterStatus, queueDate]);
 
   useEffect(() => {
     loadPatients(preselectedPatientId || patientQuery);
@@ -109,8 +119,63 @@ export default function AppointmentDesk() {
   }, [booking.departmentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!booking.doctorId || booking.departmentId) return;
+    const selected = (options.doctors || []).find((doc) => doc._id === booking.doctorId);
+    if (selected?.departmentId?._id) {
+      setBooking((current) => ({
+        ...current,
+        departmentId: selected.departmentId._id,
+      }));
+    }
+  }, [booking.doctorId, booking.departmentId, options.doctors]);
+
+  useEffect(() => {
     loadQueue();
-  }, [queueDate, filterDoctor, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadQueue]);
+
+  useEffect(() => {
+    const socket = connectSocket({ role: 'receptionist' });
+    const handleQueueUpdate = () => loadQueue();
+
+    socket.on('queue:update', handleQueueUpdate);
+    socket.on('token:generated', handleQueueUpdate);
+    socket.on('consultation:started', handleQueueUpdate);
+    socket.on('consultation:completed', handleQueueUpdate);
+
+    return () => {
+      socket.off('queue:update', handleQueueUpdate);
+      socket.off('token:generated', handleQueueUpdate);
+      socket.off('consultation:started', handleQueueUpdate);
+      socket.off('consultation:completed', handleQueueUpdate);
+    };
+  }, [loadQueue]);
+
+  useEffect(() => {
+    const loadQueueDepartments = async () => {
+      try {
+        const response = await receptionistApi.getBookingOptions({});
+        setQueueDepartments(response.departments || []);
+      } catch {
+        setQueueDepartments([]);
+      }
+    };
+    loadQueueDepartments();
+  }, []);
+
+  useEffect(() => {
+    const loadAdmissionDoctors = async () => {
+      if (!admissionTarget) return;
+      try {
+        const response = await receptionistApi.getBookingOptions({
+          departmentId: admissionForm.departmentId || undefined,
+        });
+        setAdmissionDoctors(response.doctors || []);
+      } catch {
+        setAdmissionDoctors([]);
+      }
+    };
+    loadAdmissionDoctors();
+  }, [admissionTarget, admissionForm.departmentId]);
 
   useEffect(() => {
     const loadSlots = async () => {
@@ -150,8 +215,14 @@ export default function AppointmentDesk() {
     try {
       let patientId = booking.patientId;
       if (bookingMode === 'walkIn') {
+        if (!walkInForm.dateOfBirth && !walkInForm.age) {
+          toast.error('Provide date of birth or age for walk-in patient.');
+          setSaving(false);
+          return;
+        }
         const response = await receptionistApi.registerPatient({
           ...walkInForm,
+          age: walkInForm.age ? Number(walkInForm.age) : undefined,
           emergencyContact: {
             name: walkInForm.emergencyContactName,
             phone: walkInForm.emergencyContactPhone,
@@ -202,6 +273,16 @@ export default function AppointmentDesk() {
     }
   };
 
+  const handleNoShow = async (appointmentId) => {
+    try {
+      await appointmentApi.markNoShow(appointmentId);
+      toast.success('Marked as no-show.');
+      loadQueue();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to mark no-show.');
+    }
+  };
+
   const openReschedule = (appointment) => {
     setRescheduleTarget(appointment);
     setRescheduleForm({ date: appointment.date, slot: appointment.slot });
@@ -229,6 +310,54 @@ export default function AppointmentDesk() {
     }
   };
 
+  const handleComplete = async (appointmentId) => {
+    try {
+      await appointmentApi.complete(appointmentId);
+      toast.success('Appointment marked as completed.');
+      loadQueue();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to complete appointment.');
+    }
+  };
+
+  const openAdmission = async (appointment) => {
+    setAdmissionTarget(appointment);
+    setAdmissionForm({
+      departmentId: appointment.doctorId?.departmentId?._id || '',
+      doctorId: appointment.doctorId?._id || '',
+      reason: appointment.reasonForVisit || '',
+      notes: '',
+    });
+    try {
+      const response = await receptionistApi.getBookingOptions({
+        departmentId: appointment.doctorId?.departmentId?._id || undefined,
+      });
+      setAdmissionDoctors(response.doctors || []);
+    } catch {
+      setAdmissionDoctors([]);
+    }
+  };
+
+  const submitAdmission = async (event) => {
+    event.preventDefault();
+    if (!admissionTarget?.patientProfileId?._id && !admissionTarget?.patientId?._id) {
+      return toast.error('Patient information is missing.');
+    }
+    try {
+      await admissionApi.create({
+        patientId: admissionTarget.patientProfileId?._id || admissionTarget.patientId?._id,
+        departmentId: admissionForm.departmentId,
+        doctorId: admissionForm.doctorId,
+        reason: admissionForm.reason,
+        notes: admissionForm.notes,
+      });
+      toast.success('Admission initiated successfully.');
+      setAdmissionTarget(null);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to initiate admission.');
+    }
+  };
+
   const queueDoctors = useMemo(() => {
     const seen = new Map();
     queue.forEach((appointment) => {
@@ -238,6 +367,11 @@ export default function AppointmentDesk() {
     });
     return Array.from(seen.entries());
   }, [queue]);
+
+  const visibleQueue = useMemo(() => {
+    if (!filterAdmissionOnly) return queue;
+    return queue.filter((appointment) => appointment.admissionRecommended);
+  }, [queue, filterAdmissionOnly]);
 
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
@@ -332,14 +466,17 @@ export default function AppointmentDesk() {
                   <Field label="Full name">
                     <input type="text" value={walkInForm.name} onChange={(e) => setWalkInForm((c) => ({ ...c, name: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
                   </Field>
-                  <Field label="Email">
-                    <input type="email" value={walkInForm.email} onChange={(e) => setWalkInForm((c) => ({ ...c, email: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+                  <Field label="Email (optional)">
+                    <input type="email" value={walkInForm.email} onChange={(e) => setWalkInForm((c) => ({ ...c, email: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
                   </Field>
                   <Field label="Phone">
                     <input type="text" value={walkInForm.phone} onChange={(e) => setWalkInForm((c) => ({ ...c, phone: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
                   </Field>
-                  <Field label="Date of birth">
-                    <input type="date" value={walkInForm.dateOfBirth} onChange={(e) => setWalkInForm((c) => ({ ...c, dateOfBirth: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+                  <Field label="Date of birth (optional)">
+                    <input type="date" value={walkInForm.dateOfBirth} onChange={(e) => setWalkInForm((c) => ({ ...c, dateOfBirth: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+                  </Field>
+                  <Field label="Age (optional)">
+                    <input type="number" min="0" value={walkInForm.age} onChange={(e) => setWalkInForm((c) => ({ ...c, age: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
                   </Field>
                 </div>
                 <Field label="Address">
@@ -369,7 +506,21 @@ export default function AppointmentDesk() {
                 </select>
               </Field>
               <Field label="Doctor">
-                <select value={booking.doctorId} onChange={(event) => setBooking((current) => ({ ...current, doctorId: event.target.value, slot: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
+                <select
+                  value={booking.doctorId}
+                  onChange={(event) => {
+                    const doctorId = event.target.value;
+                    const doctor = (options.doctors || []).find((item) => item._id === doctorId);
+                    setBooking((current) => ({
+                      ...current,
+                      doctorId,
+                      slot: '',
+                      departmentId: doctor?.departmentId?._id || current.departmentId,
+                    }));
+                  }}
+                  className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
+                  required
+                >
                   <option value="">Select doctor</option>
                   {(options.doctors || []).map((item) => (
                     <option key={item._id} value={item._id}>{item.userId?.name || 'Doctor'} • {item.departmentId?.name || 'Department'}</option>
@@ -391,6 +542,12 @@ export default function AppointmentDesk() {
                   <option value="in-person">In-Person</option>
                   <option value="video">Video</option>
                   <option value="phone">Phone</option>
+                </select>
+              </Field>
+              <Field label="Priority">
+                <select value={booking.priority} onChange={(event) => setBooking((current) => ({ ...current, priority: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                  <option value="Normal">Normal</option>
+                  <option value="Emergency">Emergency</option>
                 </select>
               </Field>
             </div>
@@ -441,24 +598,39 @@ export default function AppointmentDesk() {
               <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Today&apos;s Queue</p>
               <h3 className="mt-2 text-2xl font-semibold text-foreground">Check-in and queue management</h3>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <input type="date" value={queueDate} onChange={(event) => setQueueDate(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-              <select value={filterDoctor} onChange={(event) => setFilterDoctor(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
-                <option value="">All doctors</option>
-                {queueDoctors.map(([id, name]) => (
-                  <option key={id} value={id}>{name}</option>
-                ))}
-              </select>
-              <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
-                <option value="">All statuses</option>
-                <option value="booked">Booked</option>
-                <option value="arrived">Arrived</option>
-                <option value="waiting">Waiting</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
+          <div className="flex flex-wrap gap-3">
+            <input type="date" value={queueDate} onChange={(event) => setQueueDate(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+            <select value={filterDepartment} onChange={(event) => setFilterDepartment(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
+              <option value="">All departments</option>
+              {queueDepartments.map((dept) => (
+                <option key={dept._id} value={dept._id}>{dept.name}</option>
+              ))}
+            </select>
+            <select value={filterDoctor} onChange={(event) => setFilterDoctor(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
+              <option value="">All doctors</option>
+              {queueDoctors.map(([id, name]) => (
+                <option key={id} value={id}>{name}</option>
+              ))}
+            </select>
+            <select value={filterStatus} onChange={(event) => setFilterStatus(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
+              <option value="">All statuses</option>
+              <option value="booked">Booked</option>
+              <option value="arrived">Arrived</option>
+              <option value="waiting">Waiting</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <label className="flex items-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={filterAdmissionOnly}
+                onChange={(event) => setFilterAdmissionOnly(event.target.checked)}
+                className="h-4 w-4"
+              />
+              Admission recommended only
+            </label>
           </div>
+        </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-4">
             {[
@@ -475,7 +647,7 @@ export default function AppointmentDesk() {
           </div>
 
           <div className="mt-6 space-y-3">
-            {queue.map((appointment) => (
+            {visibleQueue.map((appointment) => (
               <article key={appointment._id} className="rounded-xl border border-border p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
@@ -483,6 +655,19 @@ export default function AppointmentDesk() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {appointment.patientId?.patientId} • {appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Token {appointment.tokenNumber || '—'} {appointment.queuePosition ? `• #${appointment.queuePosition}` : ''}
+                    </p>
+                    {appointment.estimatedWaitTime != null && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Est. wait {appointment.estimatedWaitTime} min
+                      </p>
+                    )}
+                    {appointment.arrivalTime || appointment.checkInAt ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Arrived {new Date(appointment.arrivalTime || appointment.checkInAt).toLocaleTimeString()}
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">{appointment.visitType}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -491,6 +676,12 @@ export default function AppointmentDesk() {
                     </span>
                     {appointment.status === 'booked' && (
                       <Button size="sm" onClick={() => handleArrive(appointment._id)}>Mark Arrived</Button>
+                    )}
+                    {['booked', 'confirmed'].includes(appointment.status) && (
+                      <Button size="sm" variant="outline" onClick={() => handleNoShow(appointment._id)}>Mark No‑Show</Button>
+                    )}
+                    {['inConsultation'].includes(appointment.status) && (
+                      <Button size="sm" variant="outline" onClick={() => handleComplete(appointment._id)}>Mark Completed</Button>
                     )}
                     {appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
                       <>
@@ -501,11 +692,14 @@ export default function AppointmentDesk() {
                     {['arrived', 'waiting', 'inConsultation', 'completed'].includes(appointment.status) && (
                       <Button size="sm" variant="outline" onClick={() => handleInitiateBilling(appointment._id)}>Initiate Bill</Button>
                     )}
+                    {['arrived', 'waiting', 'inConsultation'].includes(appointment.status) && (
+                      <Button size="sm" variant="outline" onClick={() => openAdmission(appointment)}>Initiate Admission</Button>
+                    )}
                   </div>
                 </div>
               </article>
             ))}
-            {queue.length === 0 && <p className="text-sm text-muted-foreground">No appointments found for the selected filters.</p>}
+            {visibleQueue.length === 0 && <p className="text-sm text-muted-foreground">No appointments found for the selected filters.</p>}
           </div>
         </article>
       </div>
@@ -528,6 +722,48 @@ export default function AppointmentDesk() {
             <div className="mt-6 flex gap-3">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setRescheduleTarget(null)}>Cancel</Button>
               <Button type="submit" className="flex-1">Save Reschedule</Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {admissionTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <form onSubmit={submitAdmission} className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-foreground">Initiate Admission</h3>
+              <button type="button" onClick={() => setAdmissionTarget(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="mt-5 grid gap-4">
+              <Field label="Patient">
+                <input type="text" value={admissionTarget.patientId?.name || admissionTarget.patientProfileId?.name || 'Patient'} readOnly className="w-full rounded-2xl border border-border px-4 py-3 text-sm text-muted-foreground" />
+              </Field>
+              <Field label="Department">
+                <select value={admissionForm.departmentId} onChange={(event) => setAdmissionForm((current) => ({ ...current, departmentId: event.target.value, doctorId: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
+                  <option value="">Select department</option>
+                  {(queueDepartments || []).map((dept) => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Doctor">
+                <select value={admissionForm.doctorId} onChange={(event) => setAdmissionForm((current) => ({ ...current, doctorId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required>
+                  <option value="">Select doctor</option>
+                  {(admissionDoctors || []).map((doctor) => (
+                    <option key={doctor._id} value={doctor._id}>{doctor.userId?.name || 'Doctor'}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Reason (optional)">
+                <input type="text" value={admissionForm.reason} onChange={(event) => setAdmissionForm((current) => ({ ...current, reason: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              </Field>
+              <Field label="Notes (optional)">
+                <textarea value={admissionForm.notes} onChange={(event) => setAdmissionForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              </Field>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setAdmissionTarget(null)}>Cancel</Button>
+              <Button type="submit" className="flex-1">Confirm Admission</Button>
             </div>
           </form>
         </div>

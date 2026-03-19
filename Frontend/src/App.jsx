@@ -34,6 +34,11 @@ import AuditHistoryPage from './pages/employee/AuditHistoryPage.jsx';
 import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
 import BillingManagement from './pages/employee/BillingManagement.jsx';
 import EmployeeNotifications from './pages/employee/Notifications.jsx';
+import AnalyticsDashboard from './pages/employee/AnalyticsDashboard.jsx';
+import DoctorDetail from './pages/employee/DoctorDetail.jsx';
+import PatientDetail from './pages/employee/PatientDetail.jsx';
+import LabOrderDetail from './pages/employee/LabOrderDetail.jsx';
+import PharmacyOrderDetail from './pages/employee/PharmacyOrderDetail.jsx';
 import PatientManagement from './pages/admin/PatientManagement.jsx';
 import WardManagement from './pages/admin/WardManagement.jsx';
 import BedManagement from './pages/admin/BedManagement.jsx';
@@ -45,10 +50,15 @@ import AwardManagement from './pages/admin/AwardManagement.jsx';
 import DepartmentManagement from './pages/admin/DepartmentManagement.jsx';
 import LocationManagement from './pages/admin/LocationManagement.jsx';
 import AddUserPage from './pages/admin/AddUserPage.jsx';
+import NurseDutyAllocation from './pages/admin/NurseDutyAllocation.jsx';
+import ShiftManagement from './pages/admin/ShiftManagement.jsx';
+import ShiftCalendar from './pages/ShiftCalendar.jsx';
+import StaffAvailability from './pages/StaffAvailability.jsx';
 import ReceptionistDashboard from './pages/receptionist/Dashboard.jsx';
 import PatientRegistration from './pages/receptionist/PatientRegistration.jsx';
 import AppointmentDesk from './pages/receptionist/AppointmentDesk.jsx';
 import PatientSearch from './pages/receptionist/PatientSearch.jsx';
+import PatientHistory from './pages/receptionist/PatientHistory.jsx';
 import DashboardLayout from './components/layout/DashboardLayout.jsx';
 import DoctorDashboard from './pages/doctor/Dashboard.jsx';
 import DoctorAppointments from './pages/doctor/Appointments.jsx';
@@ -60,6 +70,7 @@ import DoctorAvailability from './pages/doctor/Availability.jsx';
 import PatientSummary from './pages/doctor/PatientSummary.jsx';
 import LabTechDashboard from './pages/labtech/Dashboard.jsx';
 import LabTechOrdersInbox from './pages/labtech/OrdersInbox.jsx';
+import LabTechProfile from './pages/labtech/Profile.jsx';
 import PharmacistDashboard from './pages/pharmacist/Dashboard.jsx';
 import PharmacistOrders from './pages/pharmacist/Orders.jsx';
 import PharmacistInventory from './pages/pharmacist/Inventory.jsx';
@@ -76,10 +87,10 @@ import { EMPLOYEE_ROLE_PATHS, EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, getEmploye
 function Unauthorized() {
   return (
     <section className="flex min-h-[60vh] items-center justify-center px-4 py-12">
-      <div className="max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Employee access</p>
-        <h1 className="mt-3 text-3xl font-semibold text-slate-900">Unauthorized</h1>
-        <p className="mt-3 text-slate-600">
+      <div className="max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-sm">
+        <p className="text-sm uppercase tracking-[0.25em] text-muted-foreground">Employee access</p>
+        <h1 className="mt-3 text-3xl font-semibold text-foreground">Unauthorized</h1>
+        <p className="mt-3 text-muted-foreground">
           Your account is signed in, but the selected route is not available for your employee role.
         </p>
       </div>
@@ -173,6 +184,7 @@ function App() {
             <Route path="/employee" element={<EmployeeHomeRedirect />} />
             <Route path="/employee/dashboard" element={<EmployeeHomeRedirect />} />
             <Route path="/employee/notifications" element={<EmployeeNotifications />} />
+            <Route path="/employee/shifts/calendar" element={<ShiftCalendar />} />
 
             <Route element={<EmployeeRoute allowedRoles={['superadmin']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.superadmin} element={<GovernanceDashboard />} />
@@ -195,18 +207,20 @@ function App() {
               <Route path="/employee/nurse/notes" element={<NurseNotes />} />
               <Route path="/employee/nurse/handover" element={<NurseHandover />} />
             </Route>
-            <Route element={<EmployeeRoute allowedRoles={['receptionist']} />}>
+            <Route element={<EmployeeRoute allowedRoles={['receptionist', 'admin', 'superadmin', 'subadmin']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.receptionist} element={<ReceptionistDashboard />} />
               <Route path="/employee/receptionist/register-patient" element={<PatientRegistration />} />
               <Route path="/employee/receptionist/appointments" element={<AppointmentDesk />} />
               <Route path="/employee/receptionist/queue" element={<AppointmentDesk />} />
               <Route path="/employee/receptionist/patients" element={<PatientSearch />} />
+              <Route path="/employee/receptionist/history" element={<PatientHistory />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['labTechnician']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.labTechnician} element={<LabTechDashboard />} />
               <Route path="/employee/lab-technician/orders" element={<LabTechOrdersInbox />} />
               <Route path="/employee/lab-technician/processing" element={<LabTechOrdersInbox presetStatus="inProcessing" title="Lab Processing Queue" description="Focus on collected samples, in-process tests, uploads, and release-ready reports." />} />
               <Route path="/employee/lab-technician/completed" element={<LabTechOrdersInbox presetStatus="reportReady" title="Reports Ready For Release" description="Review report-ready orders, confirm payment, and release eligible results to the patient portal." />} />
+              <Route path="/employee/lab-technician/profile" element={<LabTechProfile />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['pharmacist']} />}>
               <Route path={EMPLOYEE_ROLE_PATHS.pharmacist} element={<PharmacistDashboard />} />
@@ -222,9 +236,15 @@ function App() {
               <Route path="/employee/doctors" element={<DoctorManagement />} />
               <Route path="/employee/doctor-availability" element={<DoctorAvailabilityManagement />} />
             </Route>
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
+              <Route path="/employee/doctors/:id" element={<DoctorDetail />} />
+            </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'subadmin']} />}>
               <Route path="/employee/wards" element={<WardManagement />} />
               <Route path="/employee/beds" element={<BedManagement />} />
+              <Route path="/employee/nurse-assignments" element={<NurseDutyAllocation />} />
+              <Route path="/employee/shifts" element={<ShiftManagement />} />
+              <Route path="/employee/staff-availability" element={<StaffAvailability />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/patients" element={<PatientManagement />} />
@@ -232,8 +252,18 @@ function App() {
               <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
               <Route path="/employee/locations" element={<LocationManagement />} />
+              <Route path="/employee/analytics" element={<AnalyticsDashboard />} />
               <Route path="/employee/audit" element={<AuditHistoryPage />} />
               <Route path="/employee/settings" element={<HospitalSettingsPage />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'subadmin', 'doctor', 'receptionist']} />}>
+              <Route path="/employee/patients/:id" element={<PatientDetail />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'doctor', 'labTechnician']} />}>
+              <Route path="/employee/lab-orders/:id" element={<LabOrderDetail />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'pharmacist']} />}>
+              <Route path="/employee/pharmacy-orders/:id" element={<PharmacyOrderDetail />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={STAFF_MANAGEMENT_ROLES} />}>
               <Route path="/employee/users" element={<Navigate to="/employee/manage-roles" replace />} />

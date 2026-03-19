@@ -98,3 +98,4 @@
 {"level":"warn","message":"Migrated 1 superreceptionist user(s) to subadmin","service":"hospital-api","timestamp":"2026-03-12T16:30:35.012Z"}
 {"level":"error","message":"Image file format webp not allowed","method":"PUT","path":"/api/users/profile-image","service":"hospital-api","statusCode":500,"timestamp":"2026-03-13T07:39:55.015Z"}
 {"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-16T11:56:06.301Z"}
+{"level":"error","message":"An unknown file format not allowed","method":"POST","path":"/api/lab-techs/orders/69bbc0a94b73a5a3c8fda840/report-upload","service":"hospital-api","statusCode":500,"timestamp":"2026-03-19T09:36:17.844Z"}

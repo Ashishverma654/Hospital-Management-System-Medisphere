@@ -76,7 +76,7 @@ const mapPatientSummary = (patient) => ({
     : null,
 });
 
-const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labReports, invoices, bedEvents }) => {
+const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labReports, pharmacyOrders, invoices, bedEvents }) => {
   const events = [];
 
   if (patient?.createdAt) {
@@ -85,6 +85,9 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
       title: "Patient registered",
       description: patient.userId?.name || "Patient record created",
       occurredAt: patient.createdAt,
+      date: patient.createdAt,
+      status: "registered",
+      referenceId: patient._id,
     });
   }
 
@@ -94,7 +97,12 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
       title: `Appointment ${appointment.status}`,
       description: `${appointment.date} at ${appointment.slot}`,
       occurredAt: appointment.createdAt,
+      date: appointment.createdAt,
       id: appointment._id,
+      referenceId: appointment._id,
+      status: appointment.status,
+      link: `/patient/appointments?appointment=${appointment._id}`,
+      critical: appointment.priority === "Emergency",
     });
   });
 
@@ -104,7 +112,11 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
       title: "Prescription issued",
       description: prescription.diagnosis || "Prescription created",
       occurredAt: prescription.createdAt,
+      date: prescription.createdAt,
       id: prescription._id,
+      referenceId: prescription._id,
+      status: prescription.status || "active",
+      link: `/patient/prescriptions?prescription=${prescription._id}`,
     });
   });
 
@@ -114,7 +126,12 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
       title: `Lab order ${order.status}`,
       description: order.orderNumber || "Diagnostic order created",
       occurredAt: order.createdAt,
+      date: order.createdAt,
       id: order._id,
+      referenceId: order._id,
+      status: order.status,
+      link: `/patient/lab-tests?order=${order._id}`,
+      critical: ["urgent", "stat"].includes(order.urgency),
     });
   });
 
@@ -124,7 +141,26 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
       title: "Lab report uploaded",
       description: report.reportName,
       occurredAt: report.createdAt,
+      date: report.createdAt,
       id: report._id,
+      referenceId: report._id,
+      status: report.status,
+      link: `/patient/lab-reports?report=${report._id}`,
+    });
+  });
+
+  (pharmacyOrders || []).forEach((order) => {
+    events.push({
+      type: "pharmacy",
+      title: `Pharmacy order ${order.status}`,
+      description: `PHARM-${String(order._id).slice(-6).toUpperCase()}`,
+      occurredAt: order.createdAt,
+      date: order.createdAt,
+      id: order._id,
+      referenceId: order._id,
+      status: order.status,
+      link: `/patient/medicine-orders?order=${order._id}`,
+      critical: order.status === "readyForPickup",
     });
   });
 
@@ -134,7 +170,11 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
       title: `Invoice ${invoice.paymentStatus}`,
       description: `${invoice.billType} bill`,
       occurredAt: invoice.createdAt,
+      date: invoice.createdAt,
       id: invoice._id,
+      referenceId: invoice._id,
+      status: invoice.paymentStatus,
+      link: `/patient/bills?invoice=${invoice._id}`,
     });
   });
 
@@ -145,7 +185,11 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
         title: "Patient admitted",
         description: `${bed.bedNumber}${bed.wardId?.name ? ` in ${bed.wardId.name}` : ""}`,
         occurredAt: bed.admittedAt,
+        date: bed.admittedAt,
         id: bed._id,
+        referenceId: bed._id,
+        status: "admitted",
+        critical: true,
       });
     }
     if (bed.dischargedAt) {
@@ -154,7 +198,11 @@ const buildTimeline = ({ patient, appointments, prescriptions, labOrders, labRep
         title: "Patient discharged",
         description: `${bed.bedNumber}${bed.wardId?.name ? ` from ${bed.wardId.name}` : ""}`,
         occurredAt: bed.dischargedAt,
+        date: bed.dischargedAt,
         id: bed._id,
+        referenceId: bed._id,
+        status: "discharged",
+        critical: true,
       });
     }
   });
@@ -328,7 +376,7 @@ export const getAdminPatientById = async (req, res) => {
       })
       .populate("hospitalLocationId", "name city state address");
 
-    const [appointments, prescriptions, labOrders, labReports, invoices, bedEvents] = await Promise.all([
+    const [appointments, prescriptions, labOrders, labReports, pharmacyOrders, invoices, bedEvents] = await Promise.all([
       Appointment.find({
         $or: [{ patientProfileId: patient._id }, { patientId: user._id }],
       })
@@ -360,6 +408,9 @@ export const getAdminPatientById = async (req, res) => {
         })
         .sort({ createdAt: -1 })
         .limit(20),
+      PharmacyOrder.find({ patientId: patient._id })
+        .sort({ createdAt: -1 })
+        .limit(20),
       Invoice.find({ patientId: patient._id })
         .sort({ createdAt: -1 })
         .limit(20),
@@ -378,6 +429,7 @@ export const getAdminPatientById = async (req, res) => {
         prescriptions,
         labOrders,
         labReports,
+        pharmacyOrders,
         invoices,
         admissions: bedEvents,
       },
@@ -387,6 +439,7 @@ export const getAdminPatientById = async (req, res) => {
         prescriptions,
         labOrders,
         labReports,
+        pharmacyOrders,
         invoices,
         bedEvents,
       }),
@@ -657,11 +710,12 @@ export const getMyTimeline = async (req, res) => {
     const { patient, user } = await ensurePatientProfileForUser(req.user.id);
     const populated = await Patient.findById(patient._id).populate("userId");
 
-    const [appointments, prescriptions, labOrders, labReports, invoices, bedEvents] = await Promise.all([
+    const [appointments, prescriptions, labOrders, labReports, pharmacyOrders, invoices, bedEvents] = await Promise.all([
       Appointment.find({ patientId: user._id }).sort({ createdAt: -1 }).limit(30),
       Prescription.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
       LabOrder.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
       LabReport.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
+      PharmacyOrder.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
       Invoice.find({ patientId: patient._id }).sort({ createdAt: -1 }).limit(30),
       Bed.find({ $or: [{ patientProfileId: patient._id }, { patientId: user._id }] })
         .populate("wardId", "name wardNumber")
@@ -669,13 +723,24 @@ export const getMyTimeline = async (req, res) => {
         .limit(20),
     ]);
 
+    const activeAdmission = bedEvents.find((bed) => bed.admittedAt && !bed.dischargedAt) || null;
+    const activePrescriptions = prescriptions.filter((prescription) => prescription.status === "active");
+    const pendingBills = invoices.filter((invoice) => ["pending", "partiallyPaid"].includes(invoice.paymentStatus));
+
     return res.json({
+      summary: {
+        totalVisits: appointments.length,
+        activePrescriptions: activePrescriptions.length,
+        pendingBills: pendingBills.length,
+        activeAdmission: Boolean(activeAdmission),
+      },
       timeline: buildTimeline({
         patient: populated,
         appointments,
         prescriptions,
         labOrders,
         labReports,
+        pharmacyOrders,
         invoices,
         bedEvents,
       }),

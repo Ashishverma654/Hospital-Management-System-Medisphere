@@ -13,6 +13,7 @@ const typeLabels = {
   labOrder: 'Lab order',
   labReport: 'Lab report',
   invoice: 'Invoice',
+  pharmacy: 'Pharmacy',
   admission: 'Admission',
   discharge: 'Discharge',
 };
@@ -23,10 +24,12 @@ const typeLinks = {
   labOrder: '/patient/lab-tests',
   labReport: '/patient/lab-reports',
   invoice: '/patient/bills',
+  pharmacy: '/patient/medicine-orders',
 };
 
 export default function PatientTimeline() {
   const [timeline, setTimeline] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadTimeline = async () => {
@@ -34,6 +37,7 @@ export default function PatientTimeline() {
     try {
       const data = await patientApi.getMyTimeline();
       setTimeline(Array.isArray(data?.timeline) ? data.timeline : []);
+      setSummary(data?.summary || null);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load timeline.');
     } finally {
@@ -55,9 +59,18 @@ export default function PatientTimeline() {
         </p>
       </div>
 
+      {summary && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <SummaryCard label="Total visits" value={summary.totalVisits} />
+          <SummaryCard label="Active prescriptions" value={summary.activePrescriptions} />
+          <SummaryCard label="Pending bills" value={summary.pendingBills} />
+          <SummaryCard label="Active admission" value={summary.activeAdmission ? 'Yes' : 'No'} />
+        </div>
+      )}
+
       <div className="space-y-4">
         {timeline.map((event, index) => (
-          <article key={`${event.type}-${event.id || index}`} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <article key={`${event.type}-${event.id || index}`} className={`rounded-2xl border border-border bg-card p-6 shadow-sm ${event.critical ? 'border-destructive/40' : ''}`}>
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-semibold text-foreground">{event.title}</p>
@@ -68,8 +81,12 @@ export default function PatientTimeline() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={event.type}>{typeLabels[event.type] || event.type}</StatusBadge>
-                {typeLinks[event.type] && (
-                  <Link to={typeLinks[event.type]} className="text-xs font-semibold text-foreground underline">
+                {event.status && <StatusBadge status={event.status}>{event.status}</StatusBadge>}
+                {event.critical && (
+                  <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">Critical</span>
+                )}
+                {(event.link || typeLinks[event.type]) && (
+                  <Link to={event.link || typeLinks[event.type]} className="text-xs font-semibold text-foreground underline">
                     View details
                   </Link>
                 )}
@@ -85,5 +102,14 @@ export default function PatientTimeline() {
         )}
       </div>
     </motion.section>
+  );
+}
+
+function SummaryCard({ label, value }) {
+  return (
+    <article className="rounded-xl bg-card p-6 shadow-sm">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <h3 className="mt-2 text-3xl font-semibold text-foreground">{value}</h3>
+    </article>
   );
 }

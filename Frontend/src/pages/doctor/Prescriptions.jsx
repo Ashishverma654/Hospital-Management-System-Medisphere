@@ -28,6 +28,7 @@ export default function DoctorPrescriptions() {
   const [medicines, setMedicines] = useState([]);
   const [appointment, setAppointment] = useState(null);
   const [recentPrescriptions, setRecentPrescriptions] = useState([]);
+  const [doctorAppointments, setDoctorAppointments] = useState([]);
 
   const [formData, setFormData] = useState({
     appointmentId: appointmentId || '',
@@ -41,11 +42,24 @@ export default function DoctorPrescriptions() {
     dosage: '',
     frequency: '',
     duration: '',
+    quantity: '',
+    unit: '',
+    instructions: '',
   });
 
   useEffect(() => {
-    Promise.all([fetchMedicines(), appointmentId && fetchAppointment(appointmentId), fetchRecentPrescriptions()]);
+    Promise.all([fetchMedicines(), fetchDoctorAppointments(), appointmentId && fetchAppointment(appointmentId), fetchRecentPrescriptions()]);
   }, [appointmentId]);
+
+  const fetchDoctorAppointments = async () => {
+    try {
+      const data = await appointmentApi.getDoctorAll();
+      const list = Array.isArray(data) ? data : data?.data || [];
+      setDoctorAppointments(Array.isArray(list) ? list : []);
+    } catch {
+      setDoctorAppointments([]);
+    }
+  };
 
   const fetchMedicines = async () => {
     try {
@@ -59,8 +73,9 @@ export default function DoctorPrescriptions() {
   const fetchAppointment = async (id) => {
     try {
       setLoading(true);
-      const data = await appointmentApi.getAll();
-      const found = Array.isArray(data) ? data.find((a) => a._id === id) : null;
+      const data = await appointmentApi.getDoctorAll();
+      const list = Array.isArray(data) ? data : data?.data || [];
+      const found = Array.isArray(list) ? list.find((a) => a._id === id) : null;
       if (found) {
         setAppointment(found);
       } else {
@@ -94,7 +109,7 @@ export default function DoctorPrescriptions() {
         { ...medicineInput, medicineId: medicineInput.medicineId },
       ],
     });
-    setMedicineInput({ medicineId: '', dosage: '', frequency: '', duration: '' });
+    setMedicineInput({ medicineId: '', dosage: '', frequency: '', duration: '', quantity: '', unit: '', instructions: '' });
   };
 
   const handleRemoveMedicine = (index) => {
@@ -182,18 +197,31 @@ export default function DoctorPrescriptions() {
               <Label htmlFor="appointment">
                 Appointment <span className="text-red-500">*</span>
               </Label>
-              <Input
+              <select
                 id="appointment"
                 value={formData.appointmentId}
-                onChange={(e) =>
-                  setFormData({ ...formData, appointmentId: e.target.value })
-                }
-                placeholder="Enter appointment ID or select from list"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData({ ...formData, appointmentId: value });
+                  if (value) {
+                    fetchAppointment(value);
+                  }
+                }}
+                className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
                 required
-              />
+              >
+                <option value="">Select appointment</option>
+                {doctorAppointments.map((apt) => (
+                  <option key={apt._id} value={apt._id}>
+                    {apt.patientId?.name || apt.patientId?.userId?.name || 'Patient'} • {apt.slot} • {apt.status}
+                  </option>
+                ))}
+              </select>
               {appointment && (
                 <div className="mt-2 p-3 bg-muted/50 rounded text-sm">
-                  <p className="font-medium">{appointment.patientId?.userId?.name}</p>
+                  <p className="font-medium">
+                    {appointment.patientId?.name || appointment.patientId?.userId?.name || 'Patient'}
+                  </p>
                   <p className="text-muted-foreground">
                     {new Date(appointment.date).toLocaleDateString()} at{' '}
                     {appointment.slot || '—'}
@@ -294,6 +322,51 @@ export default function DoctorPrescriptions() {
                       placeholder="e.g., 7 days"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <Input
+                      id="quantity"
+                      type="number"
+                      value={medicineInput.quantity}
+                      onChange={(e) =>
+                        setMedicineInput({
+                          ...medicineInput,
+                          quantity: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., 10"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">Unit</Label>
+                    <Input
+                      id="unit"
+                      value={medicineInput.unit}
+                      onChange={(e) =>
+                        setMedicineInput({
+                          ...medicineInput,
+                          unit: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., tablets"
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="instructions">Instructions</Label>
+                    <Input
+                      id="instructions"
+                      value={medicineInput.instructions}
+                      onChange={(e) =>
+                        setMedicineInput({
+                          ...medicineInput,
+                          instructions: e.target.value,
+                        })
+                      }
+                      placeholder="Any special instructions"
+                    />
+                  </div>
                 </div>
 
                 <Button
@@ -322,6 +395,14 @@ export default function DoctorPrescriptions() {
                           <p className="text-xs text-muted-foreground">
                             {med.dosage} - {med.frequency} for {med.duration}
                           </p>
+                          {(med.quantity || med.unit) && (
+                            <p className="text-xs text-muted-foreground">
+                              Qty: {med.quantity || '—'} {med.unit || ''}
+                            </p>
+                          )}
+                          {med.instructions && (
+                            <p className="text-xs text-muted-foreground">{med.instructions}</p>
+                          )}
                         </div>
                         <Button
                           type="button"

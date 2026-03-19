@@ -12,10 +12,12 @@ import {
   emailInvoice,
 } from "../controllers/billingController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createInvoiceSchema, payInvoiceSchema } from "../validations/billingValidation.js";
 
 const router = express.Router();
 
-router.post("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), createInvoice);
+router.post("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), validate(createInvoiceSchema), createInvoice);
 router.get("/", verifyAccessToken, authorizeRoles("admin", "receptionist"), getAllInvoices);
 router.get("/context", verifyAccessToken, authorizeRoles("admin", "receptionist"), getInvoicesByContext);
 
@@ -26,6 +28,6 @@ router.post("/:id/email", verifyAccessToken, authorizeRoles("admin", "receptioni
 router.get("/patient/:patientId", verifyAccessToken, authorizeRoles("admin", "receptionist"), getPatientInvoice);
 router.post("/appointments/:appointmentId/initiate", verifyAccessToken, authorizeRoles("admin", "receptionist"), initiateConsultationBilling);
 
-router.put("/pay/:id", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), payInvoice);
+router.put("/pay/:id", verifyAccessToken, authorizeRoles("admin", "receptionist", "patient"), validate(payInvoiceSchema), payInvoice);
 
 export default router;

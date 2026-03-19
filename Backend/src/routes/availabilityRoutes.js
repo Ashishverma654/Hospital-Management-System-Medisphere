@@ -9,6 +9,8 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createAvailabilitySchema, updateAvailabilitySchema } from "../validations/availabilityAwardFileValidation.js";
 
 const router = express.Router();
 
@@ -16,6 +18,7 @@ router.post(
   "/",
   verifyAccessToken,
   authorizeRoles("admin", "superadmin"),
+  validate(createAvailabilitySchema),
   createAvailability,
 );
 
@@ -23,6 +26,7 @@ router.put(
   "/:id",
   verifyAccessToken,
   authorizeRoles("admin", "superadmin"),
+  validate(updateAvailabilitySchema),
   updateAvailability,
 );
 

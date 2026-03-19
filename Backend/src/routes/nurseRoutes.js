@@ -9,6 +9,7 @@ import {
   getDashboardStats,
   getEscalationNotes,
   getHandoverNotes,
+  getRoster,
   getMyProfile,
   getNursingNotes,
   getNursingTasks,
@@ -19,6 +20,14 @@ import {
   updateNursingTask,
 } from "../controllers/nurseController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import {
+  createNursingTaskSchema,
+  updateNursingTaskSchema,
+  recordVitalsSchema,
+  createNursingNoteSchema,
+  createHandoverSchema,
+} from "../validations/nurseValidation.js";
 
 const router = express.Router();
 
@@ -30,17 +39,18 @@ router.get("/assignments", getAssignments);
 router.get("/patients", getAssignedPatients);
 router.get("/ward-board", getWardOverview);
 router.get("/tasks", getNursingTasks);
-router.post("/tasks", createNursingTask);
-router.patch("/tasks/:id", updateNursingTask);
+router.post("/tasks", validate(createNursingTaskSchema), createNursingTask);
+router.patch("/tasks/:id", validate(updateNursingTaskSchema), updateNursingTask);
 router.get("/vitals", getVitalsHistory);
 router.get("/vitals/:patientId/history", getVitalsHistory);
-router.post("/vitals", recordVitals);
+router.post("/vitals", validate(recordVitalsSchema), recordVitals);
 router.get("/notes", getNursingNotes);
-router.post("/notes", createNursingNote);
+router.post("/notes", validate(createNursingNoteSchema), createNursingNote);
 router.get("/handover", getHandoverNotes);
-router.post("/handover", createHandoverNote);
+router.post("/handover", validate(createHandoverSchema), createHandoverNote);
+router.get("/roster", getRoster);
 router.get("/escalations", getEscalationNotes);
-router.post("/escalations", createEscalationNote);
+router.post("/escalations", validate(createNursingNoteSchema), createEscalationNote);
 router.get("/profile", getMyProfile);
 router.put("/profile", updateMyProfile);
 

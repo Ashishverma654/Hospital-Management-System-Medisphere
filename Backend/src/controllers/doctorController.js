@@ -834,14 +834,14 @@ export const getDoctorById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    let doctor = await Doctor.findOne({ _id: id, isActive: true, isPublished: true })
+    let doctor = await Doctor.findOne({ _id: id, isActive: true, isPublished: true, isDeleted: { $ne: true } })
       .populate("userId", "name email phone profileImage")
       .populate("departmentId", "name description")
       .populate("specializationIds", "name")
       .populate("hospitalLocations", "name city state");
 
     if (!doctor) {
-      doctor = await Doctor.findOne({ userId: id, isActive: true, isPublished: true })
+      doctor = await Doctor.findOne({ userId: id, isActive: true, isPublished: true, isDeleted: { $ne: true } })
         .populate("userId", "name email phone profileImage")
         .populate("departmentId", "name description")
         .populate("specializationIds", "name")

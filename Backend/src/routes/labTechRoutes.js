@@ -16,6 +16,8 @@ import {
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 import upload from "../middlewares/uploadMiddleware.js";
 import { uploadLabReport } from "../controllers/labReportController.js";
+import validate from "../middlewares/validate.js";
+import { uploadLabReportSchema } from "../validations/labValidation.js";
 
 const router = express.Router();
 
@@ -33,7 +35,7 @@ router.patch("/orders/:id/report-pickup", scheduleReportPickup);
 router.patch("/orders/:id/sample-collected", markSampleCollected);
 router.patch("/orders/:id/processing", markInProcessing);
 router.patch("/orders/:id/report-ready", markReportReady);
-router.post("/orders/:id/report-upload", upload.single("reportFile"), uploadLabReport);
+router.post("/orders/:id/report-upload", validate(uploadLabReportSchema), upload.single("reportFile"), uploadLabReport);
 router.patch("/orders/:id/release", releaseReportToPortal);
 
 export default router;

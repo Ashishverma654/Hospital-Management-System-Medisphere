@@ -12,6 +12,12 @@ const shiftSchema = new mongoose.Schema(
       enum: SHIFT_TYPES,
       default: "custom",
     },
+    code: {
+      type: String,
+    },
+    description: {
+      type: String,
+    },
     startTime: {
       type: String,
       required: true,
@@ -23,6 +29,14 @@ const shiftSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   { timestamps: true }

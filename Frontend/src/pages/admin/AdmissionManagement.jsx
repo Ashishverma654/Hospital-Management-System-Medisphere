@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui/button';
-import { bedApi, wardApi } from '../../services/apiServices.js';
+import { bedApi, wardApi, departmentApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { RefreshCw, Search } from 'lucide-react';
+import { Plus, RefreshCw, Search } from 'lucide-react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
@@ -10,31 +10,75 @@ export default function AdmissionManagement() {
   const [summary, setSummary] = useState(null);
   const [admissions, setAdmissions] = useState([]);
   const [wards, setWards] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [search, setSearch] = useState('');
   const [filterWard, setFilterWard] = useState('');
+  const [showAdmitForm, setShowAdmitForm] = useState(false);
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [candidates, setCandidates] = useState([]);
+  const [beds, setBeds] = useState([]);
+  const [admitForm, setAdmitForm] = useState({
+    patientId: '',
+    departmentId: '',
+    wardId: '',
+    bedId: '',
+    reason: '',
+    notes: '',
+  });
+  const [transferForm, setTransferForm] = useState({
+    fromBedId: '',
+    toWardId: '',
+    toBedId: '',
+    notes: '',
+  });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
-      const [summaryData, admissionsData, wardsData] = await Promise.all([
+      const [summaryData, admissionsData, wardsData, departmentsData] = await Promise.all([
         wardApi.getSummary(),
         bedApi.getCurrentAdmissions({
           search: search || undefined,
           wardId: filterWard || undefined,
         }),
         wardApi.getAll({}),
+        departmentApi.getAll({ isActive: true }),
       ]);
       setSummary(summaryData);
       setAdmissions(Array.isArray(admissionsData) ? admissionsData : []);
       setWards(Array.isArray(wardsData) ? wardsData : []);
+      setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load occupancy dashboard.');
     }
-  };
+  }, [filterWard, search]);
+
+  const loadBedsForWard = useCallback(async (wardId) => {
+    if (!wardId) {
+      setBeds([]);
+      return;
+    }
+    try {
+      const data = await bedApi.getAll({ wardId });
+      setBeds(Array.isArray(data) ? data : []);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to load beds.');
+    }
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
-  }, [search, filterWard]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [load]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadBedsForWard(admitForm.wardId);
+  }, [admitForm.wardId, loadBedsForWard]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadBedsForWard(transferForm.toWardId);
+  }, [transferForm.toWardId, loadBedsForWard]);
 
   const wardRows = useMemo(() => summary?.wards || [], [summary]);
 
@@ -48,6 +92,91 @@ export default function AdmissionManagement() {
     }
   };
 
+  const loadCandidates = async () => {
+    try {
+      const data = await bedApi.getAdmissionCandidates();
+      setCandidates(Array.isArray(data) ? data : []);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to load admission candidates.');
+    }
+  };
+
+  const openAdmit = async () => {
+    setAdmitForm({
+      patientId: '',
+      departmentId: '',
+      wardId: '',
+      bedId: '',
+      reason: '',
+      notes: '',
+    });
+    setBeds([]);
+    await loadCandidates();
+    setShowAdmitForm(true);
+  };
+
+  const submitAdmission = async (autoAssign = false) => {
+    try {
+      if (!admitForm.patientId || !admitForm.wardId) {
+        return toast.error('Patient and ward are required.');
+      }
+      if (!autoAssign && !admitForm.bedId) {
+        return toast.error('Select a bed or use auto assign.');
+      }
+      if (autoAssign) {
+        await bedApi.assignAuto({
+          patientId: admitForm.patientId,
+          wardId: admitForm.wardId,
+          departmentId: admitForm.departmentId || undefined,
+          reason: admitForm.reason || undefined,
+          notes: admitForm.notes || undefined,
+        });
+      } else {
+        await bedApi.assign(admitForm.bedId, {
+          patientId: admitForm.patientId,
+          wardId: admitForm.wardId,
+          departmentId: admitForm.departmentId || undefined,
+          reason: admitForm.reason || undefined,
+          notes: admitForm.notes || undefined,
+        });
+      }
+      toast.success('Patient admitted successfully.');
+      setShowAdmitForm(false);
+      await load();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to admit patient.');
+    }
+  };
+
+  const openTransfer = async (admission) => {
+    setTransferForm({
+      fromBedId: admission.id,
+      toWardId: '',
+      toBedId: '',
+      notes: '',
+    });
+    setBeds([]);
+    setShowTransferForm(true);
+  };
+
+  const submitTransfer = async () => {
+    try {
+      if (!transferForm.fromBedId || !transferForm.toBedId) {
+        return toast.error('Select a target bed to transfer.');
+      }
+      await bedApi.transfer({
+        fromBedId: transferForm.fromBedId,
+        toBedId: transferForm.toBedId,
+        notes: transferForm.notes || undefined,
+      });
+      toast.success('Patient transferred successfully.');
+      setShowTransferForm(false);
+      await load();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to transfer patient.');
+    }
+  };
+
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
@@ -56,6 +185,12 @@ export default function AdmissionManagement() {
         <p className="mt-2 max-w-3xl text-muted-foreground">
           Monitor ward occupancy, current admissions, available capacity, and doctor-linked admission recommendations in one operational view.
         </p>
+        <div className="mt-4">
+          <Button onClick={openAdmit}>
+            <Plus className="mr-2 h-4 w-4" />
+            Admit Patient
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
@@ -150,6 +285,9 @@ export default function AdmissionManagement() {
                     <span className="text-sm text-muted-foreground">
                       ₹{Number(admission.effectivePrice || 0).toLocaleString()}
                     </span>
+                    <Button variant="outline" size="sm" onClick={() => openTransfer(admission)}>
+                      Transfer
+                    </Button>
                     <Button variant="destructive" size="sm" onClick={() => discharge(admission)}>
                       Discharge
                     </Button>
@@ -165,6 +303,116 @@ export default function AdmissionManagement() {
           </div>
         </article>
       </div>
+
+      {showAdmitForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-4xl rounded-2xl bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-foreground">Admit patient</h3>
+              <button type="button" onClick={() => setShowAdmitForm(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <Field label="Patient">
+                <select value={admitForm.patientId} onChange={(e) => setAdmitForm((c) => ({ ...c, patientId: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                  <option value="">Select patient</option>
+                  {candidates.map((candidate) => (
+                    <option key={candidate.id} value={candidate.id}>
+                      {candidate.name} ({candidate.patientId || 'No ID'})
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Department">
+                <select value={admitForm.departmentId} onChange={(e) => setAdmitForm((c) => ({ ...c, departmentId: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                  <option value="">Select department</option>
+                  {departments.map((dept) => (
+                    <option key={dept._id} value={dept._id}>{dept.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Ward">
+                <select
+                  value={admitForm.wardId}
+                  onChange={(e) => setAdmitForm((c) => ({ ...c, wardId: e.target.value, bedId: '' }))}
+                  className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
+                >
+                  <option value="">Select ward</option>
+                  {wards
+                    .filter((ward) => !admitForm.departmentId || String(ward.departmentId?._id || ward.departmentId) === String(admitForm.departmentId))
+                    .map((ward) => (
+                      <option key={ward._id} value={ward._id}>{ward.name}</option>
+                    ))}
+                </select>
+              </Field>
+              <Field label="Bed (manual)">
+                <select value={admitForm.bedId} onChange={(e) => setAdmitForm((c) => ({ ...c, bedId: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                  <option value="">Select bed</option>
+                  {beds.map((bed) => (
+                    <option key={bed._id} value={bed._id} disabled={bed.status !== 'available'}>
+                      {bed.bedNumber} {bed.status !== 'available' ? '(occupied)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Reason">
+                <input type="text" value={admitForm.reason} onChange={(e) => setAdmitForm((c) => ({ ...c, reason: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              </Field>
+              <Field label="Notes">
+                <input type="text" value={admitForm.notes} onChange={(e) => setAdmitForm((c) => ({ ...c, notes: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              </Field>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+              Available beds: {beds.filter((bed) => bed.status === 'available').length} / {beds.length}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAdmitForm(false)}>Cancel</Button>
+              <Button type="button" variant="outline" className="flex-1" onClick={() => submitAdmission(true)}>Auto Assign Bed</Button>
+              <Button type="button" className="flex-1" onClick={() => submitAdmission(false)}>Admit Patient</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTransferForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl rounded-2xl bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-foreground">Transfer patient</h3>
+              <button type="button" onClick={() => setShowTransferForm(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <Field label="Target Ward">
+                <select value={transferForm.toWardId} onChange={(e) => setTransferForm((c) => ({ ...c, toWardId: e.target.value, toBedId: '' }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                  <option value="">Select ward</option>
+                  {wards.map((ward) => (
+                    <option key={ward._id} value={ward._id}>{ward.name}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Target Bed">
+                <select value={transferForm.toBedId} onChange={(e) => setTransferForm((c) => ({ ...c, toBedId: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
+                  <option value="">Select bed</option>
+                  {beds.map((bed) => (
+                    <option key={bed._id} value={bed._id} disabled={bed.status !== 'available'}>
+                      {bed.bedNumber} {bed.status !== 'available' ? '(occupied)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Transfer Notes">
+                <input type="text" value={transferForm.notes} onChange={(e) => setTransferForm((c) => ({ ...c, notes: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
+              </Field>
+            </div>
+            <div className="mt-6 flex gap-3">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowTransferForm(false)}>Cancel</Button>
+              <Button type="button" className="flex-1" onClick={submitTransfer}>Transfer Patient</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.section>
   );
 }
@@ -175,5 +423,14 @@ function SummaryCard({ label, value }) {
       <p className="text-sm text-muted-foreground">{label}</p>
       <h3 className="mt-2 text-3xl font-semibold text-foreground">{value}</h3>
     </article>
+  );
+}
+
+function Field({ children, className = '', label }) {
+  return (
+    <div className={className}>
+      <label className="mb-2 block text-sm font-medium text-foreground">{label}</label>
+      {children}
+    </div>
   );
 }

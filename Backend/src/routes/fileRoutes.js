@@ -1,6 +1,8 @@
 import express from "express";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 import upload from "../middlewares/uploadMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { fileUploadSchema } from "../validations/availabilityAwardFileValidation.js";
 
 const router = express.Router();
 
@@ -8,6 +10,7 @@ router.post(
   "/upload",
   verifyAccessToken,
   authorizeRoles("superadmin", "admin", "subadmin", "doctor"),
+  validate(fileUploadSchema),
   upload.single("image"),
   (req, res) => {
     try {

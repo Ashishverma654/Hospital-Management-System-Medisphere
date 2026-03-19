@@ -2,6 +2,7 @@ import Patient from "../models/Patient.js";
 import Appointment from "../models/Appointment.js";
 import Invoice from "../models/Invoice.js";
 import Bed from "../models/Bed.js";
+import Admission from "../models/Admission.js";
 import Doctor from "../models/Doctor.js";
 import User from "../models/User.js";
 import Nurse from "../models/Nurse.js";
@@ -84,6 +85,11 @@ export const getDashboardStats = async (req, res) => {
 
     const occupiedBeds = await Bed.countDocuments({ status: "occupied" });
     const availableBeds = await Bed.countDocuments({ status: "available" });
+    const todayAdmissions = await Admission.countDocuments({
+      admissionDate: { $gte: new Date(`${today}T00:00:00.000Z`), $lte: new Date(`${today}T23:59:59.999Z`) },
+    });
+    const activeAdmissions = await Admission.countDocuments({ status: { $in: ["Admitted", "Transferred"] } });
+    const icuOccupancy = await Bed.countDocuments({ status: "occupied", type: "icu" });
 
     const totalNurses = await User.countDocuments({ role: "nurse", isActive: true });
     const totalPharmacists = await User.countDocuments({ role: "pharmacist", isActive: true });
@@ -117,6 +123,9 @@ export const getDashboardStats = async (req, res) => {
       totalRevenue,
       occupiedBeds,
       availableBeds,
+      todayAdmissions,
+      activeAdmissions,
+      icuOccupancy,
       totalNurses,
       totalPharmacists,
       totalLabTechs,

@@ -8,16 +8,25 @@ export default function NurseWardBoard() {
   const [board, setBoard] = useState({ wards: [], totalPatients: 0 });
 
   useEffect(() => {
+    let isMounted = true;
     const load = async () => {
       try {
         const data = await nurseApi.getWardBoard();
+        if (!isMounted) return;
         setBoard(data || { wards: [], totalPatients: 0 });
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to load ward board.');
+        if (isMounted) {
+          toast.error(error.response?.data?.message || 'Failed to load ward board.');
+        }
       }
     };
 
     load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (

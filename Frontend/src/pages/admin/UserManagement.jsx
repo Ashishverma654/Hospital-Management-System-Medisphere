@@ -243,6 +243,13 @@ export default function UserManagement() {
           <Button variant="outline" size="sm" onClick={loadHistory}>
             <History className="mr-2 h-4 w-4" /> History
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/employee/manage-roles/add?role=receptionist')}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Receptionist
+          </Button>
           <Button size="sm" onClick={() => navigate('/employee/manage-roles/add')}>
             <Plus className="mr-2 h-4 w-4" /> Create User
           </Button>

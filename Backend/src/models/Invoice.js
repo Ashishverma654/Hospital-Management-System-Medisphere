@@ -38,6 +38,28 @@ const invoiceLineItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const paymentHistorySchema = new mongoose.Schema(
+  {
+    amount: {
+      type: Number,
+      min: 0,
+      required: true,
+    },
+    method: {
+      type: String,
+      enum: PAYMENT_METHODS,
+    },
+    paidAt: {
+      type: Date,
+      default: Date.now,
+    },
+    notes: {
+      type: String,
+    },
+  },
+  { _id: false }
+);
+
 const invoiceSchema = new mongoose.Schema({
     invoiceNumber: {
         type: String,
@@ -146,6 +168,31 @@ const invoiceSchema = new mongoose.Schema({
 
     paidAt: {
         type: Date
+    },
+
+    paymentHistory: [paymentHistorySchema],
+
+    discount: {
+        amount: {
+            type: Number,
+            min: 0
+        },
+        reason: {
+            type: String
+        }
+    },
+
+    insuranceCoverage: {
+        provider: {
+            type: String
+        },
+        amount: {
+            type: Number,
+            min: 0
+        },
+        policyNumber: {
+            type: String
+        }
     },
 
     notes: {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { patientApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -302,10 +303,15 @@ export default function PatientManagement() {
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">{new Date(patient.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-3">
-                      <Button size="sm" variant="outline" onClick={() => loadPatientDetail(patient.id)}>
-                        <Eye className="mr-1 h-3 w-3" />
-                        View
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => loadPatientDetail(patient.id)}>
+                          <Eye className="mr-1 h-3 w-3" />
+                          View
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link to={`/employee/patients/${patient.id}`}>Open Page</Link>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

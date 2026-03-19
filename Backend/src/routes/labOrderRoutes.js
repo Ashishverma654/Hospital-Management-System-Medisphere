@@ -12,6 +12,8 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createLabOrderSchema, updateLabOrderStatusSchema } from "../validations/labValidation.js";
 
 const router = express.Router();
 
@@ -20,6 +22,7 @@ router.post(
   "/",
   verifyAccessToken,
   authorizeRoles("doctor"),
+  validate(createLabOrderSchema),
   createLabOrder
 );
 
@@ -54,6 +57,7 @@ router.put(
   "/:id/status",
   verifyAccessToken,
   authorizeRoles("admin", "superadmin", "labTechnician"),
+  validate(updateLabOrderStatusSchema),
   updateLabOrderStatus
 );
 

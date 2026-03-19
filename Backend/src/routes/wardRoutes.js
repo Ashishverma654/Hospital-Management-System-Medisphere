@@ -9,6 +9,8 @@ import {
   updateWard,
 } from "../controllers/wardController.js";
 import { authorizeRoles, verifyAccessToken } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createWardSchema, updateWardSchema, emptyBodySchema } from "../validations/reportShiftUserWardValidation.js";
 
 const router = express.Router();
 
@@ -19,8 +21,8 @@ router.get("/", listWards);
 router.get("/summary", getWardOccupancySummary);
 router.get("/:id", getWardDetail);
 router.get("/:id/history", getWardHistory);
-router.post("/", createWard);
-router.put("/:id", updateWard);
-router.put("/:id/toggle-active", toggleWardActive);
+router.post("/", validate(createWardSchema), createWard);
+router.put("/:id", validate(updateWardSchema), updateWard);
+router.put("/:id/toggle-active", validate(emptyBodySchema), toggleWardActive);
 
 export default router;

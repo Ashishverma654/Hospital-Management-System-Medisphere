@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
-import { Users, Stethoscope, UserCog, CalendarCheck, ArrowRight } from 'lucide-react';
-import { adminApi } from '../../services/apiServices.js';
+import { Users, Stethoscope, UserCog, CalendarCheck, ArrowRight, CreditCard } from 'lucide-react';
+import { adminApi, analyticsApi } from '../../services/apiServices.js';
 import { getRoleLabel } from '../../auth/constants.js';
 import StatCard from '../../components/StatCard.jsx';
 import { SkeletonCard, SkeletonList } from '../../components/ui/skeleton.jsx';
@@ -22,17 +22,29 @@ const roleCountLabels = [
 export default function GovernanceDashboard() {
   const user = useSelector((state) => state.auth.user);
   const [stats, setStats] = useState(null);
+  const [analyticsRevenue, setAnalyticsRevenue] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const unwrapResponse = (response) => response?.data ?? response;
+
     const loadStats = async () => {
       setLoading(true);
       try {
-        setStats(await adminApi.getDashboardStats());
+        const dashboardResponse = await adminApi.getDashboardStats();
+        setStats(unwrapResponse(dashboardResponse));
         setError('');
       } catch (err) {
         setError(err.response?.data?.message || 'Unable to load dashboard.');
+      }
+
+      try {
+        const revenueResponse = await analyticsApi.getRevenue();
+        const revenueData = unwrapResponse(revenueResponse);
+        setAnalyticsRevenue(revenueData?.totalRevenue ?? 0);
+      } catch {
+        setAnalyticsRevenue(null);
       } finally {
         setLoading(false);
       }
@@ -75,11 +87,19 @@ export default function GovernanceDashboard() {
           <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
         </div>
       ) : (
-        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <StatCard title="Total Patients" value={stats?.totalPatients} icon={Users} variant="default" />
           <StatCard title="Total Doctors" value={stats?.totalDoctors} icon={Stethoscope} variant="info" />
           <StatCard title="Total Employees" value={stats?.totalEmployees} icon={UserCog} variant="success" />
           <StatCard title="Today's Appointments" value={stats?.todayPatientActivity?.appointments} icon={CalendarCheck} variant="warning" />
+          <StatCard
+            title="Revenue (analytics)"
+            value={analyticsRevenue ?? 0}
+            prefix="₹"
+            icon={CreditCard}
+            variant="info"
+            subtitle="From billing analytics"
+          />
         </motion.div>
       )}
 

@@ -68,6 +68,21 @@ const appointmentSchema = new mongoose.Schema(
       default: "newConsultation",
     },
 
+    priority: {
+      type: String,
+      enum: ["Normal", "Emergency"],
+      default: "Normal",
+    },
+
+    admissionRecommended: {
+      type: Boolean,
+      default: false,
+    },
+
+    admissionRecommendationNotes: {
+      type: String,
+    },
+
     bookingSource: {
       type: String,
       enum: ["patientPortal", "receptionDesk", "admin"],
@@ -75,6 +90,10 @@ const appointmentSchema = new mongoose.Schema(
     },
 
     checkInAt: {
+      type: Date,
+    },
+
+    arrivalTime: {
       type: Date,
     },
 
@@ -87,10 +106,37 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
     },
 
+    cancelReason: {
+      type: String,
+    },
+
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    cancelledAt: {
+      type: Date,
+    },
+
+    noShowAt: {
+      type: Date,
+    },
+
     rescheduledFrom: {
       date: String,
       slot: String,
       rescheduledAt: Date,
+    },
+
+    rescheduledFromId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Appointment",
+    },
+
+    tokenNumber: {
+      type: Number,
+      min: 1,
     },
 
     notes: {
@@ -111,5 +157,6 @@ const appointmentSchema = new mongoose.Schema(
 );
 
 appointmentSchema.index({ doctorId: 1, date: 1, slot: 1 }, { unique: true });
+appointmentSchema.index({ date: 1 });
 
 export default mongoose.model("Appointment", appointmentSchema);

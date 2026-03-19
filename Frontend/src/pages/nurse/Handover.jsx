@@ -9,6 +9,7 @@ import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 const initialForm = {
   wardId: '',
   patientId: '',
+  toNurseUserId: '',
   priority: 'medium',
   summary: '',
 };
@@ -18,23 +19,27 @@ export default function NurseHandover() {
   const [patients, setPatients] = useState([]);
   const [notes, setNotes] = useState([]);
   const [form, setForm] = useState(initialForm);
+  const [nurseRoster, setNurseRoster] = useState([]);
 
   const load = async () => {
     try {
-      const [assignmentData, patientData, handoverData] = await Promise.all([
+      const [assignmentData, patientData, handoverData, rosterData] = await Promise.all([
         nurseApi.getAssignments(),
         nurseApi.getAssignedPatients(),
         nurseApi.getHandover(),
+        nurseApi.getRoster(),
       ]);
       const assignmentList = Array.isArray(assignmentData) ? assignmentData : [];
       const patientList = Array.isArray(patientData) ? patientData : [];
       setAssignments(assignmentList);
       setPatients(patientList);
       setNotes(Array.isArray(handoverData) ? handoverData : []);
+      setNurseRoster(Array.isArray(rosterData) ? rosterData : []);
 
       if (!form.wardId && assignmentList.length) {
-        const firstWard = assignmentList.find((assignment) => assignment.ward?.id)?.ward?.id || '';
-        setForm((current) => ({ ...current, wardId: firstWard }));
+        const firstWard = assignmentList.find((assignment) => assignment.ward?._id || assignment.ward?.id)?.ward;
+        const wardId = firstWard?._id || firstWard?.id || '';
+        setForm((current) => ({ ...current, wardId }));
       }
       if (!form.patientId && patientList.length) {
         setForm((current) => ({ ...current, patientId: patientList[0].id }));
@@ -64,8 +69,8 @@ export default function NurseHandover() {
   const uniqueWards = Array.from(
     new Map(
       assignments
-        .filter((assignment) => assignment.ward?.id)
-        .map((assignment) => [assignment.ward.id, assignment.ward])
+        .filter((assignment) => assignment.ward?._id || assignment.ward?.id)
+        .map((assignment) => [assignment.ward?._id || assignment.ward?.id, assignment.ward])
     ).values()
   );
 
@@ -86,7 +91,7 @@ export default function NurseHandover() {
             <select value={form.wardId} onChange={(event) => setForm((current) => ({ ...current, wardId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">Select ward</option>
               {uniqueWards.map((ward) => (
-                <option key={ward.id} value={ward.id}>
+                <option key={ward._id || ward.id} value={ward._id || ward.id}>
                   {ward.name} {ward.wardNumber ? `(${ward.wardNumber})` : ''}
                 </option>
               ))}
@@ -96,6 +101,14 @@ export default function NurseHandover() {
               {patients.map((patient) => (
                 <option key={patient.id} value={patient.id}>
                   {patient.name} ({patient.patientId || 'No ID'})
+                </option>
+              ))}
+            </select>
+            <select value={form.toNurseUserId} onChange={(event) => setForm((current) => ({ ...current, toNurseUserId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
+              <option value="">Optional receiving nurse</option>
+              {nurseRoster.map((nurse) => (
+                <option key={nurse.id} value={nurse.id}>
+                  {nurse.name} {nurse.employeeId ? `(${nurse.employeeId})` : ''}
                 </option>
               ))}
             </select>

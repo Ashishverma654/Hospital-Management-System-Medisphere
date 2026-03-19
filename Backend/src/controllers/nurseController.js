@@ -10,6 +10,7 @@ import Prescription from "../models/Prescription.js";
 import Shift from "../models/Shift.js";
 import Vitals from "../models/Vitals.js";
 import Ward from "../models/Ward.js";
+import User from "../models/User.js";
 
 const ACTIVE_ASSIGNMENT_STATUSES = ["scheduled", "active"];
 const ESCALATION_NOTE_TYPE = "incident";
@@ -833,6 +834,33 @@ export const getHandoverNotes = async (req, res) => {
       .limit(50);
 
     res.json(notes.map(mapHandover));
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getRoster = async (req, res) => {
+  try {
+    const scope = await getScopeData(req.user.id);
+    if (!scope.wardIds.length) {
+      return res.json([]);
+    }
+
+    const nurseIds = await NurseAssignment.find({
+      wardId: { $in: scope.wardIds },
+      nurseUserId: { $ne: req.user.id },
+    }).distinct("nurseUserId");
+
+    const nurses = await User.find({ _id: { $in: nurseIds }, role: "nurse", isActive: true })
+      .select("name employeeId");
+
+    res.json(
+      nurses.map((nurse) => ({
+        id: nurse._id,
+        name: nurse.name,
+        employeeId: nurse.employeeId,
+      }))
+    );
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

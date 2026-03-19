@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog.jsx';
+import VideoCall from '../../components/VideoCall.jsx';
 import { StatusBadge, DataTable, LoadingSkeleton, ErrorState } from '../../components';
 import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
-import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText } from 'lucide-react';
+import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText, Video } from 'lucide-react';
 
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
@@ -19,16 +20,22 @@ export default function DoctorAppointments() {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickViewData, setQuickViewData] = useState(null);
   const [quickViewLoading, setQuickViewLoading] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoAppointment, setVideoAppointment] = useState(null);
+  const [endingCall, setEndingCall] = useState(false);
+  const [viewMode, setViewMode] = useState('today');
 
   useEffect(() => {
-    fetchTodayAppointments();
-  }, []);
+    fetchAppointments();
+  }, [viewMode]);
 
-  const fetchTodayAppointments = async () => {
+  const fetchAppointments = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await appointmentApi.getDoctorToday();
+      const response = viewMode === 'today'
+        ? await appointmentApi.getDoctorToday()
+        : await appointmentApi.getDoctorAll();
       const normalized = Array.isArray(response) ? response : response?.data || [];
       setTodayAppointments(Array.isArray(normalized) ? normalized : []);
     } catch (err) {
@@ -44,13 +51,43 @@ export default function DoctorAppointments() {
       setStartingConsultation(appointmentId);
       await appointmentApi.startConsultation(appointmentId);
       toast.success('Consultation started');
-      fetchTodayAppointments();
+      fetchAppointments();
       // Redirect to patient summary
       navigate(`/doctor/appointments/${appointmentId}/summary`);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to start consultation');
     } finally {
       setStartingConsultation(null);
+    }
+  };
+
+  const handleStartVideo = async (appointment) => {
+    if (!appointment) return;
+    try {
+      if (appointment.status !== 'inConsultation') {
+        await appointmentApi.startConsultation(appointment._id);
+      }
+      setVideoAppointment(appointment);
+      setVideoOpen(true);
+      fetchAppointments();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to start video call');
+    }
+  };
+
+  const handleEndCall = async () => {
+    if (!videoAppointment) return;
+    try {
+      setEndingCall(true);
+      await appointmentApi.complete(videoAppointment._id);
+      toast.success('Consultation completed');
+      setVideoOpen(false);
+      setVideoAppointment(null);
+      fetchAppointments();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to complete consultation');
+    } finally {
+      setEndingCall(false);
     }
   };
 
@@ -157,6 +194,16 @@ export default function DoctorAppointments() {
               {startingConsultation === row._id ? 'Starting...' : 'Start'}
             </Button>
           )}
+          {row.consultationMode === 'video' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleStartVideo(row)}
+              className="text-xs"
+            >
+              <Video className="h-3 w-3 mr-1" /> Start video
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -172,6 +219,14 @@ export default function DoctorAppointments() {
             className="text-xs"
           >
             <Eye className="h-3 w-3 mr-1" /> View
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/doctor/prescriptions?appointmentId=${row._id}`)}
+            className="text-xs"
+          >
+            <FileText className="h-3 w-3 mr-1" /> Prescription
           </Button>
         </div>
       ),
@@ -202,9 +257,33 @@ export default function DoctorAppointments() {
             })}
           </p>
         </div>
-        <Button variant="outline" onClick={fetchTodayAppointments}>
-          <Calendar className="mr-2 h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewMode('today')}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+              viewMode === 'today'
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-foreground hover:bg-muted'
+            }`}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('all')}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+              viewMode === 'all'
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-foreground hover:bg-muted'
+            }`}
+          >
+            All
+          </button>
+          <Button variant="outline" onClick={fetchAppointments}>
+            <Calendar className="mr-2 h-4 w-4" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -235,7 +314,7 @@ export default function DoctorAppointments() {
         </Card>
       </div>
 
-      {error && <ErrorState error={error} onRetry={fetchTodayAppointments} />}
+      {error && <ErrorState error={error} onRetry={fetchAppointments} />}
 
       {/* Appointments Table */}
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
@@ -392,6 +471,32 @@ export default function DoctorAppointments() {
                 Full summary
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Video Consultation</DialogTitle>
+            <DialogDescription>
+              Appointment {videoAppointment?._id?.slice(-6)} • {videoAppointment?.patientId?.name || 'Patient'}
+            </DialogDescription>
+          </DialogHeader>
+          {videoAppointment && (
+            <VideoCall
+              appointmentId={videoAppointment._id}
+              role="doctor"
+              onEnd={handleEndCall}
+            />
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVideoOpen(false)} disabled={endingCall}>
+              Close
+            </Button>
+            <Button variant="destructive" onClick={handleEndCall} disabled={endingCall}>
+              {endingCall ? 'Ending...' : 'End consultation'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -14,6 +14,7 @@ const initialNoteForm = {
 
 const initialEscalationForm = {
   patientId: '',
+  reason: '',
   content: '',
 };
 
@@ -37,10 +38,12 @@ export default function NurseNotes() {
       setEscalations(Array.isArray(escalationData) ? escalationData : []);
 
       if (!noteForm.patientId && patientList.length) {
-        setNoteForm((current) => ({ ...current, patientId: patientList[0].id }));
+        const first = patientList[0];
+        setNoteForm((current) => ({ ...current, patientId: first.id || first._id }));
       }
       if (!escalationForm.patientId && patientList.length) {
-        setEscalationForm((current) => ({ ...current, patientId: patientList[0].id }));
+        const first = patientList[0];
+        setEscalationForm((current) => ({ ...current, patientId: first.id || first._id }));
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load nursing notes.');
@@ -67,7 +70,11 @@ export default function NurseNotes() {
   const submitEscalation = async (event) => {
     event.preventDefault();
     try {
-      await nurseApi.createEscalation(escalationForm);
+      const reasonPrefix = escalationForm.reason ? `[Reason: ${escalationForm.reason}] ` : '';
+      await nurseApi.createEscalation({
+        patientId: escalationForm.patientId,
+        content: `${reasonPrefix}${escalationForm.content}`.trim(),
+      });
       toast.success('Escalation note recorded.');
       setEscalationForm((current) => ({ ...initialEscalationForm, patientId: current.patientId }));
       await load();
@@ -93,7 +100,7 @@ export default function NurseNotes() {
             <select value={noteForm.patientId} onChange={(event) => setNoteForm((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">Select patient</option>
               {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
+                <option key={patient.id || patient._id} value={patient.id || patient._id}>
                   {patient.name} ({patient.patientId || 'No ID'})
                 </option>
               ))}
@@ -115,13 +122,23 @@ export default function NurseNotes() {
         <section className="rounded-2xl bg-card p-6 shadow-sm">
           <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Add Escalation</p>
           <form className="mt-4 space-y-4" onSubmit={submitEscalation}>
+            <label className="text-sm text-muted-foreground">Patient</label>
             <select value={escalationForm.patientId} onChange={(event) => setEscalationForm((current) => ({ ...current, patientId: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">Select patient</option>
               {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
+                <option key={patient.id || patient._id} value={patient.id || patient._id}>
                   {patient.name} ({patient.patientId || 'No ID'})
                 </option>
               ))}
+            </select>
+            <label className="text-sm text-muted-foreground">Escalation reason</label>
+            <select value={escalationForm.reason} onChange={(event) => setEscalationForm((current) => ({ ...current, reason: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
+              <option value="">Select escalation reason</option>
+              <option value="condition_change">Condition change</option>
+              <option value="abnormal_vitals">Abnormal vitals</option>
+              <option value="medication_reaction">Medication reaction</option>
+              <option value="equipment_issue">Equipment issue</option>
+              <option value="other">Other</option>
             </select>
             <textarea value={escalationForm.content} onChange={(event) => setEscalationForm((current) => ({ ...current, content: event.target.value }))} rows={5} placeholder="Describe why doctor attention is needed" className="w-full rounded-2xl border border-red-200 px-4 py-3 text-sm outline-none focus:border-red-500" />
             <Button type="submit" className="w-full" disabled={!escalationForm.patientId || !escalationForm.content.trim()}>

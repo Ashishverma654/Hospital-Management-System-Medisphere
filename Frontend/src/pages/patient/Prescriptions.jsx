@@ -95,16 +95,62 @@ export default function PatientPrescriptions() {
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {(prescription.medicines || []).map((medicine, index) => (
-                <div key={`${prescription._id}-${index}`} className="rounded-xl bg-muted/50 p-4">
-                  <p className="font-medium text-foreground">{medicine.name}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {medicine.dosage || 'Dose not set'} • {medicine.frequency || 'Frequency not set'}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">{medicine.duration || 'Duration not set'}</p>
+            <div className="mt-4 space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Diagnosis</p>
+                  <p className="mt-2 text-sm text-foreground">{prescription.diagnosis || prescription.clinicalNotes || 'Not specified'}</p>
                 </div>
-              ))}
+                <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Advice</p>
+                  <p className="mt-2 text-sm text-foreground">{prescription.advice || 'No special advice.'}</p>
+                </div>
+              </div>
+              {prescription.followUpDate && (
+                <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Follow-up</p>
+                  <p className="mt-2 text-sm text-foreground">
+                    {new Date(prescription.followUpDate).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              {prescription.admissionRecommended && (
+                <div className="rounded-xl border border-amber-300/50 bg-amber-50/30 p-4 text-sm text-amber-800">
+                  Admission has been recommended by your doctor.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Medicine</th>
+                    <th className="px-4 py-3">Dosage</th>
+                    <th className="px-4 py-3">Frequency</th>
+                    <th className="px-4 py-3">Duration</th>
+                    <th className="px-4 py-3">Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(prescription.medicines || []).map((medicine, index) => (
+                    <tr key={`${prescription._id}-${index}`} className="border-t border-border/60">
+                      <td className="px-4 py-3 font-semibold text-foreground">{medicine.name}</td>
+                      <td className="px-4 py-3">{medicine.dosage || '—'}</td>
+                      <td className="px-4 py-3">{medicine.frequency || '—'}</td>
+                      <td className="px-4 py-3">{medicine.duration || '—'}</td>
+                      <td className="px-4 py-3">{medicine.quantity ? `${medicine.quantity} ${medicine.unit || ''}` : '—'}</td>
+                    </tr>
+                  ))}
+                  {(prescription.medicines || []).length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-4 text-center text-sm text-muted-foreground">
+                        No medicines listed for this prescription.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">

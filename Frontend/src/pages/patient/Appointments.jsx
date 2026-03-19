@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { appointmentApi } from '../../services/apiServices.js';
+import VideoCall from '../../components/VideoCall.jsx';
+import { connectSocket } from '../../services/socket.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { Video } from 'lucide-react';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 const STATUS_OPTIONS = [
@@ -20,12 +24,18 @@ const STATUS_OPTIONS = [
 const isUpcoming = (appointment, today) => appointment.date >= today && appointment.status !== 'cancelled';
 
 export default function PatientAppointments() {
+  const user = useSelector((state) => state.auth.user);
   const [appointments, setAppointments] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [filters, setFilters] = useState({ status: '', startDate: '', endDate: '' });
   const [loading, setLoading] = useState(true);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoAppointment, setVideoAppointment] = useState(null);
+  const [videoStatus, setVideoStatus] = useState('');
+  const [waitingCountdown, setWaitingCountdown] = useState(null);
+  const graceMinutes = Number(import.meta.env.VITE_VIDEO_CALL_GRACE_MINUTES ?? import.meta.env.VITE_NO_SHOW_GRACE_MINUTES ?? 5);
 
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
     setLoading(true);
     try {
       const data = await appointmentApi.getAll({
@@ -43,16 +53,70 @@ export default function PatientAppointments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters.endDate, filters.startDate, filters.status, selectedId]);
 
   useEffect(() => {
     loadAppointments();
-  }, [filters.status, filters.startDate, filters.endDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    const interval = setInterval(loadAppointments, 20000);
+    return () => clearInterval(interval);
+  }, [loadAppointments]);
+
+  useEffect(() => {
+    const patientId = user?.id || user?._id;
+    if (!patientId) return undefined;
+    const socket = connectSocket({ patientId });
+    const handleUpdate = () => loadAppointments();
+
+    socket.on('queue:update', handleUpdate);
+    socket.on('token:generated', handleUpdate);
+    socket.on('consultation:started', handleUpdate);
+    socket.on('consultation:completed', handleUpdate);
+
+    return () => {
+      socket.off('queue:update', handleUpdate);
+      socket.off('token:generated', handleUpdate);
+      socket.off('consultation:started', handleUpdate);
+      socket.off('consultation:completed', handleUpdate);
+    };
+  }, [loadAppointments, user?.id, user?._id]);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const upcoming = appointments.filter((item) => isUpcoming(item, today));
   const past = appointments.filter((item) => !isUpcoming(item, today));
   const selected = appointments.find((item) => (item._id || item.id) === selectedId);
+  const canJoinVideo = selected?.consultationMode === 'video' && ['arrived', 'checked-in', 'inConsultation'].includes(selected?.status);
+  const waitingRoomVisible = videoOpen && videoStatus === 'Waiting for participant...';
+
+  useEffect(() => {
+    if (!waitingRoomVisible) {
+      setWaitingCountdown(null);
+      return undefined;
+    }
+
+    setWaitingCountdown(graceMinutes * 60);
+    const handle = setInterval(() => {
+      setWaitingCountdown((current) => {
+        if (current === null) return graceMinutes * 60;
+        if (current <= 0) {
+          clearInterval(handle);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(handle);
+  }, [waitingRoomVisible, graceMinutes]);
+
+  const formatCountdown = (seconds) => {
+    if (seconds === null || seconds === undefined) return '--:--';
+    const safe = Math.max(0, seconds);
+    const mins = Math.floor(safe / 60)
+      .toString()
+      .padStart(2, '0');
+    const secs = (safe % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
 
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
@@ -173,6 +237,9 @@ export default function PatientAppointments() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <StatusBadge status={selected.status}>{selected.status}</StatusBadge>
                   <StatusBadge status={selected.visitType}>{selected.visitType || 'visit'}</StatusBadge>
+                  {selected.queuePosition ? (
+                    <StatusBadge status="queue">Queue #{selected.queuePosition}</StatusBadge>
+                  ) : null}
                 </div>
               </div>
 
@@ -193,6 +260,24 @@ export default function PatientAppointments() {
                   <span>Booking source</span>
                   <span className="capitalize">{selected.bookingSource || 'patient portal'}</span>
                 </div>
+                {selected.tokenNumber ? (
+                  <div className="mt-2 flex items-center justify-between">
+                    <span>Token</span>
+                    <span>{selected.tokenNumber}</span>
+                  </div>
+                ) : null}
+                {selected.estimatedWaitTime != null ? (
+                  <div className="mt-2 flex items-center justify-between">
+                    <span>Estimated wait</span>
+                    <span>{selected.estimatedWaitTime} min</span>
+                  </div>
+                ) : null}
+                {selected.arrivalTime || selected.checkInAt ? (
+                  <div className="mt-2 flex items-center justify-between">
+                    <span>Arrived</span>
+                    <span>{new Date(selected.arrivalTime || selected.checkInAt).toLocaleTimeString()}</span>
+                  </div>
+                ) : null}
               </article>
 
               {selected.reasonForVisit && (
@@ -201,10 +286,67 @@ export default function PatientAppointments() {
                   <p className="mt-2">{selected.reasonForVisit}</p>
                 </article>
               )}
+
+              {selected.consultationMode === 'video' && (
+                <article className="rounded-xl border border-border p-4">
+                  <p className="text-sm font-semibold text-foreground">Video consultation</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Join when the doctor starts the consultation.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={!canJoinVideo}
+                    onClick={() => { setVideoAppointment(selected); setVideoOpen(true); }}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+                  >
+                    <Video className="h-3 w-3" /> Join video call
+                  </button>
+                  {!canJoinVideo && (
+                    <p className="mt-2 text-xs text-muted-foreground">Waiting for arrival or doctor start.</p>
+                  )}
+                  {waitingRoomVisible && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Doctor has {formatCountdown(waitingCountdown ?? graceMinutes * 60)} before the system auto-marks this appointment as no-show (grace period {graceMinutes} min).
+                    </p>
+                  )}
+                </article>
+              )}
             </div>
           )}
         </section>
       </div>
+
+      {videoOpen && videoAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-5xl rounded-2xl bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Video consultation</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{videoAppointment.doctorId?.userId?.name || 'Doctor'}</h3>
+              </div>
+              <button type="button" onClick={() => setVideoOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="mt-4 relative">
+              {waitingRoomVisible && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/80 p-6 text-center text-sm text-foreground">
+                  <p className="text-lg font-semibold">Waiting room</p>
+                  <p className="text-xs text-muted-foreground mt-2">Doctor is connecting to the video consultation.</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    This session will be auto-marked no-show in {formatCountdown(waitingCountdown ?? graceMinutes * 60)} if the doctor does not join.
+                  </p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">You can stay here or cancel the call.</p>
+                </div>
+              )}
+              <VideoCall
+                appointmentId={videoAppointment._id}
+                role="patient"
+                onEnd={() => setVideoOpen(false)}
+                onStatusChange={setVideoStatus}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </motion.section>
   );
 }

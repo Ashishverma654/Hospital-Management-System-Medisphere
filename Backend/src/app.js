@@ -6,7 +6,6 @@ import mongoose from "mongoose";
 
 import authRoutes from "./routes/authRoutes.js";
 import dynamicDataRoutes from "./routes/dynamicDataRoutes.js";
-import testRoutes from "./routes/testRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import specializationRoutes from "./routes/specializationRoutes.js";
 import locationRoutes from "./routes/locationRoutes.js";
@@ -26,13 +25,20 @@ import pharmacyRoutes from "./routes/pharmacyRoutes.js";
 import pharmacyOrderRoutes from "./routes/pharmacyOrderRoutes.js";
 import bedRoutes from "./routes/bedRoutes.js";
 import wardRoutes from "./routes/wardRoutes.js";
+import admissionRoutes from "./routes/admissionRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import receptionistRoutes from "./routes/receptionistRoutes.js";
 import nurseRoutes from "./routes/nurseRoutes.js";
+import nurseAssignmentRoutes from "./routes/nurseAssignmentRoutes.js";
+import shiftRoutes from "./routes/shiftRoutes.js";
+import shiftScheduleRoutes from "./routes/shiftScheduleRoutes.js";
 import labTechRoutes from "./routes/labTechRoutes.js";
 import pharmacistRoutes from "./routes/pharmacistRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import staffDutyRoutes from "./routes/staffDutyRoutes.js";
+import staffAvailabilityRoutes from "./routes/staffAvailabilityRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import limiter from "./middlewares/rateLimiter.js";
 
@@ -112,7 +118,6 @@ app.use("/api", (req, res, next) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/dynamic", dynamicDataRoutes);
-app.use("/api/test", testRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/specializations", specializationRoutes);
 app.use("/api/locations", locationRoutes);
@@ -132,13 +137,20 @@ app.use("/api/medicines", pharmacyRoutes);
 app.use("/api/pharmacy-orders", pharmacyOrderRoutes);
 app.use("/api/wards", wardRoutes);
 app.use("/api/beds", bedRoutes);
+app.use("/api/admissions", admissionRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/receptionists", receptionistRoutes);
 app.use("/api/nurses", nurseRoutes);
+app.use("/api/nurse-assignments", nurseAssignmentRoutes);
+app.use("/api/shifts", shiftScheduleRoutes);
+app.use("/api/shifts", shiftRoutes);
 app.use("/api/lab-techs", labTechRoutes);
 app.use("/api/pharmacists", pharmacistRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/staff-duty", staffDutyRoutes);
+app.use("/api/staff-availability", staffAvailabilityRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/analytics", analyticsRoutes);
 app.use(errorHandler);
 
 export default app;

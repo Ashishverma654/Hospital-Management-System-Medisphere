@@ -21,7 +21,7 @@ export default function NurseTasks() {
   const [taskForm, setTaskForm] = useState(initialTaskForm);
   const [saving, setSaving] = useState(false);
 
-  const selectedPatient = patients.find((patient) => patient.id === taskForm.patientId) || null;
+  const selectedPatient = patients.find((patient) => (patient.id || patient._id) === taskForm.patientId) || null;
 
   const load = async () => {
     try {
@@ -43,10 +43,11 @@ export default function NurseTasks() {
 
   useEffect(() => {
     if (!taskForm.patientId && patients.length) {
+      const first = patients[0];
       setTaskForm((current) => ({
         ...current,
-        patientId: patients[0].id,
-        wardId: patients[0].ward?.id || '',
+        patientId: first.id || first._id,
+        wardId: first.ward?.id || '',
       }));
     }
   }, [patients, taskForm.patientId]);
@@ -112,7 +113,7 @@ export default function NurseTasks() {
             <select
               value={taskForm.patientId}
               onChange={(event) => {
-                const patient = patients.find((item) => item.id === event.target.value);
+                const patient = patients.find((item) => (item.id || item._id) === event.target.value);
                 setTaskForm((current) => ({
                   ...current,
                   patientId: event.target.value,
@@ -123,7 +124,7 @@ export default function NurseTasks() {
             >
               <option value="">Select patient</option>
               {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
+                <option key={patient.id || patient._id} value={patient.id || patient._id}>
                   {patient.name} ({patient.patientId || 'No ID'})
                 </option>
               ))}
@@ -177,7 +178,7 @@ export default function NurseTasks() {
             <select value={filters.patientId} onChange={(event) => setFilters((current) => ({ ...current, patientId: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">All patients</option>
               {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
+                <option key={patient.id || patient._id} value={patient.id || patient._id}>
                   {patient.name}
                 </option>
               ))}

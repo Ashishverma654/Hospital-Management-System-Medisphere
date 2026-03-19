@@ -22,11 +22,13 @@ import {
 } from 'lucide-react';
 
 export default function PatientSummary() {
-  const { appointmentId } = useParams();
+  const { id } = useParams();
+  const appointmentId = id;
   const navigate = useNavigate();
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -35,9 +37,10 @@ export default function PatientSummary() {
         setError(null);
         
         // Fetch appointment first to get patient ID
-        const appointmentResponse = await appointmentApi.getDoctorToday();
-        const appointment = Array.isArray(appointmentResponse)
-          ? appointmentResponse.find((a) => a._id === appointmentId)
+        const appointmentResponse = await appointmentApi.getDoctorAll();
+        const list = Array.isArray(appointmentResponse) ? appointmentResponse : appointmentResponse?.data || [];
+        const appointment = Array.isArray(list)
+          ? list.find((a) => a._id === appointmentId)
           : null;
 
         if (!appointment) {
@@ -46,7 +49,8 @@ export default function PatientSummary() {
         }
 
         // Fetch patient summary
-        const patientResponse = await appointmentApi.getPatientSummary(appointment.patientId);
+        const resolvedPatientId = appointment.patientId?._id || appointment.patientId;
+        const patientResponse = await appointmentApi.getPatientSummary(resolvedPatientId);
         setSummaryData({
           appointment,
           ...patientResponse,
@@ -70,9 +74,10 @@ export default function PatientSummary() {
       setError(null);
       
       // Fetch appointment first to get patient ID
-      const appointmentResponse = await appointmentApi.getDoctorToday();
-      const appointment = Array.isArray(appointmentResponse)
-        ? appointmentResponse.find((a) => a._id === appointmentId)
+      const appointmentResponse = await appointmentApi.getDoctorAll();
+      const list = Array.isArray(appointmentResponse) ? appointmentResponse : appointmentResponse?.data || [];
+      const appointment = Array.isArray(list)
+        ? list.find((a) => a._id === appointmentId)
         : null;
 
       if (!appointment) {
@@ -81,7 +86,8 @@ export default function PatientSummary() {
       }
 
       // Fetch patient summary
-      const patientResponse = await appointmentApi.getPatientSummary(appointment.patientId);
+      const resolvedPatientId = appointment.patientId?._id || appointment.patientId;
+      const patientResponse = await appointmentApi.getPatientSummary(resolvedPatientId);
       setSummaryData({
         appointment,
         ...patientResponse,
@@ -110,6 +116,8 @@ export default function PatientSummary() {
   const recentLabOrders = summaryData.recentLabOrders || [];
   const recentLabReports = summaryData.recentLabReports || [];
   const appointmentHistory = summaryData.appointmentHistory || [];
+  const recentVitals = summaryData.recentVitals || [];
+  const nursingNotes = summaryData.nursingNotes || [];
   const triageFlags = [];
 
   if (patient?.allergies?.length) {
@@ -148,12 +156,33 @@ export default function PatientSummary() {
             </p>
           </div>
         </div>
-        <Button asChild className="gap-2">
-          <a href="#consultation">
-            <Stethoscope className="h-4 w-4" />
-            Start Prescription
-          </a>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild className="gap-2">
+            <a href="#consultation">
+              <Stethoscope className="h-4 w-4" />
+              Start Prescription
+            </a>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              if (!appointmentId) return;
+              try {
+                setCompleting(true);
+                await appointmentApi.complete(appointmentId);
+                toast.success('Appointment marked as completed.');
+                navigate('/doctor/appointments');
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Failed to complete appointment.');
+              } finally {
+                setCompleting(false);
+              }
+            }}
+            disabled={completing}
+          >
+            {completing ? 'Completing...' : 'Mark Completed'}
+          </Button>
+        </div>
       </div>
 
       {/* Patient Identity Card */}
@@ -343,21 +372,36 @@ export default function PatientSummary() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Pill className="h-5 w-5" />
-              Recent Prescriptions
+              Prescription Timeline
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {recentPrescriptions.map((prescription) => (
                 <div
                   key={prescription._id}
-                  className="border-l-4 border-blue-500 pl-4 py-2"
+                  className="border-l-4 border-blue-500 pl-4 py-3"
                 >
-                  <p className="font-medium text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-600">
+                      {prescription.status || 'active'}
+                    </span>
+                    {prescription.followUpDate && (
+                      <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+                        Follow-up {new Date(prescription.followUpDate).toLocaleDateString()}
+                      </span>
+                    )}
+                    {prescription.admissionRecommended && (
+                      <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700">
+                        Admission recommended
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 font-medium text-sm">
                     {prescription.diagnosis || 'Medical Prescription'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {prescription.medicines?.length || 0} items
+                    {prescription.medicines?.length || 0} medicines • {prescription.appointmentId?.date || 'Date not set'}
                   </p>
                 </div>
               ))}
@@ -449,8 +493,65 @@ export default function PatientSummary() {
         </Card>
       )}
 
+      {/* Nursing Notes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Nursing Notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {nursingNotes.length > 0 ? nursingNotes.map((note) => (
+              <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-2">
+                <p className="font-medium text-sm">{note.noteType || 'Note'}</p>
+                <p className="text-xs text-muted-foreground">
+                  {note.nurseName || 'Nurse'} • {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">{note.content}</p>
+              </div>
+            )) : (
+              <p className="text-sm text-muted-foreground">No nursing notes available.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Vitals */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Heart className="h-5 w-5" />
+            Recent Vitals
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {recentVitals.length > 0 ? recentVitals.map((vital) => (
+              <div key={vital.id} className="border-l-4 border-emerald-500 pl-4 py-2">
+                <p className="font-medium text-sm">
+                  {vital.recordedAt ? new Date(vital.recordedAt).toLocaleString() : 'Vitals entry'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {vital.nurseName || 'Nurse'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  BP {vital.bloodPressure || '—'} • Pulse {vital.pulse || '—'} • Temp {vital.temperature || '—'} • SpO2 {vital.spo2 || '—'}
+                </p>
+                {vital.notes && (
+                  <p className="text-xs text-muted-foreground mt-1">{vital.notes}</p>
+                )}
+              </div>
+            )) : (
+              <p className="text-sm text-muted-foreground">No vitals recorded yet.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Action Buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Button asChild className="gap-2">
           <a href="#consultation">
             <Stethoscope className="h-4 w-4" />
@@ -465,6 +566,13 @@ export default function PatientSummary() {
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Prescription
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/doctor/lab-orders?appointmentId=${appointmentId}`)}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Create Lab Order
         </Button>
       </div>
     </div>

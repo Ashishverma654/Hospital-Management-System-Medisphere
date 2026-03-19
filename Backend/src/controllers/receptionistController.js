@@ -5,8 +5,11 @@ import Doctor from "../models/Doctor.js";
 import Invoice from "../models/Invoice.js";
 import Patient from "../models/Patient.js";
 import Specialization from "../models/Specialization.js";
+import Admission from "../models/Admission.js";
+import Prescription from "../models/Prescription.js";
+import Token from "../models/Token.js";
 import User from "../models/User.js";
-import { ensurePatientProfileForUser } from "../utils/patientContext.js";
+import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 import { generateUniqueId } from "../utils/idGenerator.js";
 import { ID_PREFIXES } from "../constants/roles.js";
 
@@ -75,7 +78,7 @@ export const getReceptionistDashboard = async (req, res) => {
     const todayStart = new Date(`${today}T00:00:00`);
     const todayEnd = new Date(`${today}T23:59:59.999`);
 
-    const [todayAppointments, waitingAppointments, registrations, cancelledAppointments, pendingBilling] =
+    const [todayAppointments, waitingAppointments, registrations, cancelledAppointments, pendingBilling, admittedToday] =
       await Promise.all([
         Appointment.find({ date: today })
           .populate("patientId", "name patientId email phone")
@@ -115,6 +118,10 @@ export const getReceptionistDashboard = async (req, res) => {
             populate: { path: "userId", select: "name" },
           })
           .sort({ slot: 1 }),
+        Admission.countDocuments({
+          status: { $in: ["Admitted", "Transferred"] },
+          admissionDate: { $gte: todayStart, $lte: todayEnd },
+        }),
       ]);
 
     const billingInvoices = await Invoice.find({
@@ -126,17 +133,47 @@ export const getReceptionistDashboard = async (req, res) => {
       (item) => !billedAppointmentIds.has(item._id.toString())
     );
 
+    const tokens = await Token.find({ appointmentId: { $in: todayAppointments.map((item) => item._id) } }).select(
+      "appointmentId tokenNumber status"
+    );
+    const tokenMap = new Map(tokens.map((token) => [String(token.appointmentId), token]));
+    const queueWithTokens = todayAppointments.map((appointment) => {
+      const token = tokenMap.get(String(appointment._id));
+      return {
+        ...appointment.toObject(),
+        tokenNumber: token?.tokenNumber,
+        tokenStatus: token?.status,
+      };
+    });
+    const sortedQueue = queueWithTokens
+      .filter((item) => ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation"].includes(item.status))
+      .sort((a, b) => {
+        const aPriority = a.priority === "Emergency" ? 0 : 1;
+        const bPriority = b.priority === "Emergency" ? 0 : 1;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        const aTime = a.checkInAt ? new Date(a.checkInAt) : new Date(a.createdAt);
+        const bTime = b.checkInAt ? new Date(b.checkInAt) : new Date(b.createdAt);
+        if (aTime.getTime() !== bTime.getTime()) return aTime.getTime() - bTime.getTime();
+        return (a.tokenNumber || Number.MAX_SAFE_INTEGER) - (b.tokenNumber || Number.MAX_SAFE_INTEGER);
+      });
+    const positionMap = new Map(sortedQueue.map((item, index) => [String(item._id), index + 1]));
+
     return res.json({
       date: today,
       stats: {
         todayAppointments: todayAppointments.length,
         waitingPatients: waitingAppointments.length,
+        arrivedPatients: todayAppointments.filter((item) => item.status === "arrived").length,
+        admittedPatients: admittedToday,
         registrationsToday: registrations.length,
         cancelledToday: cancelledAppointments.length,
         pendingCheckIns: todayAppointments.filter((item) => item.status === "booked").length,
         pendingBillingActions: pendingBillingAppointments.length,
       },
-      queue: todayAppointments,
+      queue: sortedQueue.map((item) => ({
+        ...item,
+        queuePosition: positionMap.get(String(item._id)) || null,
+      })),
       waitingQueue: waitingAppointments,
       registrations,
       cancelledAppointments,
@@ -156,6 +193,7 @@ export const registerPatientAtDesk = async (req, res) => {
       email,
       phone,
       dateOfBirth,
+      age,
       gender,
       address,
       bloodGroup,
@@ -166,14 +204,17 @@ export const registerPatientAtDesk = async (req, res) => {
       insuranceNumber,
     } = req.body;
 
-    if (!name || !email || !phone || !dateOfBirth) {
-      return res.status(400).json({ message: "Name, email, phone, and date of birth are required." });
+    if (!name || !phone || (!dateOfBirth && age === undefined)) {
+      return res.status(400).json({ message: "Name, phone, and either date of birth or age are required." });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await User.findOne({
-      $or: [{ email: normalizedEmail }, { phone }],
-    });
+    const normalizedEmail = email ? email.trim().toLowerCase() : "";
+    const fallbackEmail = normalizedEmail || `noemail+${phone}@mediflow.local`;
+    const existingUser = await User.findOne(
+      normalizedEmail
+        ? { $or: [{ email: normalizedEmail }, { phone }] }
+        : { phone }
+    );
 
     if (existingUser) {
       return res.status(400).json({
@@ -181,27 +222,33 @@ export const registerPatientAtDesk = async (req, res) => {
       });
     }
 
+    const now = new Date();
+    const resolvedDob = dateOfBirth
+      ? new Date(dateOfBirth)
+      : new Date(now.getFullYear() - Number(age || 0), 0, 1);
+
     const patientId = await generateUniqueId(User, "patientId", ID_PREFIXES.patient);
     const temporaryPassword = generateTemporaryPassword();
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
     user = await User.create({
       name: normalizeName(name),
-      email: normalizedEmail,
+      email: fallbackEmail,
       phone,
       password: hashedPassword,
       role: "patient",
       patientId,
       gender,
       address,
-      dob: dateOfBirth,
+      dob: resolvedDob,
       createdBy: req.user.id,
       onboardingStatus: "passwordResetPending",
       mustResetPassword: true,
     });
 
     const { patient } = await ensurePatientProfileForUser(user._id, {
-      dateOfBirth,
+      dateOfBirth: resolvedDob,
+      age: age !== undefined ? Number(age) : undefined,
       gender,
       bloodGroup,
       allergies: splitList(allergies),
@@ -223,7 +270,7 @@ export const registerPatientAtDesk = async (req, res) => {
       patient: mapPatientLookup(populatedPatient),
       temporaryCredential: {
         patientId,
-        email: normalizedEmail,
+        email: fallbackEmail,
         temporaryPassword,
       },
     });
@@ -312,6 +359,60 @@ export const getReceptionBookingOptions = async (req, res) => {
       departments,
       specializations,
       doctors,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getPatientHistoryForDesk = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { patient, user } = await resolvePatientContext(patientId);
+
+    const [appointments, admissions, prescriptions] = await Promise.all([
+      Appointment.find({
+        $or: [{ patientId: user._id }, { patientProfileId: patient._id }],
+      })
+        .populate({
+          path: "doctorId",
+          populate: { path: "userId", select: "name" },
+        })
+        .sort({ date: -1 }),
+      Admission.find({ patientProfileId: patient._id })
+        .populate("wardId", "name wardNumber")
+        .populate("bedId", "bedNumber")
+        .populate({ path: "doctorId", populate: { path: "userId", select: "name" } })
+        .sort({ admissionDate: -1 }),
+      Prescription.find({ patientId: patient._id })
+        .populate({ path: "doctorId", populate: { path: "userId", select: "name" } })
+        .sort({ issuedAt: -1 })
+        .limit(10),
+    ]);
+
+    return res.json({
+      patient: {
+        id: patient._id,
+        name: user.name,
+        patientId: user.patientId,
+        phone: user.phone,
+        email: user.email,
+        bloodGroup: patient.bloodGroup,
+        age: patient.age,
+        gender: patient.gender,
+      },
+      appointments,
+      admissions,
+      discharges: admissions.filter((item) => item.status === "Discharged"),
+      prescriptions: prescriptions.map((item) => ({
+        id: item._id,
+        issuedAt: item.issuedAt,
+        diagnosis: item.diagnosis || item.clinicalNotes,
+        advice: item.advice,
+        status: item.status,
+        doctor: item.doctorId?.userId?.name || "Doctor",
+        admissionRecommended: Boolean(item.admissionRecommended),
+      })),
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });

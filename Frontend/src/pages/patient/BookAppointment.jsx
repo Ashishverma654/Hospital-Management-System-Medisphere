@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs.jsx';
 const initialForm = {
   departmentId: '',
   doctorId: '',
-  date: new Date().toISOString().split('T')[0],
+  date: '',
   slot: '',
   hospitalLocationId: '',
   visitType: 'newConsultation',
@@ -69,6 +69,10 @@ export default function PatientBookAppointment() {
     () => doctors.find((doc) => `${doc._id || doc.id}` === `${form.doctorId}`),
     [doctors, form.doctorId]
   );
+  const requiresLocation =
+    form.consultationMode === 'in-person' &&
+    selectedDoctor?.hospitalLocations?.length > 0 &&
+    !form.hospitalLocationId;
 
   useEffect(() => {
     const loadMasters = async () => {
@@ -119,7 +123,7 @@ export default function PatientBookAppointment() {
 
   useEffect(() => {
     const loadWeekSlots = async () => {
-      if (!form.doctorId) {
+      if (!form.doctorId || requiresLocation) {
         setSlotStatsByDate(new Map());
         return;
       }
@@ -143,21 +147,21 @@ export default function PatientBookAppointment() {
       }
     };
     loadWeekSlots();
-  }, [form.doctorId, weekDates]);
+  }, [form.doctorId, weekDates, requiresLocation]);
 
   useEffect(() => {
-    if (autoPicked || !form.doctorId) return;
+    if (autoPicked || !form.doctorId || requiresLocation) return;
     const firstAvailable = weekDates.find((date) => (slotStatsByDate.get(date)?.available ?? 0) > 0);
     if (firstAvailable) {
       setForm((current) => ({ ...current, date: firstAvailable, slot: '' }));
       setAutoPicked(true);
       setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
     }
-  }, [autoPicked, form.doctorId, slotStatsByDate, weekDates]);
+  }, [autoPicked, form.doctorId, slotStatsByDate, weekDates, requiresLocation]);
 
   useEffect(() => {
     const loadSlots = async () => {
-      if (!form.doctorId || !form.date) {
+      if (!form.doctorId || !form.date || requiresLocation) {
         setAvailableSlots([]);
         setAllSlots([]);
         setBookedSlots([]);
@@ -186,7 +190,7 @@ export default function PatientBookAppointment() {
       }
     };
     loadSlots();
-  }, [form.doctorId, form.date, refreshKey]);
+  }, [form.doctorId, form.date, refreshKey, requiresLocation]);
 
   const resolveFee = () => {
     if (!selectedDoctor) return 0;
@@ -357,6 +361,7 @@ export default function PatientBookAppointment() {
                   prev.setDate(prev.getDate() - 7);
                   setWeekStart(prev.toISOString().split('T')[0]);
                 }}
+                disabled={requiresLocation}
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
               >
                 Previous week
@@ -368,6 +373,7 @@ export default function PatientBookAppointment() {
                   next.setDate(next.getDate() + 7);
                   setWeekStart(next.toISOString().split('T')[0]);
                 }}
+                disabled={requiresLocation}
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
               >
                 Next week
@@ -394,7 +400,7 @@ export default function PatientBookAppointment() {
                       setForm((current) => ({ ...current, date, slot: '' }));
                       setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
                     }}
-                    disabled={isDisabled}
+                    disabled={isDisabled || requiresLocation}
                     title={ranges.length ? ranges.join(' | ') : 'No availability'}
                     className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                       form.date === date && dateMode === 'quick'
@@ -418,6 +424,7 @@ export default function PatientBookAppointment() {
               <button
                 type="button"
                 onClick={() => setDateMode('custom')}
+                disabled={requiresLocation}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                   dateMode === 'custom'
                     ? 'bg-primary text-primary-foreground'
@@ -440,9 +447,15 @@ export default function PatientBookAppointment() {
                       setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
                     }
                   }}
+                  disabled={requiresLocation}
                   className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
                 />
               </div>
+            )}
+            {requiresLocation && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Select a hospital location before choosing the appointment date.
+              </p>
             )}
             {dayRanges.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">

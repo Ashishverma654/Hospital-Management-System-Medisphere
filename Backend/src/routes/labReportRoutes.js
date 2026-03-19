@@ -5,10 +5,19 @@ import { uploadLabReport, getPatientReports, getReportByPatientId } from "../con
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 
 import upload from "../middlewares/uploadMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { uploadLabReportSchema } from "../validations/labValidation.js";
 
 const router = express.Router();
 
-router.post("/upload", verifyAccessToken, authorizeRoles("admin", "doctor", "receptionist", "patient", "labTechnician"), upload.single("reportFile"), uploadLabReport);
+router.post(
+  "/upload",
+  verifyAccessToken,
+  authorizeRoles("admin", "doctor", "receptionist", "patient", "labTechnician"),
+  validate(uploadLabReportSchema),
+  upload.single("reportFile"),
+  uploadLabReport
+);
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getPatientReports);
 

@@ -38,6 +38,10 @@ const bedSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Patient"
     },
+    admissionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Admission"
+    },
 
     admittedAt: {
         type: Date

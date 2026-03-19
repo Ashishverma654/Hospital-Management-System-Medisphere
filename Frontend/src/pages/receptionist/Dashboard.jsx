@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
+import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
 import { billingApi, receptionistApi } from '../../services/apiServices.js';
 import { Calendar, CreditCard, FilePlus, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -40,6 +41,8 @@ export default function ReceptionistDashboard() {
   const stats = [
     { title: "Today's Appointments", icon: Calendar, value: dashboard?.stats?.todayAppointments ?? 0 },
     { title: 'Waiting / Checked In', icon: Users, value: dashboard?.stats?.waitingPatients ?? 0 },
+    { title: 'Arrived Today', icon: Users, value: dashboard?.stats?.arrivedPatients ?? 0 },
+    { title: 'Admitted Today', icon: Users, value: dashboard?.stats?.admittedPatients ?? 0 },
     { title: 'Registrations Today', icon: FilePlus, value: dashboard?.stats?.registrationsToday ?? 0 },
     { title: 'Pending Billing', icon: CreditCard, value: dashboard?.stats?.pendingBillingActions ?? 0 },
   ];
@@ -67,6 +70,8 @@ export default function ReceptionistDashboard() {
         </div>
       </div>
 
+      <StaffDutyWidget />
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <article key={stat.title} className="rounded-2xl bg-card p-6 shadow-sm">
@@ -93,13 +98,21 @@ export default function ReceptionistDashboard() {
 
           <div className="mt-5 space-y-3">
             {(dashboard?.queue || []).slice(0, 8).map((appointment) => (
-              <article key={appointment._id} className="rounded-xl border border-border p-4">
+              <article key={appointment._id} className={`rounded-xl border p-4 ${appointment.admissionRecommended ? 'border-amber-400/60 bg-amber-50/30' : 'border-border'}`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="font-semibold text-foreground">{appointment.patientId?.name || 'Patient'}</p>
                     <p className="text-sm text-muted-foreground">
                       {appointment.doctorId?.userId?.name || 'Doctor'} • {appointment.slot}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Token {appointment.tokenNumber || '—'} {appointment.queuePosition ? `• #${appointment.queuePosition}` : ''}
+                    </p>
+                    {appointment.admissionRecommended && (
+                      <p className="mt-2 inline-flex items-center rounded-full bg-amber-200/40 px-3 py-1 text-xs font-semibold text-amber-800">
+                        Admission recommended
+                      </p>
+                    )}
                   </div>
                   <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                     {appointment.status}

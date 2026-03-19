@@ -85,7 +85,17 @@ export const NURSING_TASK_STATUSES = ["pending", "inProgress", "completed", "mis
 export const NURSING_NOTE_TYPES = ["general", "assessment", "condition", "observation", "medication", "incident", "handover", "discharge"];
 export const HANDOVER_PRIORITIES = ["low", "medium", "high", "critical"];
 
-export const SHIFT_TYPES = ["morning", "afternoon", "evening", "night", "custom"];
+export const SHIFT_TYPES = [
+  "standard",
+  "emergency",
+  "on-call",
+  "custom",
+  // Legacy values retained for backward compatibility.
+  "morning",
+  "afternoon",
+  "evening",
+  "night",
+];
 export const WARD_TYPES = ["general", "semi-private", "private", "icu", "nicu", "picu", "emergency", "maternity", "isolation"];
 export const CLEANING_STATUSES = ["clean", "dirty", "inProgress"];
 export const EQUIPMENT_OPTIONS = [

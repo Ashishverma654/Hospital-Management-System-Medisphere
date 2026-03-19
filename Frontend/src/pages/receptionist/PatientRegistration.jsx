@@ -12,6 +12,7 @@ const initialForm = {
   email: '',
   phone: '',
   dateOfBirth: '',
+  age: '',
   gender: 'unknown',
   address: '',
   bloodGroup: '',
@@ -61,6 +62,10 @@ export default function PatientRegistration() {
       toast.error('Phone number must be exactly 10 digits.');
       return;
     }
+    if (!form.dateOfBirth && !form.age) {
+      toast.error('Provide either date of birth or age.');
+      return;
+    }
 
     setSaving(true);
 
@@ -69,6 +74,7 @@ export default function PatientRegistration() {
         ...form,
         allergies: form.allergies,
         chronicDiseases: form.chronicDiseases,
+        age: form.age ? Number(form.age) : undefined,
         emergencyContact: {
           name: form.emergencyContactName,
           phone: form.emergencyContactPhone,
@@ -141,9 +147,10 @@ export default function PatientRegistration() {
       <form onSubmit={handleSubmit} className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Full Name"><input type="text" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
-          <Field label="Email"><input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
+          <Field label="Email (optional)"><input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
           <Field label="Phone"><input type="text" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required /></Field>
-          <Field label="Date of Birth"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required max={new Date().toISOString().split('T')[0]} /></Field>
+          <Field label="Date of Birth (optional)"><input type="date" value={form.dateOfBirth} onChange={(event) => setForm((current) => ({ ...current, dateOfBirth: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" max={new Date().toISOString().split('T')[0]} /></Field>
+          <Field label="Age (optional)"><input type="number" min="0" value={form.age} onChange={(event) => setForm((current) => ({ ...current, age: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
           <Field label="Gender">
             <select value={form.gender} onChange={(event) => setForm((current) => ({ ...current, gender: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary">
               <option value="unknown">Unknown</option>
@@ -152,7 +159,20 @@ export default function PatientRegistration() {
               <option value="other">Other</option>
             </select>
           </Field>
-          <Field label="Blood Group"><input type="text" value={form.bloodGroup} onChange={(event) => setForm((current) => ({ ...current, bloodGroup: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>
+          <Field label="Blood Group">
+            <select
+              value={form.bloodGroup}
+              onChange={(event) => setForm((current) => ({ ...current, bloodGroup: event.target.value }))}
+              className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
+            >
+              <option value="">Select blood group</option>
+              {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
 
         <Field label="Address" className="mt-4"><textarea value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} className="min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" /></Field>

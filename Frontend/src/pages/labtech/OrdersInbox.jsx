@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
+import { Link } from 'react-router-dom';
 import { labTechApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
@@ -272,6 +273,9 @@ export default function LabTechOrdersInbox({
                 <div className="mt-3 flex flex-wrap gap-2">
                   <StatusBadge status={selectedOrder.status}>{selectedOrder.status}</StatusBadge>
                   <StatusBadge status={selectedOrder.paymentStatus}>{selectedOrder.paymentStatus}</StatusBadge>
+                  <Button asChild size="sm" variant="outline" className="rounded-full">
+                    <Link to={`/employee/lab-orders/${selectedOrder._id}`}>Open Detail Page</Link>
+                  </Button>
                 </div>
               </div>
 

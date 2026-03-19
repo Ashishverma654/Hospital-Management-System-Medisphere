@@ -44,6 +44,8 @@ export default function LabOrderCreation() {
   const [loading, setLoading] = useState(false);
   const [appointment, setAppointment] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [doctorPatients, setDoctorPatients] = useState([]);
+  const [patientQuery, setPatientQuery] = useState('');
 
   const [formData, setFormData] = useState({
     patientId: patientId || '',
@@ -60,13 +62,14 @@ export default function LabOrderCreation() {
       const fetchAppointment = async () => {
         try {
           setLoading(true);
-          const response = await appointmentApi.getDoctorToday();
-          const found = Array.isArray(response) ? response.find((a) => a._id === appointmentId) : null;
+          const response = await appointmentApi.getDoctorAll();
+          const list = Array.isArray(response) ? response : response?.data || [];
+          const found = Array.isArray(list) ? list.find((a) => a._id === appointmentId) : null;
           if (found) {
             setAppointment(found);
             setFormData((prev) => ({
               ...prev,
-              patientId: found.patientId,
+              patientId: found.patientId?._id || found.patientId,
               appointmentId,
             }));
           }
@@ -79,6 +82,30 @@ export default function LabOrderCreation() {
       fetchAppointment();
     }
   }, [appointmentId]);
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      try {
+        const data = await appointmentApi.getDoctorAll();
+        const list = Array.isArray(data) ? data : data?.data || [];
+        const map = new Map();
+        list.forEach((apt) => {
+          const patient = apt.patientId;
+          const id = patient?._id || patient;
+          if (!id || map.has(String(id))) return;
+          map.set(String(id), {
+            id: String(id),
+            name: patient?.name || patient?.userId?.name || 'Patient',
+            patientId: patient?.patientId || patient?.userId?.patientId || '',
+          });
+        });
+        setDoctorPatients(Array.from(map.values()));
+      } catch {
+        setDoctorPatients([]);
+      }
+    };
+    loadPatients();
+  }, []);
 
   const loadRecentOrders = async () => {
     try {
@@ -232,17 +259,44 @@ export default function LabOrderCreation() {
             )}
 
             {!appointment && (
-              <div>
-                <Label htmlFor="patient">Patient ID *</Label>
-                <Input
-                  id="patient"
-                  placeholder="Enter patient ID or email"
-                  value={formData.patientId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, patientId: e.target.value })
-                  }
-                  required
-                />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="patientFilter">Filter by Patient ID</Label>
+                  <Input
+                    id="patientFilter"
+                    placeholder="Search by patient ID or email"
+                    value={patientQuery}
+                    onChange={(e) => setPatientQuery(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="patient">Patient *</Label>
+                  <select
+                    id="patient"
+                    value={formData.patientId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, patientId: e.target.value })
+                    }
+                    className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  >
+                    <option value="">Select patient</option>
+                    {doctorPatients
+                      .filter((patient) => {
+                        if (!patientQuery.trim()) return true;
+                        const query = patientQuery.trim().toLowerCase();
+                        return (
+                          patient.patientId?.toLowerCase().includes(query) ||
+                          patient.name?.toLowerCase().includes(query)
+                        );
+                      })
+                      .map((patient) => (
+                        <option key={patient.id} value={patient.id}>
+                          {patient.name} {patient.patientId ? `(${patient.patientId})` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
             )}
           </CardContent>

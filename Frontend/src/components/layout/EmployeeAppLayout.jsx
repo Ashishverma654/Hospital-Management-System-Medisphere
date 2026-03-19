@@ -28,13 +28,17 @@ const buildNavItems = (role, homeRoute) => {
   const canAccessGovernance = ['superadmin', 'admin'].includes(role);
   const canManageWardsBeds = ['superadmin', 'admin', 'subadmin'].includes(role);
   const canManageDoctors = ['superadmin', 'admin'].includes(role);
+  const profilePath = role === 'labTechnician' ? '/employee/lab-technician/profile' : '/employee/profile';
 
   const sections = [];
 
   // Dashboard section
   sections.push({
     label: 'Overview',
-    items: [{ to: homeRoute, label: `Dashboard`, icon: LayoutDashboard }],
+    items: [
+      { to: homeRoute, label: `Dashboard`, icon: LayoutDashboard },
+      { to: '/employee/shifts/calendar', label: 'Shift Calendar', icon: Calendar },
+    ],
   });
 
   // Role-specific sections
@@ -46,6 +50,7 @@ const buildNavItems = (role, homeRoute) => {
         { to: '/employee/receptionist/appointments', label: 'Book Appointment', icon: Calendar },
         { to: '/employee/receptionist/queue', label: 'Today Queue', icon: Clock },
         { to: '/employee/receptionist/patients', label: 'Search Patients', icon: Users },
+        { to: '/employee/receptionist/history', label: 'Patient History', icon: NotepadText },
         { to: '/employee/billing', label: 'Billing', icon: CreditCard },
       ],
     });
@@ -112,6 +117,9 @@ const buildNavItems = (role, homeRoute) => {
       items: [
         { to: '/employee/wards', label: 'Wards', icon: BedDouble },
         { to: '/employee/beds', label: 'Beds', icon: BedDouble },
+        { to: '/employee/nurse-assignments', label: 'Staff Duty', icon: ClipboardList },
+        { to: '/employee/shifts', label: 'Shifts', icon: Clock },
+        { to: '/employee/staff-availability', label: 'Staff Availability', icon: Activity },
       ],
     });
   }
@@ -122,6 +130,9 @@ const buildNavItems = (role, homeRoute) => {
       items: [
         { to: '/employee/wards', label: 'Wards', icon: BedDouble },
         { to: '/employee/beds', label: 'Beds', icon: BedDouble },
+        { to: '/employee/nurse-assignments', label: 'Staff Duty', icon: ClipboardList },
+        { to: '/employee/shifts', label: 'Shifts', icon: Clock },
+        { to: '/employee/staff-availability', label: 'Staff Availability', icon: Activity },
         { to: '/employee/admissions', label: 'Admissions', icon: Users },
         { to: '/employee/departments', label: 'Departments', icon: Building2 },
         { to: '/employee/locations', label: 'Locations', icon: MapPin },
@@ -131,6 +142,7 @@ const buildNavItems = (role, homeRoute) => {
     sections.push({
       label: 'System',
       items: [
+        { to: '/employee/analytics', label: 'Analytics', icon: FileBarChart },
         { to: '/employee/audit', label: 'Audit History', icon: ShieldCheck },
         { to: '/employee/settings', label: 'Settings', icon: Settings },
       ],
@@ -141,7 +153,7 @@ const buildNavItems = (role, homeRoute) => {
   sections.push({
     label: 'Account',
     items: [
-      { to: '/employee/profile', label: 'Profile', icon: User },
+      { to: profilePath, label: 'Profile', icon: User },
       { to: '/employee/notifications', label: 'Notifications', icon: Bell },
     ],
   });
@@ -162,6 +174,7 @@ export default function EmployeeAppLayout() {
   const user = useSelector((state) => state.auth.user);
   const homeRoute = getEmployeeHomeRoute(user?.role);
   const navSections = buildNavItems(user?.role, homeRoute);
+  const profilePath = user?.role === 'labTechnician' ? '/employee/lab-technician/profile' : '/employee/profile';
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -323,7 +336,7 @@ export default function EmployeeAppLayout() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem className="cursor-pointer p-0">
-                    <NavLink to="/employee/profile" className="w-full px-2 py-1.5">Profile</NavLink>
+                    <NavLink to={profilePath} className="w-full px-2 py-1.5">Profile</NavLink>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

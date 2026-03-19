@@ -388,6 +388,9 @@ export default function DoctorManagement() {
                         <Eye className="mr-1 h-3 w-3" />
                         View
                       </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => navigate(`/employee/doctors/${doctor.id}`)}>
+                        Open Page
+                      </Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => startEdit(doctor)}>Edit</Button>
                       <Button type="button" variant={doctor.isActive ? 'destructive' : 'outline'} size="sm" onClick={() => handleToggleActive(doctor)}>
                         {doctor.isActive ? <UserX className="mr-1 h-3 w-3" /> : <UserCheck className="mr-1 h-3 w-3" />}

@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
 const medicineSchema = new mongoose.Schema({
+  medicineId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Medicine",
+  },
   name: {
     type: String,
     required: true
@@ -15,6 +19,14 @@ const medicineSchema = new mongoose.Schema({
   },
 
   duration: {
+    type: String
+  },
+
+  quantity: {
+    type: Number
+  },
+
+  unit: {
     type: String
   },
 

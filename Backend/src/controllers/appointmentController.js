@@ -6,16 +6,113 @@ import Invoice from "../models/Invoice.js";
 import DoctorAvailability from "../models/DoctorAvailability.js";
 import LabOrder from "../models/LabOrder.js";
 import Prescription from "../models/Prescription.js";
+import PharmacyOrder from "../models/PharmacyOrder.js";
 import LabReport from "../models/LabReport.js";
 import Vitals from "../models/Vitals.js";
+import NursingNote from "../models/NursingNote.js";
+import Token from "../models/Token.js";
 import { generateSlots } from "../utils/generateSlots.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { sendSms } from "../utils/sendSms.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
-import { notifyPatient } from "../services/notificationService.js";
+import { notifyEmployee, notifyPatient, notifyRole } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
+import { emitToRoom } from "../services/socketService.js";
 
 const OCCUPIED_SLOT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation", "completed"];
+const QUEUE_ACTIVE_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation"];
+const DEFAULT_WAIT_MINUTES = Number(process.env.QUEUE_AVG_WAIT_MINUTES || 15);
+
+const getQueueSortKey = (appointment) => {
+  const priorityRank = appointment.priority === "Emergency" ? 0 : 1;
+  const arrivalTime = appointment.arrivalTime || appointment.checkInAt || appointment.createdAt || new Date(0);
+  const tokenNumber = appointment.tokenNumber || Number.MAX_SAFE_INTEGER;
+  return { priorityRank, arrivalTime, tokenNumber };
+};
+
+const sortQueue = (appointments) =>
+  [...appointments].sort((a, b) => {
+    const aKey = getQueueSortKey(a);
+    const bKey = getQueueSortKey(b);
+    if (aKey.priorityRank !== bKey.priorityRank) return aKey.priorityRank - bKey.priorityRank;
+    if (aKey.arrivalTime?.getTime && bKey.arrivalTime?.getTime) {
+      const timeDiff = aKey.arrivalTime.getTime() - bKey.arrivalTime.getTime();
+      if (timeDiff !== 0) return timeDiff;
+    }
+    return aKey.tokenNumber - bKey.tokenNumber;
+  });
+
+const buildQueueMeta = (sortedQueue) => {
+  const activeQueue = sortedQueue.filter((item) => QUEUE_ACTIVE_STATUSES.includes(item.status));
+  const queuePositionMap = new Map(activeQueue.map((item, index) => [String(item._id), index + 1]));
+  const estimatedWaitMap = new Map(
+    activeQueue.map((item, index) => [String(item._id), index * DEFAULT_WAIT_MINUTES])
+  );
+  return {
+    activeQueue,
+    queuePositionMap,
+    estimatedWaitMap,
+    waitingCount: activeQueue.length,
+  };
+};
+
+const attachTokenMetadata = async (appointments) => {
+  if (!appointments.length) return appointments;
+  const tokens = await Token.find({ appointmentId: { $in: appointments.map((a) => a._id) } }).select(
+    "appointmentId tokenNumber status"
+  );
+  const tokenMap = new Map(tokens.map((t) => [String(t.appointmentId), t]));
+
+  return appointments.map((appointment) => {
+    const token = tokenMap.get(String(appointment._id));
+    return {
+      ...appointment.toObject(),
+      tokenNumber: token?.tokenNumber,
+      tokenStatus: token?.status,
+    };
+  });
+};
+
+const createTokenForAppointment = async ({ appointment, doctor, session }) => {
+  const existing = await Token.findOne({ appointmentId: appointment._id }).session(session || null);
+  if (existing) return existing;
+  const lastToken = await Token.findOne({ doctorId: appointment.doctorId, date: appointment.date })
+    .sort({ tokenNumber: -1 })
+    .session(session || null);
+  const tokenNumber = (lastToken?.tokenNumber || 0) + 1;
+  const [created] = await Token.create(
+    [
+      {
+        appointmentId: appointment._id,
+        tokenNumber,
+        doctorId: appointment.doctorId,
+        departmentId: doctor?.departmentId,
+        date: appointment.date,
+        status: "Waiting",
+        issuedAt: new Date(),
+      },
+    ],
+    { session }
+  );
+  if (!appointment.tokenNumber) {
+    appointment.tokenNumber = created.tokenNumber;
+    await appointment.save({ session });
+  }
+  return created;
+};
+
+const emitQueueUpdate = (appointment) => {
+  emitToRoom(`doctor_${appointment.doctorId}`, "queue:update", {
+    appointmentId: appointment._id,
+    doctorId: appointment.doctorId,
+    status: appointment.status,
+  });
+  emitToRoom("reception", "queue:update", {
+    appointmentId: appointment._id,
+    doctorId: appointment.doctorId,
+    status: appointment.status,
+  });
+};
 
 const buildSlotsForDay = (availabilities = []) => {
   const slots = availabilities
@@ -55,6 +152,7 @@ export const bookAppointment = async (req, res) => {
       consultationMode = "in-person",
       reasonForVisit,
       notes,
+      priority,
     } = req.body;
 
     // If user is admin/receptionist, they can provide patientId. Else use current user.
@@ -163,6 +261,7 @@ export const bookAppointment = async (req, res) => {
       consultationMode,
       reasonForVisit,
       notes,
+      priority: priority || "Normal",
       bookingSource:
         req.user.role === "receptionist"
           ? "receptionDesk"
@@ -171,9 +270,26 @@ export const bookAppointment = async (req, res) => {
             : "patientPortal",
       status: visitType === "walkIn" ? "arrived" : "booked",
       checkInAt: visitType === "walkIn" ? new Date() : undefined,
+      arrivalTime: visitType === "walkIn" ? new Date() : undefined,
       checkedInBy: visitType === "walkIn" ? req.user.id : undefined,
       createdBy: req.user.id,
     });
+
+    if (appointment.status === "arrived") {
+      const token = await createTokenForAppointment({ appointment, doctor });
+      emitToRoom(`doctor_${appointment.doctorId}`, "token:generated", {
+        appointmentId: appointment._id,
+        doctorId: appointment.doctorId,
+        patientId: appointment.patientId,
+        tokenNumber: token?.tokenNumber,
+      });
+      emitToRoom(`patient_${appointment.patientId}`, "token:generated", {
+        appointmentId: appointment._id,
+        doctorId: appointment.doctorId,
+        tokenNumber: token?.tokenNumber,
+      });
+      emitQueueUpdate(appointment);
+    }
 
     // Auto-create consultation invoice
     const existingInvoice = await Invoice.findOne({ appointmentId: appointment._id });
@@ -229,6 +345,17 @@ export const bookAppointment = async (req, res) => {
       type: "appointment",
       title: "Appointment booked",
       message: `Your appointment is scheduled for ${appointment.date} at ${appointment.slot}.`,
+      sourceType: "appointment",
+      sourceId: appointment._id,
+      metadata: { date: appointment.date, slot: appointment.slot, status: appointment.status },
+    });
+
+    await notifyRole({
+      role: "receptionist",
+      key: `reception:appointment:${appointment._id}:booked`,
+      type: "appointment",
+      title: "New appointment booked",
+      message: `New appointment for ${appointment.date} at ${appointment.slot}.`,
       sourceType: "appointment",
       sourceId: appointment._id,
       metadata: { date: appointment.date, slot: appointment.slot, status: appointment.status },
@@ -304,9 +431,67 @@ export const getAllAppointments = async (req, res) => {
         path: "patientProfileId",
         populate: { path: "userId", select: "name email patientId" },
       });
-    res.json(appointments);
+    const withTokens = await attachTokenMetadata(appointments);
+    const grouped = new Map();
+    withTokens.forEach((appointment) => {
+      const key = `${appointment.doctorId?._id || appointment.doctorId}-${appointment.date}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(appointment);
+    });
+
+    const queueMetaByKey = new Map();
+    grouped.forEach((groupAppointments, key) => {
+      const sortedQueue = sortQueue(groupAppointments);
+      const meta = buildQueueMeta(sortedQueue);
+      queueMetaByKey.set(key, meta);
+    });
+
+    const enriched = withTokens.map((item) => {
+      const key = `${item.doctorId?._id || item.doctorId}-${item.date}`;
+      const meta = queueMetaByKey.get(key);
+      return {
+        ...item,
+        queuePosition: meta?.queuePositionMap.get(String(item._id)) || null,
+        estimatedWaitTime: meta?.estimatedWaitMap.get(String(item._id)) ?? null,
+        waitingCount: meta?.waitingCount ?? null,
+      };
+    });
+
+    res.json(enriched);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const markAppointmentNoShow = async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+
+    if (!["booked", "confirmed"].includes(appointment.status)) {
+      return res.status(400).json({ message: "Only booked/confirmed appointments can be marked as no-show." });
+    }
+
+    appointment.status = "no-show";
+    appointment.noShowAt = new Date();
+    appointment.updatedBy = req.user.id;
+    await appointment.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "appointment_no_show",
+      entityType: "Appointment",
+      entityId: appointment._id,
+      details: { date: appointment.date, slot: appointment.slot },
+    });
+
+    emitQueueUpdate(appointment);
+
+    return res.json({ message: "Appointment marked as no-show.", appointment });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -349,6 +534,9 @@ export const cancelAppointment = async (req, res) => {
 
     appointment.status = "cancelled";
     appointment.cancellationReason = reason || appointment.cancellationReason;
+    appointment.cancelReason = reason || appointment.cancelReason;
+    appointment.cancelledBy = req.user.id;
+    appointment.cancelledAt = new Date();
 
     await appointment.save();
 
@@ -359,6 +547,8 @@ export const cancelAppointment = async (req, res) => {
       entityId: appointment._id,
       details: { reason: appointment.cancellationReason },
     });
+
+    emitQueueUpdate(appointment);
 
     res.json({ message: "Appointment cancelled Successfully." });
   } catch (error) {
@@ -430,9 +620,31 @@ export const completeAppointment = async (req, res) => {
       return res.status(404).json({ message: "Appointment not Found." });
     }
 
+    if (appointment.status !== "inConsultation") {
+      return res.status(400).json({
+        message: "Consultation must be started before completion.",
+      });
+    }
+
     appointment.status = "completed";
 
     await appointment.save();
+
+    await Token.findOneAndUpdate(
+      { appointmentId: appointment._id },
+      { $set: { status: "Completed" } }
+    );
+
+    emitToRoom(`doctor_${appointment.doctorId}`, "consultation:completed", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      patientId: appointment.patientId,
+    });
+    emitToRoom(`patient_${appointment.patientId}`, "consultation:completed", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+    });
+    emitQueueUpdate(appointment);
 
     res.json({
       message: "Appointment marked as Completed.",
@@ -501,15 +713,25 @@ export const getReceptionQueue = async (req, res) => {
       })
       .sort({ slot: 1, createdAt: 1 });
 
+    const appointmentsWithTokens = await attachTokenMetadata(appointments);
+    const sortedQueue = sortQueue(appointmentsWithTokens);
+    const { queuePositionMap, estimatedWaitMap, waitingCount } = buildQueueMeta(sortedQueue);
+
     return res.json({
       date,
-      appointments,
+      appointments: sortedQueue.map((item) => ({
+        ...item,
+        queuePosition: queuePositionMap.get(String(item._id)) || null,
+        estimatedWaitTime: estimatedWaitMap.get(String(item._id)) ?? null,
+        waitingCount,
+      })),
       summary: {
         total: appointments.length,
         booked: appointments.filter((item) => item.status === "booked").length,
         arrived: appointments.filter((item) => item.status === "arrived").length,
         waiting: appointments.filter((item) => item.status === "waiting").length,
         cancelled: appointments.filter((item) => item.status === "cancelled").length,
+        waitingCount,
       },
     });
   } catch (error) {
@@ -530,12 +752,63 @@ export const markAppointmentArrived = async (req, res) => {
 
     appointment.status = "arrived";
     appointment.checkInAt = new Date();
+    appointment.arrivalTime = appointment.checkInAt;
     appointment.checkedInBy = req.user.id;
+
+    if (!appointment.doctorUserId) {
+      const doctor = await Doctor.findById(appointment.doctorId);
+      if (doctor?.userId) {
+        appointment.doctorUserId = doctor.userId;
+      }
+    }
     await appointment.save();
+
+    const doctor = await Doctor.findById(appointment.doctorId);
+    const token = await createTokenForAppointment({ appointment, doctor });
+    emitToRoom(`doctor_${appointment.doctorId}`, "token:generated", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      patientId: appointment.patientId,
+      tokenNumber: token?.tokenNumber,
+    });
+    emitToRoom(`patient_${appointment.patientId}`, "token:generated", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      tokenNumber: token?.tokenNumber,
+    });
+    emitQueueUpdate(appointment);
+
+    const doctorUserId = appointment.doctorUserId || doctor?.userId;
+      if (doctorUserId) {
+        await notifyEmployee({
+          userId: doctorUserId,
+          key: `appointment:${appointment._id}:arrived`,
+          type: "appointment",
+          title: "Patient arrived",
+          message: "A patient has checked in for the appointment.",
+          sourceType: "appointment",
+          sourceId: appointment._id,
+        });
+      }
+
+      await notifyRole({
+        role: "receptionist",
+        key: `reception:appointment:${appointment._id}:arrived`,
+        type: "appointment",
+        title: "Patient arrived",
+        message: "A patient has checked in for the appointment.",
+        sourceType: "appointment",
+        sourceId: appointment._id,
+        metadata: { status: appointment.status },
+      });
 
     return res.json({
       message: "Patient marked as arrived.",
-      appointment,
+      appointment: {
+        ...appointment.toObject(),
+        tokenNumber: token?.tokenNumber,
+        tokenStatus: token?.status,
+      },
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -614,8 +887,39 @@ export const rescheduleAppointment = async (req, res) => {
       details: { date, slot },
     });
 
+    emitQueueUpdate(appointment);
+
     return res.json({
       message: "Appointment rescheduled successfully.",
+      appointment,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const recommendAdmission = async (req, res) => {
+  try {
+    const { admissionRecommended = true, admissionRecommendationNotes } = req.body;
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+
+    const doctor = await Doctor.findOne({ userId: req.user.id });
+    if (!doctor || appointment.doctorId.toString() !== doctor._id.toString()) {
+      return res.status(403).json({ message: "Access Forbidden: You are not the assigned doctor for this appointment." });
+    }
+
+    appointment.admissionRecommended = Boolean(admissionRecommended);
+    if (admissionRecommendationNotes !== undefined) {
+      appointment.admissionRecommendationNotes = admissionRecommendationNotes;
+    }
+    await appointment.save();
+
+    return res.json({
+      message: "Admission recommendation saved.",
       appointment,
     });
   } catch (error) {
@@ -654,6 +958,22 @@ export const startConsultation = async (req, res) => {
     appointment.status = "inConsultation";
     await appointment.save();
 
+    await Token.findOneAndUpdate(
+      { appointmentId: appointment._id },
+      { $set: { status: "In Consultation" } }
+    );
+
+    emitToRoom(`doctor_${appointment.doctorId}`, "consultation:started", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      patientId: appointment.patientId,
+    });
+    emitToRoom(`patient_${appointment.patientId}`, "consultation:started", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+    });
+    emitQueueUpdate(appointment);
+
     res.json({
       message: "Consultation started.",
       appointment,
@@ -689,25 +1009,35 @@ export const getDoctorTodayDetailed = async (req, res) => {
       })
       .sort({ slot: 1 });
 
+    const withTokens = await attachTokenMetadata(appointments);
+      const sortedQueue = sortQueue(withTokens);
+      const { queuePositionMap, estimatedWaitMap, waitingCount } = buildQueueMeta(sortedQueue);
+
     // Group by status
     const grouped = {
-      pending: appointments.filter((a) => ["booked", "confirmed"].includes(a.status)),
-      inProgress: appointments.filter((a) => ["arrived", "checked-in", "inConsultation"].includes(a.status)),
-      completed: appointments.filter((a) => a.status === "completed"),
-      cancelled: appointments.filter((a) => a.status === "cancelled"),
+      pending: sortedQueue.filter((a) => ["booked", "confirmed"].includes(a.status)),
+      inProgress: sortedQueue.filter((a) => ["arrived", "checked-in", "inConsultation"].includes(a.status)),
+      completed: sortedQueue.filter((a) => a.status === "completed"),
+      cancelled: sortedQueue.filter((a) => a.status === "cancelled"),
     };
 
-    res.json({
-      success: true,
-      data: appointments,
-      summary: {
-        total: appointments.length,
-        pending: grouped.pending.length,
-        inProgress: grouped.inProgress.length,
-        completed: grouped.completed.length,
-        cancelled: grouped.cancelled.length,
-      },
-    });
+      res.json({
+        success: true,
+        data: sortedQueue.map((item) => ({
+          ...item,
+          queuePosition: queuePositionMap.get(String(item._id)) || null,
+          estimatedWaitTime: estimatedWaitMap.get(String(item._id)) ?? null,
+          waitingCount,
+        })),
+        summary: {
+          total: appointments.length,
+          pending: grouped.pending.length,
+          inProgress: grouped.inProgress.length,
+          completed: grouped.completed.length,
+          cancelled: grouped.cancelled.length,
+          waitingCount,
+        },
+      });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -722,12 +1052,27 @@ export const getPatientSummary = async (req, res) => {
     const latestVitals = await Vitals.findOne({ patientId: patient._id })
       .sort({ recordedAt: -1 })
       .select("recordedAt systolicBp diastolicBp pulse temperature spo2 respirationRate bloodSugar weight notes");
+    const recentVitals = await Vitals.find({ patientId: patient._id })
+      .sort({ recordedAt: -1 })
+      .limit(10)
+      .select("recordedAt systolicBp diastolicBp pulse temperature spo2 respirationRate bloodSugar weight notes nurseUserId")
+      .populate("nurseUserId", "name");
+    const nursingNotes = await NursingNote.find({ patientId: patient._id })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select("noteType content createdAt nurseUserId")
+      .populate("nurseUserId", "name");
 
     // Get recent prescriptions
-    const recentPrescriptions = await Prescription.find({ patientId: patient._id })
-      .limit(3)
-      .sort({ createdAt: -1 })
-      .populate("appointmentId", "date slot");
+      const recentPrescriptions = await Prescription.find({ patientId: patient._id })
+        .limit(3)
+        .sort({ createdAt: -1 })
+        .populate("appointmentId", "date slot");
+      const latestPrescription = recentPrescriptions[0] || null;
+
+      const latestPharmacyOrder = latestPrescription?.pharmacyOrderId
+        ? await PharmacyOrder.findById(latestPrescription.pharmacyOrderId).select("status paymentStatus total updatedAt createdAt")
+        : null;
 
     const recentLabOrders = await LabOrder.find({ patientId: patient._id })
       .limit(3)
@@ -781,7 +1126,55 @@ export const getPatientSummary = async (req, res) => {
               }
             : null,
         },
+        recentVitals: recentVitals.map((entry) => ({
+          id: entry._id,
+          recordedAt: entry.recordedAt,
+          bloodPressure:
+            entry.systolicBp && entry.diastolicBp
+              ? `${entry.systolicBp}/${entry.diastolicBp}`
+              : null,
+          pulse: entry.pulse,
+          temperature: entry.temperature,
+          spo2: entry.spo2,
+          respirationRate: entry.respirationRate,
+          bloodSugar: entry.bloodSugar,
+          weight: entry.weight,
+          notes: entry.notes,
+          nurseName: entry.nurseUserId?.name || "Nurse",
+        })),
+        nursingNotes: nursingNotes.map((note) => ({
+          id: note._id,
+          noteType: note.noteType,
+          content: note.content,
+          createdAt: note.createdAt,
+          nurseName: note.nurseUserId?.name || "Nurse",
+        })),
         recentPrescriptions,
+          latestPrescription: latestPrescription
+            ? {
+                id: latestPrescription._id,
+                diagnosis: latestPrescription.diagnosis,
+                advice: latestPrescription.advice,
+                clinicalNotes: latestPrescription.clinicalNotes,
+                followUpDate: latestPrescription.followUpDate,
+                admissionRecommended: Boolean(latestPrescription.admissionRecommended),
+                admissionRecommendationNotes: latestPrescription.admissionRecommendationNotes,
+                medicines: latestPrescription.medicines || [],
+                issuedAt: latestPrescription.issuedAt || latestPrescription.createdAt,
+                appointmentId: latestPrescription.appointmentId,
+                pharmacyOrderId: latestPrescription.pharmacyOrderId,
+              }
+            : null,
+          latestPharmacyOrder: latestPharmacyOrder
+            ? {
+                id: latestPharmacyOrder._id,
+                status: latestPharmacyOrder.status,
+                paymentStatus: latestPharmacyOrder.paymentStatus,
+                total: latestPharmacyOrder.total,
+                updatedAt: latestPharmacyOrder.updatedAt,
+                createdAt: latestPharmacyOrder.createdAt,
+              }
+            : null,
         recentLabOrders,
         recentLabReports,
         appointmentHistory,

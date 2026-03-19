@@ -124,8 +124,18 @@ const buildLegacyLineItems = (payload) => {
   return lineItems;
 };
 
+const sumPaymentHistory = (invoice) => {
+  if (!Array.isArray(invoice.paymentHistory) || invoice.paymentHistory.length === 0) {
+    return invoice.paymentStatus === "paid" ? Number(invoice.totalAmount || 0) : 0;
+  }
+  return invoice.paymentHistory.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+};
+
 const mapInvoice = (invoice) => {
   const patientUser = invoice.patientId?.userId || invoice.patientUserId;
+  const totalPaid = sumPaymentHistory(invoice);
+  const totalAmount = Number(invoice.totalAmount || 0);
+  const balance = Math.max(totalAmount - totalPaid, 0);
   return {
     id: invoice._id,
     _id: invoice._id,
@@ -137,7 +147,12 @@ const mapInvoice = (invoice) => {
     createdAt: invoice.createdAt,
     updatedAt: invoice.updatedAt,
     subtotal: invoice.subtotal || invoice.totalAmount || 0,
-    totalAmount: invoice.totalAmount || 0,
+    totalAmount,
+    totalPaid,
+    balance,
+    paymentHistory: invoice.paymentHistory || [],
+    discount: invoice.discount || null,
+    insuranceCoverage: invoice.insuranceCoverage || null,
     notes: invoice.notes || "",
     patient: patientUser
       ? {
@@ -341,7 +356,7 @@ export const createInvoice = async (req, res) => {
       return res.status(400).json({ message: "At least one bill line item is required." });
     }
 
-    const invoice = await Invoice.create({
+  const invoice = await Invoice.create({
       patientId: patient._id,
       patientUserId: user._id,
       appointmentId: asOptionalObjectId(appointmentId),
@@ -361,6 +376,18 @@ export const createInvoice = async (req, res) => {
       paymentStatus,
       paymentMethod,
       paidAt: paymentStatus === "paid" ? new Date() : undefined,
+      discount: req.body.discount || undefined,
+      insuranceCoverage: req.body.insuranceCoverage || undefined,
+      paymentHistory: paymentStatus === "paid"
+        ? [
+            {
+              amount: lineItems.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0),
+              method: paymentMethod,
+              paidAt: new Date(),
+              notes: "Initial payment",
+            },
+          ]
+        : [],
       notes,
       createdBy: req.user.id,
       updatedBy: req.user.id,
@@ -606,9 +633,33 @@ export const payInvoice = async (req, res) => {
       return res.status(400).json({ message: "Invoice is already paid." });
     }
 
-    invoice.paymentStatus = "paid";
-    invoice.paymentMethod = req.body.paymentMethod || invoice.paymentMethod;
-    invoice.paidAt = new Date();
+    const paymentMethod = req.body.paymentMethod || invoice.paymentMethod;
+    const requestedAmount = Number(req.body.amount || 0);
+    const notes = req.body.notes;
+    const alreadyPaid = sumPaymentHistory(invoice);
+    const totalAmount = Number(invoice.totalAmount || 0);
+    const remaining = Math.max(totalAmount - alreadyPaid, 0);
+    const amountToPay = requestedAmount > 0 ? Math.min(requestedAmount, remaining) : remaining;
+
+    if (amountToPay <= 0) {
+      return res.status(400).json({ message: "No outstanding balance to pay." });
+    }
+
+    if (!Array.isArray(invoice.paymentHistory)) {
+      invoice.paymentHistory = [];
+    }
+
+    invoice.paymentHistory.push({
+      amount: amountToPay,
+      method: paymentMethod,
+      paidAt: new Date(),
+      notes,
+    });
+
+    const newPaidTotal = alreadyPaid + amountToPay;
+    invoice.paymentStatus = newPaidTotal >= totalAmount ? "paid" : "partiallyPaid";
+    invoice.paymentMethod = paymentMethod;
+    invoice.paidAt = invoice.paymentStatus === "paid" ? new Date() : invoice.paidAt;
     invoice.updatedBy = req.user.id;
     await invoice.save();
     await syncInvoicePaymentState(invoice);

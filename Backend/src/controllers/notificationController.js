@@ -3,12 +3,14 @@ import Invoice from "../models/Invoice.js";
 import LabOrder from "../models/LabOrder.js";
 import Notification from "../models/Notification.js";
 import PharmacyOrder from "../models/PharmacyOrder.js";
+import Doctor from "../models/Doctor.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 import { normalizeLabOrderStatus } from "../utils/labWorkflow.js";
 import { normalizePharmacyStatus, PHARMACY_STATUS } from "../utils/pharmacyWorkflow.js";
 import { EMPLOYEE_ROLES, normalizeSystemRole } from "../constants/roles.js";
 import {
   countUnreadForRecipient,
+  createNotification,
   markAllReadForRecipient,
   markNotificationRead as markNotificationReadRecord,
   notifyPatient,
@@ -69,7 +71,7 @@ const hydrateNotifications = async ({ userId, patientId }) => {
       );
     }
     if (status === "reportReleasedToPortal" || order.releasedToPortal) {
-      const key = buildKey(["lab", order._id, "released"]);
+      const key = buildKey(["lab", order._id, "reportReleased"]);
       tasks.push(
         notifyPatient({
           userId,
@@ -237,6 +239,37 @@ const employeeNotificationFilter = (user) => ({
 
 export const getMyEmployeeNotifications = async (req, res) => {
   try {
+    if (normalizeSystemRole(req.user.role) === "doctor") {
+      const doctor = await Doctor.findOne({ userId: req.user.id });
+      if (doctor) {
+        const today = new Date().toISOString().split("T")[0];
+        const arrivals = await Appointment.find({
+          doctorId: doctor._id,
+          date: { $gte: today },
+          status: { $in: ["arrived", "waiting", "checked-in"] },
+        })
+          .populate("patientId", "name patientId")
+          .select("patientId date slot status");
+
+        await Promise.all(
+          arrivals.map((appointment) =>
+            createNotification({
+              recipientType: "employee",
+              recipientId: req.user.id,
+              roleTarget: normalizeSystemRole(req.user.role),
+              key: buildKey(["appointment", appointment._id, "arrived"]),
+              type: "appointment",
+              title: "Patient arrived",
+              message: `${appointment.patientId?.name || "Patient"} checked in for ${appointment.date} at ${appointment.slot}.`,
+              sourceType: "appointment",
+              sourceId: appointment._id,
+              metadata: { status: appointment.status },
+            })
+          )
+        );
+      }
+    }
+
     const notifications = await Notification.find(employeeNotificationFilter(req.user))
       .sort({ createdAt: -1 })
       .limit(50);
@@ -296,10 +329,42 @@ export const markAllEmployeeNotificationsRead = async (req, res) => {
 
 export const getEmployeeUnreadCount = async (req, res) => {
   try {
-    const count = await Notification.countDocuments({
+    let count = await Notification.countDocuments({
       ...employeeNotificationFilter(req.user),
       status: "unread",
     });
+    if (count === 0 && normalizeSystemRole(req.user.role) === "doctor") {
+      const doctor = await Doctor.findOne({ userId: req.user.id });
+      if (doctor) {
+        const today = new Date().toISOString().split("T")[0];
+        const arrivals = await Appointment.find({
+          doctorId: doctor._id,
+          date: { $gte: today },
+          status: { $in: ["arrived", "waiting", "checked-in"] },
+        }).select("_id");
+
+        await Promise.all(
+          arrivals.map((appointment) =>
+            createNotification({
+              recipientType: "employee",
+              recipientId: req.user.id,
+              roleTarget: normalizeSystemRole(req.user.role),
+              key: buildKey(["appointment", appointment._id, "arrived"]),
+              type: "appointment",
+              title: "Patient arrived",
+              message: "A patient has checked in for the appointment.",
+              sourceType: "appointment",
+              sourceId: appointment._id,
+            })
+          )
+        );
+
+        count = await Notification.countDocuments({
+          ...employeeNotificationFilter(req.user),
+          status: "unread",
+        });
+      }
+    }
     return res.json({ unreadCount: count });
   } catch (error) {
     return res.status(500).json({ message: error.message });

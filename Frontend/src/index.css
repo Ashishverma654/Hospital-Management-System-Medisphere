@@ -37,7 +37,7 @@
   /* Sidebar */
   --sidebar: #ffffff;
   --sidebar-foreground: #1f2c4b;
-  --sidebar-primary: #09e5ab;
+  --sidebar-primary: #047859;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #1f2c4b;
@@ -48,6 +48,11 @@
   --brand-gradient: linear-gradient(120deg, #09e5ab, #0de0fe);
   --brand-gradient-warm: linear-gradient(120deg, #ffaf54, #ff5a5f);
   --brand-glow: 0 0 40px rgba(13, 224, 254, 0.25);
+
+  /* Shift calendar */
+  --shift-morning: var(--secondary);
+  --shift-evening: var(--chart-4);
+  --shift-night: var(--chart-3);
 }
 
 .dark {
@@ -57,7 +62,7 @@
   --card-foreground: #e2e8f0;
   --popover: #0f172a;
   --popover-foreground: #e2e8f0;
-  --primary: #09e5ab;
+  --primary: #05523d;
   --primary-foreground: #0f172a;
   --secondary: #0de0fe;
   --secondary-foreground: #0f172a;
@@ -83,6 +88,68 @@
   --sidebar-accent-foreground: #e2e8f0;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #09e5ab;
+
+  /* Shift calendar */
+  --shift-morning: var(--secondary);
+  --shift-evening: var(--chart-4);
+  --shift-night: var(--chart-3);
+}
+
+/* React Big Calendar theme alignment */
+.rbc-calendar {
+  color: var(--foreground);
+}
+
+.rbc-toolbar {
+  display: none;
+}
+
+.rbc-header {
+  background: var(--card);
+  color: var(--foreground);
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.rbc-month-view,
+.rbc-time-view {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card);
+}
+
+.rbc-day-bg {
+  background: var(--card);
+}
+
+.rbc-today {
+  background: color-mix(in srgb, var(--secondary) 12%, var(--card) 88%);
+}
+
+.dark .rbc-today {
+  background: color-mix(in srgb, var(--secondary) 18%, var(--card) 82%);
+}
+
+.rbc-off-range-bg {
+  background: color-mix(in srgb, var(--muted) 60%, var(--card) 40%);
+}
+
+.rbc-time-slot,
+.rbc-timeslot-group,
+.rbc-time-header-content,
+.rbc-time-header,
+.rbc-time-content,
+.rbc-month-row,
+.rbc-row-bg,
+.rbc-row-content {
+  border-color: var(--border);
+}
+
+.rbc-time-column,
+.rbc-time-gutter,
+.rbc-time-header-gutter {
+  background: var(--card);
 }
 
 /* ── Theme inline tokens ───────────────────────────────────────── */
@@ -303,7 +370,7 @@
 }
 
 .doccure-card-soft {
-  background: #f8fafc;
+  background: #eff4fa;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
 }

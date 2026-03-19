@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
+import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
 import { nurseApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -22,6 +23,7 @@ export default function NurseDashboard() {
   const [handoverNotes, setHandoverNotes] = useState([]);
 
   useEffect(() => {
+    let isMounted = true;
     const load = async () => {
       try {
         const [dashboardData, assignmentData, patientData, taskData, handoverData] = await Promise.all([
@@ -31,17 +33,25 @@ export default function NurseDashboard() {
           nurseApi.getTasks(),
           nurseApi.getHandover(),
         ]);
+        if (!isMounted) return;
         setStats(dashboardData);
         setAssignments(Array.isArray(assignmentData) ? assignmentData : []);
         setAssignedPatients(Array.isArray(patientData) ? patientData : []);
         setTasks(Array.isArray(taskData) ? taskData : []);
         setHandoverNotes(Array.isArray(handoverData) ? handoverData : []);
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to load nurse dashboard.');
+        if (isMounted) {
+          toast.error(error.response?.data?.message || 'Failed to load nurse dashboard.');
+        }
       }
     };
 
     load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const currentAssignments = assignments.filter((assignment) => assignment.status === 'active');
@@ -50,6 +60,7 @@ export default function NurseDashboard() {
   const openTasks = tasks.filter((task) => task.status !== 'completed').slice(0, 6);
   const priorityHandovers = handoverNotes.slice(0, 5);
   const patientCards = assignedPatients.slice(0, 6);
+  const latestPrescriptions = assignedPatients.filter((patient) => patient.activePrescription).slice(0, 5);
 
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
@@ -60,6 +71,8 @@ export default function NurseDashboard() {
           Track your current shift, assigned patients, vitals workload, and urgent bedside care updates from one workspace.
         </p>
       </div>
+
+      <StaffDutyWidget />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {statCards.map(([key, label]) => (
@@ -199,6 +212,60 @@ export default function NurseDashboard() {
             ))}
             {openTasks.length === 0 && (
               <p className="text-sm text-muted-foreground">No open nursing tasks right now.</p>
+            )}
+          </div>
+        </article>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Latest Prescriptions</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">Doctor instructions at a glance</h3>
+          <div className="mt-4 space-y-3">
+            {latestPrescriptions.map((patient) => (
+              <div key={patient.id} className="rounded-xl border border-border p-4">
+                <p className="font-medium text-foreground">{patient.name || 'Patient'}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {patient.activePrescription?.diagnosis || 'Prescription'} • {patient.ward?.name || 'Ward'} {patient.bed?.bedNumber ? `• Bed ${patient.bed.bedNumber}` : ''}
+                </p>
+                {patient.activePrescription?.followUpDate && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Follow-up: {new Date(patient.activePrescription.followUpDate).toLocaleDateString()}
+                  </p>
+                )}
+                {patient.activePrescription?.admissionRecommended && (
+                  <p className="mt-2 inline-flex items-center rounded-full bg-amber-200/40 px-3 py-1 text-xs font-semibold text-amber-800">
+                    Admission recommended
+                  </p>
+                )}
+              </div>
+            ))}
+            {latestPrescriptions.length === 0 && (
+              <p className="text-sm text-muted-foreground">No recent prescriptions for your assigned patients.</p>
+            )}
+          </div>
+        </article>
+
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Medication summary</p>
+          <div className="mt-4 space-y-3">
+            {latestPrescriptions.map((patient) => (
+              <div key={`${patient.id}-meds`} className="rounded-xl border border-border p-4">
+                <p className="font-medium text-foreground">{patient.name || 'Patient'}</p>
+                <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                  {(patient.medicationSummary || []).slice(0, 3).map((med, index) => (
+                    <p key={`${patient.id}-med-${index}`}>
+                      {med.name} • {med.dosage || 'Dose'} • {med.frequency || 'Frequency'}
+                    </p>
+                  ))}
+                  {(patient.medicationSummary || []).length === 0 && (
+                    <p>No medicines listed yet.</p>
+                  )}
+                </div>
+              </div>
+            ))}
+            {latestPrescriptions.length === 0 && (
+              <p className="text-sm text-muted-foreground">Medication details will appear here once prescriptions are issued.</p>
             )}
           </div>
         </article>

@@ -3,6 +3,7 @@ import {
   createReceptionistStaff,
   getReceptionBookingOptions,
   getReceptionistDashboard,
+  getPatientHistoryForDesk,
   registerPatientAtDesk,
   searchPatientsForDesk,
 } from "../controllers/receptionistController.js";
@@ -10,6 +11,8 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { createReceptionistSchema, registerPatientAtDeskSchema } from "../validations/receptionistValidation.js";
 
 const router = express.Router();
 
@@ -18,6 +21,7 @@ router.post(
   "/create",
   verifyAccessToken,
   authorizeRoles("superadmin", "admin", "subadmin"),
+  validate(createReceptionistSchema),
   createReceptionistStaff
 );
 
@@ -32,6 +36,7 @@ router.post(
   "/patients",
   verifyAccessToken,
   authorizeRoles("receptionist", "admin", "superadmin"),
+  validate(registerPatientAtDeskSchema),
   registerPatientAtDesk
 );
 
@@ -40,6 +45,13 @@ router.get(
   verifyAccessToken,
   authorizeRoles("receptionist", "admin", "superadmin"),
   searchPatientsForDesk
+);
+
+router.get(
+  "/patients/:patientId/history",
+  verifyAccessToken,
+  authorizeRoles("receptionist", "admin", "superadmin"),
+  getPatientHistoryForDesk
 );
 
 router.get(

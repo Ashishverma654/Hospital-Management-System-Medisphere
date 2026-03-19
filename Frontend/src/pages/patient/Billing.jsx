@@ -17,6 +17,8 @@ export default function PatientBilling() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('upi');
   const [upiId, setUpiId] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
 
   const loadInvoices = async () => {
     try {
@@ -65,14 +67,26 @@ export default function PatientBilling() {
       total: invoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
       paid: invoices.filter((invoice) => invoice.paymentStatus === 'paid').reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
       pending: invoices.filter((invoice) => invoice.paymentStatus === 'pending').reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
+      outstanding: invoices.filter((invoice) => ['pending', 'partiallyPaid'].includes(invoice.paymentStatus)).reduce((sum, invoice) => sum + Number(invoice.balance ?? invoice.totalAmount ?? 0), 0),
     }),
     [invoices]
   );
 
+  const unifiedTotals = useMemo(() => ({
+    consultation: invoices.filter((invoice) => invoice.billType === 'consultation').reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
+    lab: invoices.filter((invoice) => invoice.billType === 'lab').reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
+    pharmacy: invoices.filter((invoice) => invoice.billType === 'pharmacy').reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
+    ward: invoices.filter((invoice) => invoice.billType === 'ward').reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0),
+  }), [invoices]);
+
   const payInvoice = async (invoiceId) => {
     try {
       setPayingInvoiceId(invoiceId);
-      await billingApi.pay(invoiceId, { paymentMethod });
+      await billingApi.pay(invoiceId, {
+        paymentMethod,
+        amount: paymentAmount ? Number(paymentAmount) : undefined,
+        notes: paymentNotes || undefined,
+      });
       toast.success('Payment completed successfully.');
       await loadInvoices();
       await loadInvoiceDetail(invoiceId);
@@ -122,7 +136,14 @@ export default function PatientBilling() {
       <div className="grid gap-4 md:grid-cols-3">
         <SummaryCard label="Total billed" value={`₹${totals.total.toLocaleString()}`} />
         <SummaryCard label="Paid" value={`₹${totals.paid.toLocaleString()}`} />
-        <SummaryCard label="Pending" value={`₹${totals.pending.toLocaleString()}`} />
+        <SummaryCard label="Outstanding" value={`₹${totals.outstanding.toLocaleString()}`} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <SummaryCard label="Consultation" value={`₹${unifiedTotals.consultation.toLocaleString()}`} />
+        <SummaryCard label="Lab" value={`₹${unifiedTotals.lab.toLocaleString()}`} />
+        <SummaryCard label="Pharmacy" value={`₹${unifiedTotals.pharmacy.toLocaleString()}`} />
+        <SummaryCard label="Ward" value={`₹${unifiedTotals.ward.toLocaleString()}`} />
       </div>
 
       <section className="rounded-2xl bg-card p-6 shadow-sm">
@@ -138,6 +159,7 @@ export default function PatientBilling() {
           <select value={filters.paymentStatus} onChange={(event) => setFilters((current) => ({ ...current, paymentStatus: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
             <option value="">All payment states</option>
             <option value="pending">Pending</option>
+            <option value="partiallyPaid">Partially paid</option>
             <option value="paid">Paid</option>
             <option value="cancelled">Cancelled</option>
           </select>
@@ -235,9 +257,32 @@ export default function PatientBilling() {
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between"><span>Subtotal</span><span>₹{Number(selectedInvoice.subtotal || 0).toLocaleString()}</span></div>
                   <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(selectedInvoice.totalAmount || 0).toLocaleString()}</span></div>
+                  {selectedInvoice.discount?.amount ? (
+                    <div className="flex items-center justify-between"><span>Discount</span><span>-₹{Number(selectedInvoice.discount.amount || 0).toLocaleString()}</span></div>
+                  ) : null}
+                  {selectedInvoice.insuranceCoverage?.amount ? (
+                    <div className="flex items-center justify-between"><span>Insurance cover</span><span>-₹{Number(selectedInvoice.insuranceCoverage.amount || 0).toLocaleString()}</span></div>
+                  ) : null}
+                  <div className="flex items-center justify-between"><span>Paid so far</span><span>₹{Number(selectedInvoice.totalPaid || 0).toLocaleString()}</span></div>
+                  <div className="flex items-center justify-between font-semibold text-foreground"><span>Balance</span><span>₹{Number(selectedInvoice.balance ?? 0).toLocaleString()}</span></div>
                   <div className="flex items-center justify-between"><span>Payment method</span><span>{selectedInvoice.paymentMethod || 'Not recorded'}</span></div>
                   <div className="flex items-center justify-between"><span>Created</span><span>{selectedInvoice.createdAt ? new Date(selectedInvoice.createdAt).toLocaleString() : '—'}</span></div>
                   <div className="flex items-center justify-between"><span>Paid at</span><span>{selectedInvoice.paidAt ? new Date(selectedInvoice.paidAt).toLocaleString() : 'Pending'}</span></div>
+                </div>
+              </article>
+
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Payment history</p>
+                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                  {(selectedInvoice.paymentHistory || []).map((entry, index) => (
+                    <div key={`${selectedInvoice.id}-payment-${index}`} className="flex items-center justify-between">
+                      <span>₹{Number(entry.amount || 0).toLocaleString()} • {entry.method || 'method'} • {entry.paidAt ? new Date(entry.paidAt).toLocaleString() : '—'}</span>
+                      <span>{entry.notes || ''}</span>
+                    </div>
+                  ))}
+                  {(selectedInvoice.paymentHistory || []).length === 0 && (
+                    <p>No payment entries recorded yet.</p>
+                  )}
                 </div>
               </article>
 
@@ -249,7 +294,15 @@ export default function PatientBilling() {
                   Email receipt
                 </Button>
                 {selectedInvoice.paymentStatus !== 'paid' && (
-                  <Button className="w-full" disabled={payingInvoiceId === selectedInvoice.id} onClick={() => setPaymentOpen(true)}>
+                  <Button
+                    className="w-full"
+                    disabled={payingInvoiceId === selectedInvoice.id}
+                    onClick={() => {
+                      setPaymentAmount(selectedInvoice.balance ? String(selectedInvoice.balance) : '');
+                      setPaymentNotes('');
+                      setPaymentOpen(true);
+                    }}
+                  >
                     {payingInvoiceId === selectedInvoice.id ? 'Processing payment...' : 'Pay this bill'}
                   </Button>
                 )}
@@ -267,6 +320,20 @@ export default function PatientBilling() {
               <button type="button" onClick={() => setPaymentOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
             <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Amount to pay</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                />
+                {selectedInvoice?.balance !== undefined && (
+                  <p className="mt-1 text-xs text-muted-foreground">Outstanding balance: ₹{Number(selectedInvoice.balance || 0).toLocaleString()}</p>
+                )}
+              </div>
               <label className="flex items-center gap-2 text-sm text-foreground">
                 <input type="radio" name="payMethod" value="upi" checked={paymentMethod === 'upi'} onChange={(e) => setPaymentMethod(e.target.value)} />
                 UPI payment
@@ -291,6 +358,16 @@ export default function PatientBilling() {
                   />
                 </div>
               )}
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Payment note (optional)</label>
+                <input
+                  type="text"
+                  value={paymentNotes}
+                  onChange={(e) => setPaymentNotes(e.target.value)}
+                  placeholder="Reference or note"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
+                />
+              </div>
               <Button className="w-full" onClick={async () => { await payInvoice(selectedInvoice.id); setPaymentOpen(false); }}>
                 Confirm payment
               </Button>

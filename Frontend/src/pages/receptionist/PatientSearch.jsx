@@ -59,6 +59,9 @@ export default function PatientSearch() {
                 <Link to={`/employee/receptionist/appointments?patientId=${patient.id}`} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
                   Book Appointment
                 </Link>
+                <Link to={`/employee/receptionist/history?patientId=${patient.id}`} className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground">
+                  View History
+                </Link>
                 <Link to={`/employee/receptionist/register-patient?duplicate=${patient.id}`} className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground">
                   Review
                 </Link>

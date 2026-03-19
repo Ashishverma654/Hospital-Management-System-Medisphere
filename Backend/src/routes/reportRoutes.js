@@ -9,12 +9,15 @@ import {
   verifyAccessToken,
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
+import validate from "../middlewares/validate.js";
+import { uploadReportSchema } from "../validations/reportShiftUserWardValidation.js";
 const router = express.Router();
 
 router.post(
   "/",
   verifyAccessToken,
   authorizeRoles("doctor"),
+  validate(uploadReportSchema),
   upload.single("report"),
   uploadReport,
 );

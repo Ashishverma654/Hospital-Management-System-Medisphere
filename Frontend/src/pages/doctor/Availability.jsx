@@ -39,17 +39,11 @@ export default function DoctorAvailability() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchAvailabilities();
-    }
-  }, [user?.id, fetchAvailabilities]);
-
   const fetchAvailabilities = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await availabilityApi.getByDoctor(user.id);
+      const data = await availabilityApi.getByDoctor(user?.id);
       setAvailabilities(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch availability');
@@ -57,6 +51,12 @@ export default function DoctorAvailability() {
       setLoading(false);
     }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchAvailabilities();
+    }
+  }, [user?.id, fetchAvailabilities]);
 
   const handleSubmit = async (formData) => {
     if (!canEdit) {

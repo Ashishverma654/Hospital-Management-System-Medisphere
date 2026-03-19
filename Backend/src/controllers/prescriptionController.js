@@ -18,6 +18,7 @@ export const createPrescription = async (req, res) => {
       revisitRecommended,
       admissionRecommended,
       admissionRecommendationNotes,
+      status,
     } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
@@ -42,6 +43,9 @@ export const createPrescription = async (req, res) => {
 
     const { patient, user } = await resolvePatientContext(appointment.patientId);
 
+    const allowedStatuses = ["draft", "active", "dispensed", "cancelled"];
+    const resolvedStatus = allowedStatuses.includes(status) ? status : undefined;
+
     const prescription = await Prescription.create({
       appointmentId,
       doctorId: appointment.doctorId,
@@ -56,11 +60,19 @@ export const createPrescription = async (req, res) => {
       revisitRecommended,
       admissionRecommended,
       admissionRecommendationNotes,
+      status: resolvedStatus,
     });
 
+    if (admissionRecommended) {
+      appointment.admissionRecommended = true;
+      appointment.admissionRecommendationNotes = admissionRecommendationNotes || appointment.admissionRecommendationNotes;
+    }
+
     // Update appointment status to completed only if not already in a terminal state
-    if (!["completed", "cancelled"].includes(appointment.status)) {
+    if (resolvedStatus !== "draft" && !["completed", "cancelled"].includes(appointment.status)) {
       appointment.status = "completed";
+      await appointment.save();
+    } else if (appointment.isModified()) {
       await appointment.save();
     }
 

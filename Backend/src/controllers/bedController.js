@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+import Admission from "../models/Admission.js";
 import Bed from "../models/Bed.js";
 import Department from "../models/Department.js";
 import Doctor from "../models/Doctor.js";
@@ -5,8 +7,10 @@ import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
 import User from "../models/User.js";
 import Ward from "../models/Ward.js";
+import NurseAssignment from "../models/NurseAssignment.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
 import { logAudit } from "../services/auditLogService.js";
+import { notifyEmployee } from "../services/notificationService.js";
 
 const asOptionalObjectId = (value) => (value ? value : undefined);
 const asOptionalNumber = (value) => {
@@ -33,6 +37,11 @@ const mapRecommendation = (prescription) =>
           : null,
       }
     : null;
+
+const getAvailableBed = async (wardId, session) =>
+  Bed.findOne({ wardId, status: "available", isActive: true })
+    .sort({ bedNumber: 1 })
+    .session(session || null);
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -116,6 +125,31 @@ const mapBed = (bed, recommendation) => ({
     status: entry.status,
   })),
 });
+
+const notifyWardNurses = async ({ wardId, title, message, sourceId, metadata }) => {
+  if (!wardId) return;
+  const now = new Date();
+  const assignments = await NurseAssignment.find({
+    wardId,
+    status: { $in: ["scheduled", "active"] },
+    $or: [{ assignmentEnd: { $exists: false } }, { assignmentEnd: null }, { assignmentEnd: { $gte: now } }],
+  }).select("nurseUserId");
+  const nurseIds = [...new Set(assignments.map((a) => String(a.nurseUserId)).filter(Boolean))];
+  await Promise.all(
+    nurseIds.map((userId) =>
+      notifyEmployee({
+        userId,
+        key: `ward:${wardId}:admission:${sourceId}`,
+        type: "admission",
+        title,
+        message,
+        sourceType: "Admission",
+        sourceId,
+        metadata,
+      })
+    )
+  );
+};
 
 export const createBed = async (req, res) => {
   try {
@@ -384,6 +418,10 @@ export const getAdmissionCandidates = async (req, res) => {
         String(bed.patientProfileId)
       )
     );
+    const activeAdmissions = await Admission.find({ status: { $in: ["Admitted", "Transferred"] } }).select("patientProfileId");
+    activeAdmissions.forEach((admission) => {
+      if (admission.patientProfileId) occupiedPatientIds.add(String(admission.patientProfileId));
+    });
 
     const results = users
       .map((user) => {
@@ -414,121 +452,453 @@ export const getAdmissionCandidates = async (req, res) => {
 };
 
 export const assignBed = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
-    const bed = await Bed.findById(req.params.id).populate("wardId");
-    if (!bed) {
-      return res.status(404).json({ message: "Bed not found." });
-    }
+    let populatedBed = null;
+    let admission = null;
+    let prescription = null;
 
-    if (bed.status !== "available") {
-      return res.status(400).json({ message: "Only available beds can be assigned." });
-    }
+    await session.withTransaction(async () => {
+      const bed = await Bed.findById(req.params.id).populate("wardId").session(session);
+      if (!bed) {
+        throw { status: 404, message: "Bed not found." };
+      }
 
-    const { patient, user } = await resolvePatientContext(req.body.patientId);
-    const existingAdmission = await Bed.findOne({
-      _id: { $ne: bed._id },
-      patientProfileId: patient._id,
-      status: "occupied",
+      if (bed.status !== "available") {
+        throw { status: 400, message: "Only available beds can be assigned." };
+      }
+
+      const { patient, user } = await resolvePatientContext(req.body.patientId);
+      const existingAdmission = await Admission.findOne({
+        patientProfileId: patient._id,
+        status: { $in: ["Admitted", "Transferred"] },
+      }).session(session);
+
+      if (existingAdmission) {
+        throw { status: 400, message: "This patient already has an active admission." };
+      }
+
+      if (req.body.departmentId && bed.wardId?.departmentId && String(req.body.departmentId) !== String(bed.wardId.departmentId)) {
+        throw { status: 400, message: "Ward does not belong to the selected department." };
+      }
+      if (req.body.wardId && bed.wardId?._id && String(req.body.wardId) !== String(bed.wardId._id)) {
+        throw { status: 400, message: "Bed does not belong to the selected ward." };
+      }
+
+      const prescriptionId = asOptionalObjectId(req.body.prescriptionId);
+      prescription = prescriptionId
+        ? await Prescription.findById(prescriptionId).populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
+        : await Prescription.findOne({
+            patientId: patient._id,
+            admissionRecommended: true,
+            status: { $ne: "cancelled" },
+          })
+            .populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
+            .sort({ createdAt: -1 });
+
+      bed.status = "occupied";
+      bed.patientId = user._id;
+      bed.patientProfileId = patient._id;
+      bed.admittedAt = req.body.admittedAt || new Date();
+      bed.dischargedAt = null;
+      bed.admissionHistory.push({
+        patientId: user._id,
+        patientProfileId: patient._id,
+        doctorId: prescription?.doctorId?._id,
+        prescriptionId: prescription?._id,
+        admissionRecommended: Boolean(prescription?.admissionRecommended),
+        admissionRecommendationNotes: prescription?.admissionRecommendationNotes || req.body.admissionRecommendationNotes,
+        admittedAt: bed.admittedAt,
+        admittedBy: req.user.id,
+        status: "admitted",
+      });
+
+      const [createdAdmission] = await Admission.create(
+        [
+          {
+            patientId: user._id,
+            patientProfileId: patient._id,
+            wardId: bed.wardId?._id,
+            bedId: bed._id,
+            departmentId: bed.wardId?.departmentId || req.body.departmentId,
+            doctorId: prescription?.doctorId?._id,
+            admittedBy: req.user.id,
+            admissionDate: bed.admittedAt,
+            status: "Admitted",
+            reason: req.body.reason,
+            notes: req.body.notes,
+          },
+        ],
+        { session }
+      );
+      admission = createdAdmission;
+      bed.admissionId = admission._id;
+
+      await bed.save({ session });
+
+      if (bed.wardId?._id) {
+        await Ward.findByIdAndUpdate(bed.wardId._id, { $inc: { occupiedBeds: 1 } }, { session });
+      }
+
+      populatedBed = await Bed.findById(bed._id)
+        .populate("wardId", "name wardNumber wardType defaultPrice")
+        .populate("patientId", "name patientId")
+        .populate({ path: "patientProfileId", populate: { path: "userId", select: "name patientId phone" } })
+        .session(session);
     });
-
-    if (existingAdmission) {
-      return res.status(400).json({ message: "This patient is already admitted to another bed." });
-    }
-
-    const prescriptionId = asOptionalObjectId(req.body.prescriptionId);
-    const prescription = prescriptionId
-      ? await Prescription.findById(prescriptionId).populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
-      : await Prescription.findOne({
-          patientId: patient._id,
-          admissionRecommended: true,
-          status: { $ne: "cancelled" },
-        })
-          .populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
-          .sort({ createdAt: -1 });
-
-    bed.status = "occupied";
-    bed.patientId = user._id;
-    bed.patientProfileId = patient._id;
-    bed.admittedAt = req.body.admittedAt || new Date();
-    bed.dischargedAt = null;
-    bed.admissionHistory.push({
-      patientId: user._id,
-      patientProfileId: patient._id,
-      doctorId: prescription?.doctorId?._id,
-      prescriptionId: prescription?._id,
-      admissionRecommended: Boolean(prescription?.admissionRecommended),
-      admissionRecommendationNotes: prescription?.admissionRecommendationNotes || req.body.admissionRecommendationNotes,
-      admittedAt: bed.admittedAt,
-      admittedBy: req.user.id,
-      status: "admitted",
-    });
-
-    await bed.save();
-
-    // Sync ward occupiedBeds
-    if (bed.wardId?._id) {
-      await Ward.findByIdAndUpdate(bed.wardId._id, { $inc: { occupiedBeds: 1 } });
-    }
 
     await logAudit({
       actor: { id: req.user.id, name: req.user.name, role: req.user.role },
       action: "patient_admitted",
       entityType: "Bed",
-      entityId: bed._id,
-      details: { bedNumber: bed.bedNumber, patientId: user._id },
+      entityId: populatedBed._id,
+      details: { bedNumber: populatedBed.bedNumber, patientId: populatedBed.patientId?._id },
     });
 
-    const populated = await Bed.findById(bed._id)
-      .populate("wardId", "name wardNumber wardType defaultPrice")
-      .populate("patientId", "name patientId")
-      .populate({ path: "patientProfileId", populate: { path: "userId", select: "name patientId phone" } });
+    if (admission?.doctorId) {
+      await notifyEmployee({
+        userId: prescription?.doctorId?.userId?._id,
+        key: `admission:${admission._id}:doctor`,
+        type: "admission",
+        title: "New admission assigned",
+        message: `Patient admitted to ${populatedBed.wardId?.name || "ward"} (Bed ${populatedBed.bedNumber}).`,
+        sourceType: "Admission",
+        sourceId: admission._id,
+      });
+    }
 
-    res.json({
+    await notifyWardNurses({
+      wardId: populatedBed.wardId?._id,
+      title: "New admission in ward",
+      message: `Patient admitted to ${populatedBed.wardId?.name || "ward"} (Bed ${populatedBed.bedNumber}).`,
+      sourceId: admission?._id,
+      metadata: { wardId: populatedBed.wardId?._id },
+    });
+
+    return res.json({
       message: "Patient admitted successfully.",
-      bed: mapBed(populated, mapRecommendation(prescription)),
+      bed: mapBed(populatedBed, mapRecommendation(prescription)),
+      admissionId: admission?._id,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    const status = error?.status || 500;
+    return res.status(status).json({ message: error.message || "Failed to admit patient." });
+  } finally {
+    session.endSession();
   }
 };
 
 export const dischargePatient = async (req, res) => {
+  const session = await mongoose.startSession();
   try {
-    const bed = await Bed.findById(req.params.id);
+    let bed = null;
+    let admission = null;
 
-    if (!bed) {
-      return res.status(404).json({ message: "Bed not found." });
+    await session.withTransaction(async () => {
+      bed = await Bed.findById(req.params.id).session(session);
+      if (!bed) {
+        throw { status: 404, message: "Bed not found." };
+      }
+
+      if (bed.status !== "occupied") {
+        throw { status: 400, message: "This bed is not currently occupied." };
+      }
+
+      bed.status = "available";
+      bed.dischargedAt = new Date();
+      const historyEntry = [...(bed.admissionHistory || [])]
+        .reverse()
+        .find((entry) => entry.status === "admitted" && !entry.dischargedAt);
+      if (historyEntry) {
+        historyEntry.dischargedAt = bed.dischargedAt;
+        historyEntry.dischargedBy = req.user.id;
+        historyEntry.status = "discharged";
+      }
+      bed.patientId = null;
+      bed.patientProfileId = null;
+      bed.admissionId = null;
+
+      await bed.save({ session });
+
+      if (bed.wardId) {
+        await Ward.findByIdAndUpdate(bed.wardId, { $inc: { occupiedBeds: -1 } }, { session });
+      }
+
+      admission = await Admission.findOne({
+        bedId: bed._id,
+        status: { $in: ["Admitted", "Transferred"] },
+      }).session(session);
+      if (admission) {
+        admission.status = "Discharged";
+        admission.dischargeDate = bed.dischargedAt;
+        admission.dischargedBy = req.user.id;
+        await admission.save({ session });
+      }
+    });
+
+    if (admission?.doctorId) {
+      const doctor = await Doctor.findById(admission.doctorId).select("userId");
+      await notifyEmployee({
+        userId: doctor?.userId,
+        key: `admission:${admission._id}:discharged`,
+        type: "admission",
+        title: "Patient discharged",
+        message: "An admitted patient has been discharged.",
+        sourceType: "Admission",
+        sourceId: admission._id,
+      });
     }
 
-    if (bed.status !== "occupied") {
-      return res.status(400).json({ message: "This bed is not currently occupied." });
-    }
-
-    bed.status = "available";
-    bed.dischargedAt = new Date();
-    const historyEntry = [...(bed.admissionHistory || [])]
-      .reverse()
-      .find((entry) => entry.status === "admitted" && !entry.dischargedAt);
-    if (historyEntry) {
-      historyEntry.dischargedAt = bed.dischargedAt;
-      historyEntry.dischargedBy = req.user.id;
-      historyEntry.status = "discharged";
-    }
-    bed.patientId = null;
-    bed.patientProfileId = null;
-
-    await bed.save();
-
-    // Sync ward occupiedBeds
-    if (bed.wardId) {
-      await Ward.findByIdAndUpdate(bed.wardId, { $inc: { occupiedBeds: -1 } });
-    }
-
-    res.json({
+    return res.json({
       message: "Patient discharged successfully.",
       bed,
+      admissionId: admission?._id,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    const status = error?.status || 500;
+    return res.status(status).json({ message: error.message || "Failed to discharge patient." });
+  } finally {
+    session.endSession();
+  }
+};
+
+export const assignBedAuto = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    let populatedBed = null;
+    let admission = null;
+    let prescription = null;
+
+    await session.withTransaction(async () => {
+      const ward = await Ward.findById(req.body.wardId).session(session);
+      if (!ward) {
+        throw { status: 404, message: "Ward not found." };
+      }
+
+      if (req.body.departmentId && ward.departmentId && String(req.body.departmentId) !== String(ward.departmentId)) {
+        throw { status: 400, message: "Ward does not belong to the selected department." };
+      }
+
+      const bed = await getAvailableBed(ward._id, session);
+      if (!bed) {
+        throw { status: 400, message: "No available beds in the selected ward." };
+      }
+
+      const { patient, user } = await resolvePatientContext(req.body.patientId);
+      const existingAdmission = await Admission.findOne({
+        patientProfileId: patient._id,
+        status: { $in: ["Admitted", "Transferred"] },
+      }).session(session);
+      if (existingAdmission) {
+        throw { status: 400, message: "This patient already has an active admission." };
+      }
+
+      const prescriptionId = asOptionalObjectId(req.body.prescriptionId);
+      prescription = prescriptionId
+        ? await Prescription.findById(prescriptionId).populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
+        : await Prescription.findOne({
+            patientId: patient._id,
+            admissionRecommended: true,
+            status: { $ne: "cancelled" },
+          })
+            .populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
+            .sort({ createdAt: -1 });
+
+      bed.status = "occupied";
+      bed.patientId = user._id;
+      bed.patientProfileId = patient._id;
+      bed.admittedAt = req.body.admittedAt || new Date();
+      bed.dischargedAt = null;
+      bed.admissionHistory.push({
+        patientId: user._id,
+        patientProfileId: patient._id,
+        doctorId: prescription?.doctorId?._id,
+        prescriptionId: prescription?._id,
+        admissionRecommended: Boolean(prescription?.admissionRecommended),
+        admissionRecommendationNotes: prescription?.admissionRecommendationNotes || req.body.admissionRecommendationNotes,
+        admittedAt: bed.admittedAt,
+        admittedBy: req.user.id,
+        status: "admitted",
+      });
+
+      const [createdAdmission] = await Admission.create(
+        [
+          {
+            patientId: user._id,
+            patientProfileId: patient._id,
+            wardId: ward._id,
+            bedId: bed._id,
+            departmentId: ward.departmentId || req.body.departmentId,
+            doctorId: prescription?.doctorId?._id,
+            admittedBy: req.user.id,
+            admissionDate: bed.admittedAt,
+            status: "Admitted",
+            reason: req.body.reason,
+            notes: req.body.notes,
+          },
+        ],
+        { session }
+      );
+      admission = createdAdmission;
+      bed.admissionId = admission._id;
+
+      await bed.save({ session });
+      await Ward.findByIdAndUpdate(ward._id, { $inc: { occupiedBeds: 1 } }, { session });
+
+      populatedBed = await Bed.findById(bed._id)
+        .populate("wardId", "name wardNumber wardType defaultPrice")
+        .populate("patientId", "name patientId")
+        .populate({ path: "patientProfileId", populate: { path: "userId", select: "name patientId phone" } })
+        .session(session);
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "patient_admitted_auto",
+      entityType: "Bed",
+      entityId: populatedBed._id,
+      details: { bedNumber: populatedBed.bedNumber, patientId: populatedBed.patientId?._id },
+    });
+
+    if (admission?.doctorId) {
+      await notifyEmployee({
+        userId: prescription?.doctorId?.userId?._id,
+        key: `admission:${admission._id}:doctor`,
+        type: "admission",
+        title: "New admission assigned",
+        message: `Patient admitted to ${populatedBed.wardId?.name || "ward"} (Bed ${populatedBed.bedNumber}).`,
+        sourceType: "Admission",
+        sourceId: admission._id,
+      });
+    }
+
+    await notifyWardNurses({
+      wardId: populatedBed.wardId?._id,
+      title: "New admission in ward",
+      message: `Patient admitted to ${populatedBed.wardId?.name || "ward"} (Bed ${populatedBed.bedNumber}).`,
+      sourceId: admission?._id,
+      metadata: { wardId: populatedBed.wardId?._id },
+    });
+
+    return res.json({
+      message: "Patient admitted successfully (auto-assign).",
+      bed: mapBed(populatedBed, mapRecommendation(prescription)),
+      admissionId: admission?._id,
+    });
+  } catch (error) {
+    const status = error?.status || 500;
+    return res.status(status).json({ message: error.message || "Failed to admit patient." });
+  } finally {
+    session.endSession();
+  }
+};
+
+export const transferBed = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    const { fromBedId, toBedId, notes } = req.body;
+    if (!fromBedId || !toBedId) {
+      return res.status(400).json({ message: "fromBedId and toBedId are required." });
+    }
+
+    let admission = null;
+    let newBed = null;
+    let oldBed = null;
+
+    await session.withTransaction(async () => {
+      oldBed = await Bed.findById(fromBedId).session(session);
+      newBed = await Bed.findById(toBedId).session(session);
+      if (!oldBed || !newBed) {
+        throw { status: 404, message: "Bed not found." };
+      }
+      if (oldBed.status !== "occupied") {
+        throw { status: 400, message: "Source bed is not occupied." };
+      }
+      if (newBed.status !== "available") {
+        throw { status: 400, message: "Target bed is not available." };
+      }
+
+      admission = await Admission.findOne({
+        bedId: oldBed._id,
+        status: { $in: ["Admitted", "Transferred"] },
+      }).session(session);
+      if (!admission) {
+        throw { status: 404, message: "Active admission not found for transfer." };
+      }
+
+      const now = new Date();
+
+      // Release old bed
+      oldBed.status = "available";
+      oldBed.dischargedAt = now;
+      oldBed.patientId = null;
+      oldBed.patientProfileId = null;
+      oldBed.admissionId = null;
+      const historyEntry = [...(oldBed.admissionHistory || [])]
+        .reverse()
+        .find((entry) => entry.status === "admitted" && !entry.dischargedAt);
+      if (historyEntry) {
+        historyEntry.dischargedAt = now;
+        historyEntry.dischargedBy = req.user.id;
+        historyEntry.status = "discharged";
+      }
+      await oldBed.save({ session });
+
+      // Assign new bed
+      newBed.status = "occupied";
+      newBed.patientId = admission.patientId;
+      newBed.patientProfileId = admission.patientProfileId;
+      newBed.admittedAt = admission.admissionDate || now;
+      newBed.dischargedAt = null;
+      newBed.admissionId = admission._id;
+      newBed.admissionHistory.push({
+        patientId: admission.patientId,
+        patientProfileId: admission.patientProfileId,
+        doctorId: admission.doctorId,
+        admissionRecommended: false,
+        admittedAt: newBed.admittedAt,
+        admittedBy: req.user.id,
+        status: "admitted",
+      });
+      await newBed.save({ session });
+
+      if (oldBed.wardId && String(oldBed.wardId) !== String(newBed.wardId)) {
+        await Ward.findByIdAndUpdate(oldBed.wardId, { $inc: { occupiedBeds: -1 } }, { session });
+        await Ward.findByIdAndUpdate(newBed.wardId, { $inc: { occupiedBeds: 1 } }, { session });
+      }
+
+      admission.status = "Transferred";
+      admission.wardId = newBed.wardId;
+      admission.bedId = newBed._id;
+      admission.transferHistory.push({
+        fromWardId: oldBed.wardId,
+        toWardId: newBed.wardId,
+        fromBedId: oldBed._id,
+        toBedId: newBed._id,
+        transferredBy: req.user.id,
+        transferredAt: now,
+        notes,
+      });
+      await admission.save({ session });
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "patient_transferred",
+      entityType: "Admission",
+      entityId: admission?._id,
+      details: { fromBedId, toBedId },
+    });
+
+    return res.json({
+      message: "Patient transferred successfully.",
+      admissionId: admission?._id,
+      bedId: newBed?._id,
+    });
+  } catch (error) {
+    const status = error?.status || 500;
+    return res.status(status).json({ message: error.message || "Failed to transfer patient." });
+  } finally {
+    session.endSession();
   }
 };

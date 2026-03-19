@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Calendar, FileText, Activity, CreditCard, ArrowRight, Bell, Pill, FlaskConical } from 'lucide-react';
 import { billingApi, notificationsApi, patientApi } from '../../services/apiServices.js';
+import { connectSocket } from '../../services/socket.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { SkeletonCard, SkeletonList } from '../../components/ui/skeleton.jsx';
 import { toast } from 'sonner';
@@ -20,34 +21,63 @@ export default function PatientDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [data, notifs] = await Promise.all([
-          patientApi.getMyDashboard(),
-          notificationsApi.getMy().catch(() => []),
-        ]);
-        setOverview(data);
-        setNotifications(Array.isArray(notifs) ? notifs.slice(0, 5) : []);
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Failed to load dashboard.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const loadBills = async () => {
-      try {
-        const invoices = await billingApi.getMy({ paymentStatus: 'pending' });
-        const total = Array.isArray(invoices) ? invoices.reduce((s, i) => s + Number(i.totalAmount || 0), 0) : 0;
-        setPendingAmount(total);
-      } catch { setPendingAmount(0); }
-    };
-
-    load();
-    loadBills();
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [data, notifs] = await Promise.all([
+        patientApi.getMyDashboard(),
+        notificationsApi.getMy().catch(() => []),
+      ]);
+      setOverview(data);
+      setNotifications(Array.isArray(notifs) ? notifs.slice(0, 5) : []);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load dashboard.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  const loadBills = useCallback(async () => {
+    try {
+      const invoices = await billingApi.getMy({ paymentStatus: 'pending' });
+      const total = Array.isArray(invoices) ? invoices.reduce((s, i) => s + Number(i.totalAmount || 0), 0) : 0;
+      setPendingAmount(total);
+    } catch {
+      setPendingAmount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDashboard();
+    loadBills();
+    const interval = setInterval(() => {
+      loadDashboard();
+      loadBills();
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [loadBills, loadDashboard]);
+
+  useEffect(() => {
+    const patientId = user?.id || user?._id;
+    if (!patientId) return undefined;
+    const socket = connectSocket({ patientId });
+    const handleUpdate = () => {
+      loadDashboard();
+      loadBills();
+    };
+
+    socket.on('queue:update', handleUpdate);
+    socket.on('token:generated', handleUpdate);
+    socket.on('consultation:started', handleUpdate);
+    socket.on('consultation:completed', handleUpdate);
+
+    return () => {
+      socket.off('queue:update', handleUpdate);
+      socket.off('token:generated', handleUpdate);
+      socket.off('consultation:started', handleUpdate);
+      socket.off('consultation:completed', handleUpdate);
+    };
+  }, [loadBills, loadDashboard, user?.id, user?._id]);
 
   const upcomingAppointments = overview?.lists?.upcomingAppointments || [];
   const recentPrescriptions = overview?.lists?.recentPrescriptions || [];

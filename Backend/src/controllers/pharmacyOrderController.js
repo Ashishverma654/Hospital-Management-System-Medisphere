@@ -189,6 +189,12 @@ const buildOrderPayload = (order) => {
   };
 };
 
+const normalizeWorkflowStatus = (status, fallback) => {
+  if (!status) return fallback;
+  if (status === PHARMACY_STATUS.COMPLETED) return fallback;
+  return status;
+};
+
 export const placeOrderFromPrescription = async (req, res) => {
   try {
     const prescription = await Prescription.findById(req.params.prescriptionId);
@@ -381,7 +387,8 @@ export const acceptPharmacyOrder = async (req, res) => {
     }
 
     await updateOrderItemsForReview(order, req.body.items || []);
-    order.status = getOverallFulfillmentStatus(order.items) || PHARMACY_STATUS.ORDER_ACCEPTED;
+    const computedStatus = getOverallFulfillmentStatus(order.items);
+    order.status = normalizeWorkflowStatus(computedStatus, PHARMACY_STATUS.ORDER_ACCEPTED);
     order.pharmacistUserId = req.user.id;
     order.acceptedAt = new Date();
     order.paymentStatus = order.paymentStatus || "pending";
@@ -424,7 +431,8 @@ export const markOrderPreparing = async (req, res) => {
     await updateOrderItemsForReview(order, req.body.items || []);
     order.pharmacistUserId = req.user.id;
     order.preparingAt = new Date();
-    order.status = getOverallFulfillmentStatus(order.items) || PHARMACY_STATUS.PREPARING;
+    const computedStatus = getOverallFulfillmentStatus(order.items);
+    order.status = normalizeWorkflowStatus(computedStatus, PHARMACY_STATUS.PREPARING);
     await order.save();
     await syncInvoiceForOrder(order);
 
