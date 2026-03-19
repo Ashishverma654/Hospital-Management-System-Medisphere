@@ -98,7 +98,11 @@ const logEmail = (message) => {
 
 export const sendEmail = async (to, subject, text) => {
   try {
-    if (process.env.RESEND_API_KEY) {
+    const forceSmtpOnly =
+      (process.env.EMAIL_PROVIDER || "").toLowerCase() === "smtp" ||
+      process.env.SMTP_ONLY === "true";
+
+    if (!forceSmtpOnly && process.env.RESEND_API_KEY) {
       const info = await sendResendEmail({ to, subject, text });
       logEmail(`SUCCESS: Resend email sent to ${to}. Status: ${info.status}`);
       return info;
