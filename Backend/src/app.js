@@ -47,16 +47,37 @@ import limiter from "./middlewares/rateLimiter.js";
 const app = express();
 const isDev = process.env.NODE_ENV !== "production";
 
+const normalizeOrigin = (origin = '') => origin.replace(/\/+$/, '');
+const extraOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((item) => normalizeOrigin(item.trim()))
+  .filter(Boolean);
+
 const configuredOrigins = [
   process.env.FRONTEND_URL,
   process.env.PUBLIC_APP_URL,
   'https://hospital-management-system-beryl-two.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
-].filter(Boolean);
+  ...extraOrigins,
+]
+  .filter(Boolean)
+  .map(normalizeOrigin);
 
 const isAllowedLocalOrigin = (origin = '') =>
   /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+
+const isAllowedDomainOrigin = (origin = '') => {
+  if (!origin) return false;
+  try {
+    const url = new URL(origin);
+    if (url.hostname.endsWith('.medisphere.tech')) return true;
+    if (url.hostname === 'medisphere.tech') return true;
+  } catch {
+    return false;
+  }
+  return false;
+};
 
 app.use(express.json());
 app.use((err, req, res, next) => {
@@ -79,7 +100,12 @@ app.use(
         return callback(null, true);
       }
 
-      if (configuredOrigins.includes(origin) || isAllowedLocalOrigin(origin)) {
+      const normalizedOrigin = normalizeOrigin(origin);
+      if (
+        configuredOrigins.includes(normalizedOrigin) ||
+        isAllowedLocalOrigin(normalizedOrigin) ||
+        isAllowedDomainOrigin(normalizedOrigin)
+      ) {
         return callback(null, true);
       }
 
