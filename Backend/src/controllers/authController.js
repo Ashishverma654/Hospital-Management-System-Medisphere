@@ -433,13 +433,19 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // Send OTP via email
-    await sendEmail(
-      user.email,
-      "Password Reset OTP - Mediflow Hospital",
-      `Your password reset OTP is: ${otp}. It expires in 15 minutes.`
-    );
-
-    res.json({ message: "Password reset OTP sent to your email" });
+    try {
+      await sendEmail(
+        user.email,
+        "Password Reset OTP - Mediflow Hospital",
+        `Your password reset OTP is: ${otp}. It expires in 15 minutes.`
+      );
+      return res.json({ message: "Password reset OTP sent to your email" });
+    } catch (mailError) {
+      return res.status(503).json({
+        message:
+          "Password reset OTP generated, but email delivery failed. Please contact support or try again later.",
+      });
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

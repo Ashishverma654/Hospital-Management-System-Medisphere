@@ -122,17 +122,27 @@ export const sendEmail = async (to, subject, text) => {
       return info;
     }
 
-    const transporter = createTransporter();
-    const mailOptions = {
-      from: (process.env.EMAIL_USER || "").trim(),
-      to,
-      subject,
-      text,
-    };
+    try {
+      const transporter = createTransporter();
+      const mailOptions = {
+        from: (process.env.EMAIL_USER || "").trim(),
+        to,
+        subject,
+        text,
+      };
 
-    const info = await transporter.sendMail(mailOptions);
-    logEmail(`SUCCESS: Email sent to ${to}. MessageId: ${info.messageId}`);
-    return info;
+      const info = await transporter.sendMail(mailOptions);
+      logEmail(`SUCCESS: Email sent to ${to}. MessageId: ${info.messageId}`);
+      return info;
+    } catch (smtpError) {
+      // Fallback to Resend if SMTP fails and API key is available.
+      if (process.env.RESEND_API_KEY) {
+        const info = await sendResendEmail({ to, subject, text });
+        logEmail(`FALLBACK: Resend email sent to ${to}. Status: ${info.status}`);
+        return info;
+      }
+      throw smtpError;
+    }
   } catch (error) {
     logEmail(`ERROR: Failed to send email to ${to}. Error: ${error.message}`);
     console.error("Email error:", error);
