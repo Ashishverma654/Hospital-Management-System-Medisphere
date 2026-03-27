@@ -73,6 +73,7 @@ const isAllowedDomainOrigin = (origin = '') => {
     const url = new URL(origin);
     if (url.hostname.endsWith('.medisphere.tech')) return true;
     if (url.hostname === 'medisphere.tech') return true;
+    if (url.hostname.endsWith('.vercel.app')) return true;
   } catch {
     return false;
   }
