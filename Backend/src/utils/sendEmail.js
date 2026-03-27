@@ -18,9 +18,23 @@ const getEmailAuth = () => {
 
 const createTransporter = () => {
   const { user, pass } = getEmailAuth();
+  const host = (process.env.SMTP_HOST || "smtp.gmail.com").trim();
+  const port = Number(process.env.SMTP_PORT || 465);
+  const secure = port === 465;
+  const forceIpv4 = process.env.SMTP_FORCE_IPV4 !== "false";
+
   return nodemailer.createTransport({
-    service: "gmail",
+    host,
+    port,
+    secure,
     auth: { user, pass },
+    family: forceIpv4 ? 4 : undefined,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
+    tls: {
+      servername: host,
+    },
   });
 };
 

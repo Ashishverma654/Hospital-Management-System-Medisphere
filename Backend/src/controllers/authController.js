@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Patient from "../models/Patient.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -367,13 +368,26 @@ export const findAccountForHelp = async (req, res) => {
     
     // Filter by DOB (ignoring time components)
     const targetDate = new Date(dob);
-    const user = users.find(u => {
-      if (!u.dob) return false;
-      const uDate = new Date(u.dob);
-      return uDate.getUTCFullYear() === targetDate.getUTCFullYear() &&
-             uDate.getUTCMonth() === targetDate.getUTCMonth() &&
-             uDate.getUTCDate() === targetDate.getUTCDate();
-     });
+    const matchesDate = (value) => {
+      if (!value) return false;
+      const check = new Date(value);
+      return check.getUTCFullYear() === targetDate.getUTCFullYear() &&
+             check.getUTCMonth() === targetDate.getUTCMonth() &&
+             check.getUTCDate() === targetDate.getUTCDate();
+    };
+
+    let user = users.find((u) => matchesDate(u.dob));
+
+    if (!user && users.length) {
+      const patientRecords = await Patient.find({
+        userId: { $in: users.map((u) => u._id) },
+      }).populate("userId", "email patientId employeeId name");
+
+      const matchedPatient = patientRecords.find((record) => matchesDate(record.dateOfBirth));
+      if (matchedPatient?.userId) {
+        user = matchedPatient.userId;
+      }
+    }
 
     if (!user) {
       return res.status(404).json({ message: "No account found matching these details" });

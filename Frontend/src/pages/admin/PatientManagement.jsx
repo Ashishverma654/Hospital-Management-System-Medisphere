@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../../components/ui/button';
+import { Button, buttonVariants } from '../../components/ui/button';
+import { cn } from '../../lib/utils.js';
 import { patientApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { CalendarDays, Eye, Pencil, RefreshCw, Search } from 'lucide-react';
@@ -219,7 +220,12 @@ export default function PatientManagement() {
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-2">
-          <BoardList title="Registrations" items={board?.breakdown?.registrations || []} dateKey="createdAt" />
+          <BoardList
+            title="Registrations"
+            items={board?.breakdown?.registrations || []}
+            dateKey="createdAt"
+            onSelect={(item) => item?.id && loadPatientDetail(item.id)}
+          />
           <BoardList title="Appointments" items={board?.breakdown?.appointments || []} dateKey="createdAt" secondaryKey="doctor" />
           <BoardList title="Admissions" items={board?.breakdown?.admissions || []} dateKey="admittedAt" secondaryKey="bedNumber" />
           <BoardList title="Discharges" items={board?.breakdown?.discharges || []} dateKey="dischargedAt" secondaryKey="bedNumber" />
@@ -276,8 +282,10 @@ export default function PatientManagement() {
                     <td colSpan={7} className="px-3 py-10 text-center text-muted-foreground">No patients found.</td>
                   </tr>
                 )}
-                {patients.map((patient) => (
-                  <tr key={patient.id} className="border-b border-slate-100 last:border-b-0">
+                {patients.map((patient) => {
+                  const resolvedId = patient.id || patient._id || patient.user?.id || patient.user?._id;
+                  return (
+                  <tr key={resolvedId} className="border-b border-slate-100 last:border-b-0">
                     <td className="px-3 py-3">
                       <p className="font-medium text-foreground">{patient.user?.name || 'Patient'}</p>
                       <p className="text-xs text-muted-foreground">{patient.bloodGroup || 'Blood group not set'}</p>
@@ -304,17 +312,31 @@ export default function PatientManagement() {
                     <td className="px-3 py-3 text-muted-foreground">{new Date(patient.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onClick={() => loadPatientDetail(patient.id)}>
+                        <button
+                          type="button"
+                          className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
+                          onClick={() => {
+                            if (!resolvedId) {
+                              toast.error('Unable to open patient details. Missing patient reference.');
+                              return;
+                            }
+                            loadPatientDetail(resolvedId);
+                          }}
+                        >
                           <Eye className="mr-1 h-3 w-3" />
                           View
-                        </Button>
-                        <Button asChild size="sm" variant="outline">
-                          <Link to={`/employee/patients/${patient.id}`}>Open Page</Link>
-                        </Button>
+                        </button>
+                        <Link
+                          to={resolvedId ? `/employee/patients/${resolvedId}` : '#'}
+                          className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
+                        >
+                          Open Page
+                        </Link>
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>
@@ -453,7 +475,7 @@ export default function PatientManagement() {
   );
 }
 
-function BoardList({ title, items, dateKey, secondaryKey }) {
+function BoardList({ title, items, dateKey, secondaryKey, onSelect }) {
   return (
     <article className="rounded-xl border border-border p-4">
       <div className="flex items-center gap-2">
@@ -463,11 +485,18 @@ function BoardList({ title, items, dateKey, secondaryKey }) {
       <div className="mt-4 space-y-3">
         {items.length === 0 && <p className="text-sm text-muted-foreground">No activity recorded.</p>}
         {items.slice(0, 6).map((item) => (
-          <div key={item.id} className="rounded-[1rem] bg-muted/50 p-3">
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onSelect?.(item)}
+            className={`w-full rounded-[1rem] bg-muted/50 p-3 text-left transition-colors ${
+              onSelect ? 'hover:bg-muted/70' : ''
+            }`}
+          >
             <p className="font-medium text-foreground">{item.name || item.patient?.name || item.patientName || 'Patient activity'}</p>
             {secondaryKey && <p className="mt-1 text-sm text-muted-foreground">{item[secondaryKey] || '—'}</p>}
             <p className="mt-1 text-xs text-muted-foreground">{new Date(item[dateKey]).toLocaleString()}</p>
-          </div>
+          </button>
         ))}
       </div>
     </article>
