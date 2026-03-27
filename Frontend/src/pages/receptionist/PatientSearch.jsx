@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { receptionistApi } from '../../services/apiServices.js';
 import { Search } from 'lucide-react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -16,9 +17,19 @@ export default function PatientSearch() {
   const [doctorFilter, setDoctorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(true);
 
-  const goToHistory = (patientId) => {
-    if (!patientId) return;
-    navigate(`/employee/receptionist/history?patientId=${patientId}`);
+  const goToHistory = (patient) => {
+    const resolvedId = patient?.userId || patient?.id || patient?._id || patient?.patientId;
+    if (!resolvedId) {
+      toast.error('Unable to open history. Patient ID missing.');
+      return;
+    }
+    navigate(`/employee/receptionist/history?patientId=${resolvedId}`, {
+      state: {
+        patientId: patient?.id || patient?._id,
+        userId: patient?.userId,
+        patientCode: patient?.patientId,
+      },
+    });
   };
 
   useEffect(() => {
@@ -132,17 +143,10 @@ export default function PatientSearch() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => goToHistory(patient.id)}
+                  onClick={() => goToHistory(patient)}
                   className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
                 >
                   View History
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToHistory(patient.id)}
-                  className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-                >
-                  Review
                 </button>
               </div>
             </article>

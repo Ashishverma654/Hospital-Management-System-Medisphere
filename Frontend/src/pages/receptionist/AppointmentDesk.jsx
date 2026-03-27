@@ -54,6 +54,7 @@ export default function AppointmentDesk() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterAdmissionOnly, setFilterAdmissionOnly] = useState(false);
   const [queueDate, setQueueDate] = useState(new Date().toISOString().split('T')[0]);
+  const [queueScope, setQueueScope] = useState('today');
   const [saving, setSaving] = useState(false);
   const [bookingMode, setBookingMode] = useState('existing');
   const [walkInForm, setWalkInForm] = useState(initialWalkIn);
@@ -88,7 +89,7 @@ export default function AppointmentDesk() {
   const loadQueue = useCallback(async () => {
     try {
       const response = await appointmentApi.getQueueToday({
-        date: queueDate,
+        ...(queueScope === 'today' ? { date: queueDate } : { scope: 'upcoming' }),
         doctorId: filterDoctor || undefined,
         departmentId: filterDepartment || undefined,
         status: filterStatus || undefined,
@@ -98,7 +99,7 @@ export default function AppointmentDesk() {
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load today queue.');
     }
-  }, [filterDepartment, filterDoctor, filterStatus, queueDate]);
+  }, [filterDepartment, filterDoctor, filterStatus, queueDate, queueScope]);
 
   useEffect(() => {
     loadPatients(preselectedPatientId || patientQuery);
@@ -595,11 +596,37 @@ export default function AppointmentDesk() {
         <article className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Today&apos;s Queue</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">Check-in and queue management</h3>
+              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">
+                {queueScope === 'today' ? "Today&apos;s Queue" : 'Upcoming Appointments'}
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+                {queueScope === 'today' ? 'Check-in and queue management' : 'Upcoming appointment list'}
+              </h3>
             </div>
-          <div className="flex flex-wrap gap-3">
-            <input type="date" value={queueDate} onChange={(event) => setQueueDate(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+            <div className="flex flex-wrap gap-3">
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-1">
+              <button
+                type="button"
+                onClick={() => setQueueScope('today')}
+                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                  queueScope === 'today' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => setQueueScope('upcoming')}
+                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                  queueScope === 'upcoming' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Upcoming
+              </button>
+            </div>
+            {queueScope === 'today' && (
+              <input type="date" value={queueDate} onChange={(event) => setQueueDate(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+            )}
             <select value={filterDepartment} onChange={(event) => setFilterDepartment(event.target.value)} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
               <option value="">All departments</option>
               {queueDepartments.map((dept) => (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { receptionistApi } from '../../services/apiServices.js';
 import { Search } from 'lucide-react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -13,9 +13,16 @@ export default function PatientHistory() {
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [history, setHistory] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [autoResolved, setAutoResolved] = useState(false);
 
-  const [searchParams] = useSearchParams();
-  const presetPatientId = searchParams.get('patientId') || '';
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const presetPatientId =
+    searchParams.get('patientId') ||
+    location.state?.patientId ||
+    location.state?.userId ||
+    location.state?.patientCode ||
+    '';
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -34,21 +41,64 @@ export default function PatientHistory() {
   }, [query]);
 
   useEffect(() => {
-    if (presetPatientId) {
-      setSelectedPatientId(presetPatientId);
-      loadHistory(presetPatientId);
+    if (!presetPatientId) return;
+    setSelectedPatientId(presetPatientId);
+    if (!searchParams.get('patientId')) {
+      setSearchParams({ patientId: presetPatientId });
     }
-  }, [presetPatientId]);
+    loadHistory(
+      presetPatientId,
+      location.state?.userId,
+      location.state?.patientCode
+    );
+  }, [presetPatientId, location.state?.patientCode, location.state?.userId, searchParams, setSearchParams]);
 
-  const loadHistory = async (patientId) => {
+  useEffect(() => {
+    if (!presetPatientId || autoResolved || loadingHistory || history) return;
+    if (!patients.length) return;
+    const match = patients.find(
+      (patient) =>
+        [patient.id, patient.userId, patient._id, patient.patientId]
+          .filter(Boolean)
+          .some((value) => String(value) === String(presetPatientId))
+    );
+    if (!match) return;
+    const resolvedId = match.id || match.userId || match._id || match.patientId;
+    if (!resolvedId || String(resolvedId) === String(presetPatientId)) {
+      setAutoResolved(true);
+      return;
+    }
+    setAutoResolved(true);
+    loadHistory(resolvedId, match.userId, match.patientId);
+  }, [autoResolved, history, loadingHistory, patients, presetPatientId]);
+
+  const showPicker = !presetPatientId;
+
+  const loadHistory = async (patientId, fallbackId, fallbackCode) => {
     if (!patientId) return;
     setLoadingHistory(true);
     try {
       const response = await receptionistApi.getPatientHistory(patientId);
       setHistory(response);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to load patient history.');
-      setHistory(null);
+      const shouldRetry = (fallbackId && fallbackId !== patientId) || (fallbackCode && fallbackCode !== patientId);
+      if (shouldRetry) {
+        const nextId = fallbackId && fallbackId !== patientId ? fallbackId : fallbackCode;
+        if (nextId) {
+          try {
+            const retryResponse = await receptionistApi.getPatientHistory(nextId);
+            setHistory(retryResponse);
+            setSelectedPatientId(nextId);
+            return;
+          } catch (retryError) {
+            toast.error(retryError.response?.data?.message || 'Failed to load patient history.');
+            setHistory(null);
+          }
+        }
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to load patient history.');
+        setHistory(null);
+      }
     } finally {
       setLoadingHistory(false);
     }
@@ -56,6 +106,7 @@ export default function PatientHistory() {
 
   const handleSelect = (patientId) => {
     setSelectedPatientId(patientId);
+    setSearchParams({ patientId });
     loadHistory(patientId);
   };
 
@@ -69,7 +120,8 @@ export default function PatientHistory() {
         </p>
       </div>
 
-      <article className="rounded-2xl bg-card p-6 shadow-sm">
+      {showPicker && (
+        <article className="rounded-2xl bg-card p-6 shadow-sm">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -84,26 +136,31 @@ export default function PatientHistory() {
         <div className="mt-5 space-y-3">
           {loadingSearch && <p className="text-sm text-muted-foreground">Searching patients...</p>}
           {!loadingSearch && patients.length === 0 && query.trim() && <p className="text-sm text-muted-foreground">No patient matched the search.</p>}
-          {patients.map((patient) => (
+          {patients.map((patient) => {
+            const resolvedId = patient.id || patient.userId || patient._id || patient.patientId;
+            return (
             <button
-              key={patient.id}
+              key={resolvedId || patient.id || patient.patientId || patient.email}
               type="button"
-              onClick={() => handleSelect(patient.id)}
+              onClick={() => handleSelect(resolvedId)}
               className={`flex w-full flex-col gap-2 rounded-xl border border-border p-4 text-left transition ${
-                selectedPatientId === patient.id ? 'bg-muted/50' : 'hover:bg-muted/30'
+                selectedPatientId === resolvedId ? 'bg-muted/50' : 'hover:bg-muted/30'
               }`}
             >
               <p className="font-semibold text-foreground">{patient.name}</p>
               <p className="text-sm text-muted-foreground">{patient.patientId} • {patient.phone} • {patient.email}</p>
             </button>
-          ))}
+          )})}
         </div>
       </article>
+      )}
 
       <section className="rounded-2xl bg-card p-6 shadow-sm">
         {loadingHistory && <p className="text-sm text-muted-foreground">Loading history...</p>}
         {!loadingHistory && !history && (
-          <p className="text-sm text-muted-foreground">Select a patient to view history.</p>
+          <p className="text-sm text-muted-foreground">
+            {showPicker ? 'Select a patient to view history.' : 'Loading patient history...'}
+          </p>
         )}
         {!loadingHistory && history && (
           <div className="space-y-6">

@@ -724,13 +724,27 @@ export const getReceptionQueue = async (req, res) => {
   try {
     const {
       date = new Date().toISOString().split("T")[0],
+      scope,
+      startDate,
+      endDate,
       doctorId,
       departmentId,
       status,
       search,
     } = req.query;
 
-    const filter = { date };
+    let filter = {};
+    if (scope === "upcoming") {
+      const today = new Date().toISOString().split("T")[0];
+      filter.date = { $gt: today };
+      if (startDate || endDate) {
+        filter.date = {};
+        if (startDate) filter.date.$gte = startDate;
+        if (endDate) filter.date.$lte = endDate;
+      }
+    } else {
+      filter = { date };
+    }
     if (doctorId) filter.doctorId = doctorId;
     if (status) filter.status = status;
 
@@ -758,7 +772,7 @@ export const getReceptionQueue = async (req, res) => {
         path: "doctorId",
         populate: { path: "userId", select: "name email" },
       })
-      .sort({ slot: 1, createdAt: 1 });
+      .sort({ date: 1, slot: 1, createdAt: 1 });
 
     const appointmentsWithTokens = await attachTokenMetadata(appointments);
     const sortedQueue = sortQueue(appointmentsWithTokens);

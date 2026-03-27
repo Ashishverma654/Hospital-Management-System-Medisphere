@@ -59,6 +59,11 @@ export default function PatientBookAppointment() {
   const [timeTo, setTimeTo] = useState(''); // eslint-disable-line no-unused-vars
   const [weekStart, setWeekStart] = useState(() => buildWeekDates()[0]);
   const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart]);
+  const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const visibleWeekDates = useMemo(
+    () => weekDates.filter((date) => date >= todayKey),
+    [weekDates, todayKey]
+  );
   const [availability, setAvailability] = useState([]);
   const [slotStatsByDate, setSlotStatsByDate] = useState(new Map());
   const [autoPicked, setAutoPicked] = useState(false);
@@ -106,6 +111,12 @@ export default function PatientBookAppointment() {
   }, [form.doctorId]);
 
   useEffect(() => {
+    if (form.date && form.date < todayKey) {
+      setForm((current) => ({ ...current, date: todayKey, slot: '' }));
+    }
+  }, [form.date, todayKey]);
+
+  useEffect(() => {
     const loadAvailability = async () => {
       if (!form.doctorId) {
         setAvailability([]);
@@ -151,13 +162,13 @@ export default function PatientBookAppointment() {
 
   useEffect(() => {
     if (autoPicked || !form.doctorId || requiresLocation) return;
-    const firstAvailable = weekDates.find((date) => (slotStatsByDate.get(date)?.available ?? 0) > 0);
+    const firstAvailable = visibleWeekDates.find((date) => (slotStatsByDate.get(date)?.available ?? 0) > 0);
     if (firstAvailable) {
       setForm((current) => ({ ...current, date: firstAvailable, slot: '' }));
       setAutoPicked(true);
       setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
     }
-  }, [autoPicked, form.doctorId, slotStatsByDate, weekDates, requiresLocation]);
+  }, [autoPicked, form.doctorId, slotStatsByDate, visibleWeekDates, requiresLocation]);
 
   useEffect(() => {
     const loadSlots = async () => {
@@ -242,19 +253,19 @@ export default function PatientBookAppointment() {
   const slotCountsByDate = useMemo(() => {
     const map = new Map();
     if (!availability.length) return map;
-    weekDates.forEach((date) => {
+    visibleWeekDates.forEach((date) => {
       const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
       const ranges = availability.filter((item) => item.dayOfWeek === dayLabel);
       const total = ranges.reduce((sum, range) => sum + Math.floor((toMinutes(range.endTime) - toMinutes(range.startTime)) / (range.slotDuration || 15)), 0);
       map.set(date, total);
     });
     return map;
-  }, [availability, weekDates]);
+  }, [availability, visibleWeekDates]);
 
   const dayRangesByDate = useMemo(() => {
     const map = new Map();
     if (!availability.length) return map;
-    weekDates.forEach((date) => {
+    visibleWeekDates.forEach((date) => {
       const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString('en-US', { weekday: 'long' });
       const ranges = availability
         .filter((item) => item.dayOfWeek === dayLabel)
@@ -262,7 +273,7 @@ export default function PatientBookAppointment() {
       map.set(date, ranges);
     });
     return map;
-  }, [availability, weekDates]);
+  }, [availability, visibleWeekDates]);
 
 
   const handleBook = async (event) => {
@@ -361,7 +372,7 @@ export default function PatientBookAppointment() {
                   prev.setDate(prev.getDate() - 7);
                   setWeekStart(prev.toISOString().split('T')[0]);
                 }}
-                disabled={requiresLocation}
+                disabled={requiresLocation || weekStart <= todayKey}
                 className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
               >
                 Previous week
@@ -380,7 +391,7 @@ export default function PatientBookAppointment() {
               </button>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              {weekDates.map((date) => {
+              {visibleWeekDates.map((date) => {
                 const slotCount = slotStatsByDate.get(date)?.available ?? slotCountsByDate.get(date) ?? 0;
                 const ranges = dayRangesByDate.get(date) || [];
                 const isDisabled = slotCount === 0;
@@ -447,6 +458,7 @@ export default function PatientBookAppointment() {
                       setTimeout(() => slotsContainerRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 120);
                     }
                   }}
+                  min={todayKey}
                   disabled={requiresLocation}
                   className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary dark:[color-scheme:dark]"
                 />

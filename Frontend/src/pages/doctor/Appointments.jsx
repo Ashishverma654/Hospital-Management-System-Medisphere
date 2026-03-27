@@ -25,6 +25,17 @@ export default function DoctorAppointments() {
   const [endingCall, setEndingCall] = useState(false);
   const [viewMode, setViewMode] = useState('today');
 
+  const slotToMinutes = (slot = '') => {
+    const match = slot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return null;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = match[3].toUpperCase();
+    if (meridiem === 'PM' && hours !== 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  };
+
   const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true);
@@ -33,7 +44,21 @@ export default function DoctorAppointments() {
         ? await appointmentApi.getDoctorToday()
         : await appointmentApi.getDoctorAll();
       const normalized = Array.isArray(response) ? response : response?.data || [];
-      setTodayAppointments(Array.isArray(normalized) ? normalized : []);
+      if (viewMode === 'upcoming') {
+        const now = new Date();
+        const todayKey = now.toISOString().split('T')[0];
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const upcoming = normalized.filter((appt) => {
+          if (!appt?.date) return false;
+          if (appt.date > todayKey) return true;
+          if (appt.date < todayKey) return false;
+          const slotMinutes = slotToMinutes(appt.slot);
+          return slotMinutes == null ? false : slotMinutes > nowMinutes;
+        });
+        setTodayAppointments(upcoming);
+      } else {
+        setTodayAppointments(Array.isArray(normalized) ? normalized : []);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to fetch appointments');
       toast.error('Failed to load appointments');
@@ -247,14 +272,20 @@ export default function DoctorAppointments() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Today's Appointments</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {viewMode === 'today' ? "Today's Appointments" : viewMode === 'upcoming' ? 'Upcoming Appointments' : 'All Appointments'}
+          </h2>
           <p className="text-muted-foreground">
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+            {viewMode === 'today'
+              ? new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })
+              : viewMode === 'upcoming'
+                ? 'Future scheduled visits'
+                : 'All scheduled visits'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -268,6 +299,17 @@ export default function DoctorAppointments() {
             }`}
           >
             Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('upcoming')}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+              viewMode === 'upcoming'
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-card text-foreground hover:bg-muted'
+            }`}
+          >
+            Upcoming
           </button>
           <button
             type="button"

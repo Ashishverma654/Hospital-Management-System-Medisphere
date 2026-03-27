@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import jwt from "jsonwebtoken";
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -33,7 +33,7 @@ const limiter = rateLimit({
     legacyHeaders: false,
     keyGenerator: (req) => {
         const userId = resolveUserId(req);
-        return userId ? `user:${userId}` : req.ip;
+        return userId ? `user:${userId}` : ipKeyGenerator(req);
     },
     skip: (req) => isDev && ["127.0.0.1", "::1"].includes(req.ip),
 });
