@@ -325,11 +325,15 @@ export const bookAppointment = async (req, res) => {
       if (patientUser?.email) {
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
         const apiUrl = process.env.BACKEND_URL || "http://localhost:3500/api";
-        await sendEmail(
-          patientUser.email,
-          "Appointment Invoice Ready",
-          `Your consultation invoice is ready. View it here: ${frontendUrl}/patient/bills?invoice=${createdInvoice._id} or download PDF: ${apiUrl}/billing/${createdInvoice._id}/pdf`
-        );
+        try {
+          await sendEmail(
+            patientUser.email,
+            "Appointment Invoice Ready",
+            `Your consultation invoice is ready. View it here: ${frontendUrl}/patient/bills?invoice=${createdInvoice._id} or download PDF: ${apiUrl}/billing/${createdInvoice._id}/pdf`
+          );
+        } catch (emailError) {
+          console.error("Invoice email failed:", emailError.message);
+        }
       }
     }
 
@@ -369,15 +373,27 @@ export const bookAppointment = async (req, res) => {
       details: { date: appointment.date, slot: appointment.slot, doctorId: appointment.doctorId },
     });
 
-    await sendEmail(
-      patientUser.email,
-      "Appointment Confirmed",
-      `Your appointment has been booked successfully for ${appointment.date} at ${appointment.slot}.`
-    );
-    await sendSms(
-      patientUser.phone,
-      `MediFlow: Your appointment is booked for ${appointment.date} at ${appointment.slot}.`
-    );
+    if (patientUser?.email) {
+      try {
+        await sendEmail(
+          patientUser.email,
+          "Appointment Confirmed",
+          `Your appointment has been booked successfully for ${appointment.date} at ${appointment.slot}.`
+        );
+      } catch (emailError) {
+        console.error("Appointment confirmation email failed:", emailError.message);
+      }
+    }
+    if (patientUser?.phone) {
+      try {
+        await sendSms(
+          patientUser.phone,
+          `MediFlow: Your appointment is booked for ${appointment.date} at ${appointment.slot}.`
+        );
+      } catch (smsError) {
+        console.error("Appointment confirmation SMS failed:", smsError.message);
+      }
+    }
 
   } catch (error) {
     res.status(500).json({ message: error.message });
