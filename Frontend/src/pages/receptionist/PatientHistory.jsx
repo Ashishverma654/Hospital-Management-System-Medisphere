@@ -65,7 +65,7 @@ export default function PatientHistory() {
         <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Receptionist Workflow</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Patient History</h2>
         <p className="mt-2 max-w-3xl text-muted-foreground">
-          Review appointment, admission, and prescription history for a patient (read-only).
+          Review appointments, admissions, prescriptions, lab activity, and pharmacy orders for a patient (read-only).
         </p>
       </div>
 
@@ -163,10 +163,65 @@ export default function PatientHistory() {
                     <p className="font-semibold text-foreground">{item.doctor}</p>
                     <p className="text-sm text-muted-foreground">{item.diagnosis || 'No diagnosis'} • {item.status}</p>
                     {item.admissionRecommended && <p className="text-xs text-amber-700">Admission recommended</p>}
+                    {item.medicines?.length > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Medicines: {item.medicines.slice(0, 3).map((med) => med.name).join(', ')}
+                        {item.medicines.length > 3 ? '…' : ''}
+                      </p>
+                    )}
                   </div>
                 ))}
                 {(history.prescriptions || []).length === 0 && (
                   <p className="text-sm text-muted-foreground">No prescription history found.</p>
+                )}
+              </div>
+            </article>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <article className="rounded-xl border border-border p-4">
+                <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Lab Orders</p>
+                <div className="mt-3 space-y-2">
+                  {(history.labOrders || []).map((order) => (
+                    <div key={order.id} className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground">{order.orderNumber || 'Lab Order'}</p>
+                      <p className="text-sm text-muted-foreground">{order.status} • {order.doctor || 'Doctor'}</p>
+                    </div>
+                  ))}
+                  {(history.labOrders || []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No lab orders found.</p>
+                  )}
+                </div>
+              </article>
+
+              <article className="rounded-xl border border-border p-4">
+                <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Lab Reports</p>
+                <div className="mt-3 space-y-2">
+                  {(history.labReports || []).map((report) => (
+                    <div key={report.id} className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground">{report.reportName || 'Lab Report'}</p>
+                      <p className="text-sm text-muted-foreground">{report.status} • {report.doctor || 'Doctor'}</p>
+                    </div>
+                  ))}
+                  {(history.labReports || []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">No lab reports found.</p>
+                  )}
+                </div>
+              </article>
+            </div>
+
+            <article className="rounded-xl border border-border p-4">
+              <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Medicine Orders</p>
+              <div className="mt-3 space-y-2">
+                {(history.pharmacyOrders || []).map((order) => (
+                  <div key={order.id} className="rounded-lg border border-border p-3">
+                    <p className="font-semibold text-foreground">
+                      {order.items?.length || 0} items • ₹{order.total ?? 0}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{order.status} • {order.paymentStatus}</p>
+                  </div>
+                ))}
+                {(history.pharmacyOrders || []).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No pharmacy orders found.</p>
                 )}
               </div>
             </article>

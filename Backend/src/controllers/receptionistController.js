@@ -7,6 +7,9 @@ import Patient from "../models/Patient.js";
 import Specialization from "../models/Specialization.js";
 import Admission from "../models/Admission.js";
 import Prescription from "../models/Prescription.js";
+import LabOrder from "../models/LabOrder.js";
+import LabReport from "../models/LabReport.js";
+import PharmacyOrder from "../models/PharmacyOrder.js";
 import Token from "../models/Token.js";
 import User from "../models/User.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
@@ -394,7 +397,7 @@ export const getPatientHistoryForDesk = async (req, res) => {
     const { patientId } = req.params;
     const { patient, user } = await resolvePatientContext(patientId);
 
-    const [appointments, admissions, prescriptions] = await Promise.all([
+    const [appointments, admissions, prescriptions, labOrders, labReports, pharmacyOrders] = await Promise.all([
       Appointment.find({
         $or: [{ patientId: user._id }, { patientProfileId: patient._id }],
       })
@@ -411,6 +414,17 @@ export const getPatientHistoryForDesk = async (req, res) => {
       Prescription.find({ patientId: patient._id })
         .populate({ path: "doctorId", populate: { path: "userId", select: "name" } })
         .sort({ issuedAt: -1 })
+        .limit(10),
+      LabOrder.find({ patientId: patient._id })
+        .populate({ path: "doctorId", populate: { path: "userId", select: "name" } })
+        .sort({ createdAt: -1 })
+        .limit(10),
+      LabReport.find({ patientId: patient._id })
+        .populate({ path: "doctorId", populate: { path: "userId", select: "name" } })
+        .sort({ createdAt: -1 })
+        .limit(10),
+      PharmacyOrder.find({ patientId: patient._id })
+        .sort({ createdAt: -1 })
         .limit(10),
     ]);
 
@@ -436,6 +450,37 @@ export const getPatientHistoryForDesk = async (req, res) => {
         status: item.status,
         doctor: item.doctorId?.userId?.name || "Doctor",
         admissionRecommended: Boolean(item.admissionRecommended),
+        medicines: item.medicines || [],
+      })),
+      labOrders: labOrders.map((order) => ({
+        id: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        urgency: order.urgency,
+        doctor: order.doctorId?.userId?.name || "Doctor",
+        createdAt: order.createdAt,
+        reportReadyAt: order.reportReadyAt,
+        releasedToPortal: order.releasedToPortal,
+      })),
+      labReports: labReports.map((report) => ({
+        id: report._id,
+        reportName: report.reportName,
+        reportType: report.reportType,
+        status: report.status,
+        releasedToPortal: report.releasedToPortal,
+        releasedAt: report.releasedAt,
+        doctor: report.doctorId?.userId?.name || "Doctor",
+        createdAt: report.createdAt,
+        fileUrl: report.reportFile,
+      })),
+      pharmacyOrders: pharmacyOrders.map((order) => ({
+        id: order._id,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        total: order.total,
+        items: order.items || [],
+        orderedAt: order.orderedAt || order.createdAt,
       })),
     });
   } catch (error) {

@@ -772,6 +772,13 @@ export const getMyDashboard = async (req, res) => {
     ]);
 
     const upcomingAppointments = appointments.filter((appointment) => appointment.date >= today && appointment.status !== "cancelled");
+    const recentAppointments = [...appointments]
+      .sort((a, b) => {
+        const dateCompare = String(b.date).localeCompare(String(a.date));
+        if (dateCompare !== 0) return dateCompare;
+        return String(b.slot || "").localeCompare(String(a.slot || ""));
+      })
+      .slice(0, 5);
     const pendingBills = invoices.filter((invoice) => invoice.paymentStatus === "pending");
     const readyReports = labOrders.filter((order) => order.status === "reportReady");
     const reportReleased = labOrders.filter((order) => order.releasedToPortal);
@@ -787,6 +794,7 @@ export const getMyDashboard = async (req, res) => {
       },
       lists: {
         upcomingAppointments: upcomingAppointments.slice(0, 5),
+        recentAppointments,
         recentPrescriptions: prescriptions,
         activeLabOrders: labOrders,
         medicineOrders: pharmacyOrders,

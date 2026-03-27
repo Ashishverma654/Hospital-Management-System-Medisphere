@@ -556,6 +556,9 @@ export const cancelAppointment = async (req, res) => {
 
     await appointment.save();
 
+    const patientUser = await User.findById(appointment.patientId).select("name email phone patientId");
+    const cancellationReason = appointment.cancellationReason || appointment.cancelReason;
+
     await logAudit({
       actor: { id: req.user.id, name: req.user.name, role: req.user.role },
       action: "appointment_cancelled",
@@ -565,6 +568,33 @@ export const cancelAppointment = async (req, res) => {
     });
 
     emitQueueUpdate(appointment);
+
+    if (patientUser?.email) {
+      const cancelText = [
+        `Your appointment on ${appointment.date} at ${appointment.slot} has been cancelled.`,
+        cancellationReason ? `Reason: ${cancellationReason}` : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      try {
+        await sendEmail(patientUser.email, "Appointment Cancelled", cancelText);
+      } catch (emailError) {
+        console.error("Appointment cancellation email failed:", emailError.message);
+      }
+    }
+
+    await notifyPatient({
+      userId: appointment.patientId,
+      patientId: appointment.patientProfileId,
+      key: `appointment:${appointment._id}:cancelled`,
+      type: "appointment",
+      title: "Appointment cancelled",
+      message: `Your appointment on ${appointment.date} at ${appointment.slot} was cancelled.`,
+      sourceType: "appointment",
+      sourceId: appointment._id,
+      metadata: { date: appointment.date, slot: appointment.slot, status: appointment.status },
+    });
 
     res.json({ message: "Appointment cancelled Successfully." });
   } catch (error) {

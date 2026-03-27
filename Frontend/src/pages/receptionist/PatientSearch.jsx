@@ -131,7 +131,7 @@ export default function PatientSearch() {
                   View History
                 </Link>
                 <Link
-                  to={`/employee/receptionist/register-patient?duplicate=${patient.id}`}
+                  to={`/employee/receptionist/history?patientId=${patient.id}`}
                   className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
                 >
                   Review

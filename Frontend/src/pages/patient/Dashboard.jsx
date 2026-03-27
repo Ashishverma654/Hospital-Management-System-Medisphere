@@ -80,6 +80,7 @@ export default function PatientDashboard() {
   }, [loadBills, loadDashboard, user?.id, user?._id]);
 
   const upcomingAppointments = overview?.lists?.upcomingAppointments || [];
+  const recentAppointments = overview?.lists?.recentAppointments || [];
   const recentPrescriptions = overview?.lists?.recentPrescriptions || [];
   const activeLabOrders = overview?.lists?.activeLabOrders || [];
   const medicineOrders = overview?.lists?.medicineOrders || [];
@@ -181,7 +182,7 @@ export default function PatientDashboard() {
           <CardContent className="space-y-3">
             {loading ? <SkeletonList count={2} /> : (
               <>
-                {upcomingAppointments.slice(0, 3).map((appt) => (
+                {recentAppointments.slice(0, 3).map((appt) => (
                   <div key={appt._id} className="flex items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-muted/30">
                     <div>
                       <p className="font-semibold text-foreground">{appt.doctorId?.userId?.name || 'Doctor'}</p>
@@ -190,9 +191,9 @@ export default function PatientDashboard() {
                     <StatusBadge status={appt.status}>{appt.status}</StatusBadge>
                   </div>
                 ))}
-                {upcomingAppointments.length === 0 && (
+                {recentAppointments.length === 0 && (
                   <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                    <p>You have no upcoming appointments scheduled.</p>
+                    <p>No recent appointments yet.</p>
                     <Button variant="outline" size="sm" asChild className="mt-4">
                       <Link to="/patient/book-appointment" className="inline-flex items-center gap-2">
                         <Calendar className="h-4 w-4" /> Book an appointment
