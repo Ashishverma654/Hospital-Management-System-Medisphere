@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getDashboardStats,
+  getSubadminDashboard,
   createStaffUser,
   getAllUsers,
   getCreationHistory,
@@ -20,6 +21,7 @@ router.use(verifyAccessToken);
 
 // Routes accessible by superadmin & admin only
 router.get("/dashboard", authorizeRoles("superadmin", "admin"), getDashboardStats);
+router.get("/subadmin-dashboard", authorizeRoles("superadmin", "admin", "subadmin"), getSubadminDashboard);
 router.get("/users", authorizeRoles("superadmin", "admin", "subadmin"), getAllUsers);
 router.put("/users/:id/toggle-active", authorizeRoles("superadmin", "admin", "subadmin"), deactivateUser);
 router.get("/audit", authorizeRoles("superadmin", "admin", "subadmin"), getAuditHistory);

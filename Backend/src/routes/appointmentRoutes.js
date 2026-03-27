@@ -15,6 +15,7 @@ import {
   startConsultation,
   getDoctorTodayDetailed,
   getPatientSummary,
+  getDoctorAppointmentById,
 } from "../controllers/appointmentController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 import validate from "../middlewares/validate.js";
@@ -66,6 +67,7 @@ router.put(
 router.post("/:appointmentId/start-consultation", verifyAccessToken, authorizeRoles("doctor"), startConsultation);
 router.get("/doctor/today", verifyAccessToken, authorizeRoles("doctor"), getDoctorTodayDetailed);
 router.get("/doctor/all", verifyAccessToken, authorizeRoles("doctor"), getDoctorAppointments);
+router.get("/doctor/:id", verifyAccessToken, authorizeRoles("doctor"), getDoctorAppointmentById);
 
 router.put("/:id/complete", verifyAccessToken, authorizeRoles("doctor", "receptionist", "admin", "superadmin"), completeAppointment);
 

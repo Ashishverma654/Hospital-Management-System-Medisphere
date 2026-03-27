@@ -1099,6 +1099,7 @@ export const getPatientSummary = async (req, res) => {
           name: user.name,
           email: user.email,
           phone: user.phone,
+          patientId: user.patientId,
           gender: patient.gender,
           age: patient.age,
           bloodGroup: patient.bloodGroup,
@@ -1182,5 +1183,37 @@ export const getPatientSummary = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDoctorAppointmentById = async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ userId: req.user.id });
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor profile not found." });
+    }
+
+    const appointment = await Appointment.findById(req.params.id)
+      .populate("patientId", "name email phone patientId")
+      .populate({
+        path: "patientProfileId",
+        populate: { path: "userId", select: "name email patientId" },
+      })
+      .populate({
+        path: "doctorId",
+        populate: { path: "userId", select: "name email" },
+      });
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+
+    if (String(appointment.doctorId?._id || appointment.doctorId) !== String(doctor._id)) {
+      return res.status(403).json({ message: "Access forbidden." });
+    }
+
+    return res.json(appointment);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };

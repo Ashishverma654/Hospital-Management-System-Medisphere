@@ -60,6 +60,10 @@ const labReportSchema = new mongoose.Schema({
         enum: ["uploaded", "ready", "released", "archived"],
         default: "uploaded"
     },
+    isSystemGenerated: {
+        type: Boolean,
+        default: false,
+    },
 
     releasedToPortal: {
         type: Boolean,

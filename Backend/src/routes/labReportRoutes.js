@@ -1,6 +1,6 @@
 import express from "express";
 
-import { uploadLabReport, getPatientReports, getReportByPatientId } from "../controllers/labReportController.js";
+import { uploadLabReport, getPatientReports, getReportByPatientId, downloadLabReportPdf } from "../controllers/labReportController.js";
 
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
 
@@ -13,13 +13,30 @@ const router = express.Router();
 router.post(
   "/upload",
   verifyAccessToken,
-  authorizeRoles("admin", "doctor", "receptionist", "patient", "labTechnician"),
+  authorizeRoles("patient"),
   validate(uploadLabReportSchema),
   upload.single("reportFile"),
   uploadLabReport
 );
 
 router.get("/my", verifyAccessToken, authorizeRoles("patient"), getPatientReports);
+
+router.get(
+  "/:id/pdf",
+  verifyAccessToken,
+  authorizeRoles(
+    "patient",
+    "superadmin",
+    "admin",
+    "subadmin",
+    "doctor",
+    "nurse",
+    "pharmacist",
+    "receptionist",
+    "labTechnician"
+  ),
+  downloadLabReportPdf
+);
 
 router.get(
   "/patient/:patientId",

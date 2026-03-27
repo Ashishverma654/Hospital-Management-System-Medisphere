@@ -4,6 +4,7 @@ import LabOrder from "../models/LabOrder.js";
 import Notification from "../models/Notification.js";
 import PharmacyOrder from "../models/PharmacyOrder.js";
 import Doctor from "../models/Doctor.js";
+import NotificationPreference from "../models/NotificationPreference.js";
 import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 import { normalizeLabOrderStatus } from "../utils/labWorkflow.js";
 import { normalizePharmacyStatus, PHARMACY_STATUS } from "../utils/pharmacyWorkflow.js";
@@ -15,6 +16,7 @@ import {
   markNotificationRead as markNotificationReadRecord,
   notifyPatient,
 } from "../services/notificationService.js";
+import { logAudit } from "../services/auditLogService.js";
 
 const buildKey = (parts = []) => parts.filter(Boolean).join(":");
 
@@ -237,6 +239,43 @@ const employeeNotificationFilter = (user) => ({
   ],
 });
 
+const DEFAULT_ALLOWED_TYPES = ["system", "general", "attendance"];
+const ROLE_ALLOWED_TYPES = {
+  receptionist: ["appointment", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  doctor: ["appointment", "admission", "lab", "pharmacy", "billing", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  nurse: ["admission", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  labTechnician: ["lab", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  pharmacist: ["stock", "pharmacy", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  admin: ["billing", "admission", "lab", "stock", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  superadmin: ["billing", "admission", "lab", "stock", "attendance", ...DEFAULT_ALLOWED_TYPES],
+  subadmin: ["billing", "admission", "lab", "stock", "attendance", ...DEFAULT_ALLOWED_TYPES],
+};
+
+const getAllowedTypesForRole = (role) => {
+  const normalized = normalizeSystemRole(role);
+  return new Set(ROLE_ALLOWED_TYPES[normalized] || DEFAULT_ALLOWED_TYPES);
+};
+
+const filterNotificationsByRole = (notifications, role) => {
+  const allowedTypes = getAllowedTypesForRole(role);
+  return notifications.filter((notification) => allowedTypes.has(notification.type || "general"));
+};
+
+const applyPreferenceFilter = (notifications, preferences) => {
+  if (!preferences) return notifications;
+  if (preferences.muteAll) return [];
+  const mutedTypes = new Set(preferences.mutedTypes || []);
+  const mutedPriorities = new Set(preferences.mutedPriorities || []);
+  return notifications.filter((notification) => {
+    if (mutedTypes.has(notification.type)) return false;
+    if (mutedPriorities.has(notification.priority)) return false;
+    return true;
+  });
+};
+
+const getPreferencesForUser = async (userId) =>
+  NotificationPreference.findOne({ userId }).lean();
+
 export const getMyEmployeeNotifications = async (req, res) => {
   try {
     if (normalizeSystemRole(req.user.role) === "doctor") {
@@ -274,8 +313,14 @@ export const getMyEmployeeNotifications = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
+    const preferences = await getPreferencesForUser(req.user.id);
+    const filteredNotifications = applyPreferenceFilter(
+      filterNotificationsByRole(notifications, req.user.role),
+      preferences
+    );
+
     res.json(
-      notifications.map((notification) => ({
+      filteredNotifications.map((notification) => ({
         id: notification._id,
         title: notification.title,
         message: notification.message,
@@ -329,9 +374,21 @@ export const markAllEmployeeNotificationsRead = async (req, res) => {
 
 export const getEmployeeUnreadCount = async (req, res) => {
   try {
+    const baseFilter = employeeNotificationFilter(req.user);
+    const allowedTypes = Array.from(getAllowedTypesForRole(req.user.role));
+    const preferences = await getPreferencesForUser(req.user.id);
+    const mutedTypes = new Set(preferences?.mutedTypes || []);
+    const mutedPriorities = new Set(preferences?.mutedPriorities || []);
+    if (preferences?.muteAll) {
+      return res.json({ unreadCount: 0 });
+    }
+    const typeFilter = allowedTypes.filter((type) => !mutedTypes.has(type));
+    const priorityFilter = mutedPriorities.size ? { $nin: Array.from(mutedPriorities) } : undefined;
     let count = await Notification.countDocuments({
-      ...employeeNotificationFilter(req.user),
+      ...baseFilter,
       status: "unread",
+      type: { $in: typeFilter },
+      ...(priorityFilter ? { priority: priorityFilter } : {}),
     });
     if (count === 0 && normalizeSystemRole(req.user.role) === "doctor") {
       const doctor = await Doctor.findOne({ userId: req.user.id });
@@ -366,6 +423,68 @@ export const getEmployeeUnreadCount = async (req, res) => {
       }
     }
     return res.json({ unreadCount: count });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getEmployeeNotificationPreferences = async (req, res) => {
+  try {
+    const preferences = await NotificationPreference.findOne({ userId: req.user.id });
+    if (!preferences) {
+      return res.json({
+        mutedTypes: [],
+        mutedPriorities: [],
+        muteAll: false,
+        allowUrgentSound: true,
+      });
+    }
+    return res.json({
+      mutedTypes: preferences.mutedTypes || [],
+      mutedPriorities: preferences.mutedPriorities || [],
+      muteAll: Boolean(preferences.muteAll),
+      allowUrgentSound: preferences.allowUrgentSound !== false,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateEmployeeNotificationPreferences = async (req, res) => {
+  try {
+    const { mutedTypes = [], mutedPriorities = [], muteAll = false, allowUrgentSound = true } = req.body || {};
+    const preferences = await NotificationPreference.findOneAndUpdate(
+      { userId: req.user.id },
+      {
+        $set: {
+          mutedTypes: Array.isArray(mutedTypes) ? mutedTypes : [],
+          mutedPriorities: Array.isArray(mutedPriorities) ? mutedPriorities : [],
+          muteAll: Boolean(muteAll),
+          allowUrgentSound: allowUrgentSound !== false,
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: normalizeSystemRole(req.user.role) },
+      action: "notification_preferences_updated",
+      entityType: "NotificationPreference",
+      entityId: preferences._id,
+      details: {
+        mutedTypes: preferences.mutedTypes || [],
+        mutedPriorities: preferences.mutedPriorities || [],
+        muteAll: Boolean(preferences.muteAll),
+        allowUrgentSound: preferences.allowUrgentSound !== false,
+      },
+    });
+
+    return res.json({
+      mutedTypes: preferences.mutedTypes || [],
+      mutedPriorities: preferences.mutedPriorities || [],
+      muteAll: Boolean(preferences.muteAll),
+      allowUrgentSound: preferences.allowUrgentSound !== false,
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

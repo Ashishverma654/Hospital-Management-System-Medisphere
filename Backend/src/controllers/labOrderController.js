@@ -2,12 +2,15 @@ import mongoose from "mongoose";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
 import Invoice from "../models/Invoice.js";
+import LabTest from "../models/LabTest.js";
 import LabOrder from "../models/LabOrder.js";
 import LabOrderItem from "../models/LabOrderItem.js";
 import LabReport from "../models/LabReport.js";
+import TestPrice from "../models/TestPrice.js";
 import { generateLabOrderPDF } from "../utils/generateLabOrderPDF.js";
+import HospitalSettings from "../models/HospitalSettings.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
-import { notifyRole } from "../services/notificationService.js";
+import { notifyEmployee, notifyRole } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
 import {
   getOrderStatusForPayment,
@@ -20,6 +23,7 @@ const LAB_WORKFLOW_STATUSES = [
   "ordered",
   "awaitingPayment",
   "paid",
+  "accessioned",
   "sampleScheduled",
   "sampleCollected",
   "inProcessing",
@@ -27,6 +31,7 @@ const LAB_WORKFLOW_STATUSES = [
   "reportAvailableForPickup",
   "reportReleasedToPortal",
   "completed",
+  "rejected",
   "cancelled",
 ];
 
@@ -34,6 +39,7 @@ const LAB_ITEM_WORKFLOW_STATUSES = [
   "ordered",
   "awaitingPayment",
   "paid",
+  "accessioned",
   "sampleScheduled",
   "sampleCollected",
   "inProcessing",
@@ -41,6 +47,7 @@ const LAB_ITEM_WORKFLOW_STATUSES = [
   "reportAvailableForPickup",
   "reportReleasedToPortal",
   "completed",
+  "rejected",
   "cancelled",
 ];
 
@@ -98,6 +105,10 @@ const formatOrder = async (orderDoc, viewerRole = "internal") => {
       )
       .map((report) => ({
         ...report.toObject(),
+        downloadUrl:
+          report.reportFile && report.reportFile !== "generated" && !report.isSystemGenerated
+            ? report.reportFile
+            : `/api/lab-reports/${report._id}/pdf`,
         patientVisible: getPublicReportVisibility({
           report,
           orderPaymentStatus: normalizedPaymentStatus,
@@ -145,6 +156,28 @@ const upsertLabInvoice = async ({ labOrder, patient, user, tests, createdBy }) =
       notes: test.testCode || "",
     };
   });
+
+  const existingInvoice = labOrder.appointmentId
+    ? await Invoice.findOne({ appointmentId: labOrder.appointmentId }).sort({ createdAt: -1 })
+    : null;
+
+  if (existingInvoice && existingInvoice.paymentStatus !== "paid") {
+    existingInvoice.lineItems = [...(existingInvoice.lineItems || []), ...lineItems];
+    existingInvoice.labCharges = Number(existingInvoice.labCharges || 0) + Number(labOrder.totalAmount || 0);
+    existingInvoice.labOrderId = labOrder._id;
+    existingInvoice.updatedBy = createdBy;
+    await existingInvoice.save();
+
+    labOrder.invoiceId = existingInvoice._id;
+    labOrder.paymentStatus = existingInvoice.paymentStatus;
+    labOrder.status = getOrderStatusForPayment({
+      currentStatus: labOrder.status,
+      paymentStatus: existingInvoice.paymentStatus,
+    });
+    await labOrder.save();
+
+    return existingInvoice;
+  }
 
   const invoice = await Invoice.create({
     patientId: patient._id,
@@ -217,11 +250,51 @@ export const createLabOrder = async (req, res) => {
       return res.status(400).json({ message: "At least one lab test must be selected." });
     }
 
-    const normalizedTests = tests.map((test) => ({
-      testName: test.testName,
-      testCode: test.testCode || "",
-      price: Number(test.price || 0),
-    }));
+    const seenKeys = new Set();
+    const normalizedTests = [];
+
+    for (const test of tests) {
+      const key = test.testId || test.testCode || test.testName;
+      if (key && seenKeys.has(String(key))) {
+        return res.status(400).json({ message: "Duplicate tests are not allowed in the same order." });
+      }
+      if (key) seenKeys.add(String(key));
+
+      if (test.testId) {
+        const labTest = await LabTest.findById(test.testId);
+        if (!labTest) {
+          return res.status(404).json({ message: "Lab test not found." });
+        }
+
+        const priceRecord = await TestPrice.findOne({
+          testId: labTest._id,
+          $or: [{ department: doctor.departmentId }, { department: { $exists: false } }, { department: null }],
+        }).sort({ department: -1 });
+
+        if (!priceRecord) {
+          return res.status(400).json({ message: `Price not set for ${labTest.name}.` });
+        }
+
+        normalizedTests.push({
+          testId: labTest._id,
+          testType: labTest.testType,
+          testName: labTest.name,
+          testCode: test.testCode || "",
+          price: Number(priceRecord.price || 0),
+        });
+        continue;
+      }
+
+      if (!test.testName) {
+        return res.status(400).json({ message: "Test name is required." });
+      }
+
+      normalizedTests.push({
+        testName: test.testName,
+        testCode: test.testCode || "",
+        price: Number(test.price || 0),
+      });
+    }
 
     const totalAmount = normalizedTests.reduce((sum, test) => sum + test.price, 0);
 
@@ -241,6 +314,8 @@ export const createLabOrder = async (req, res) => {
       normalizedTests.map((test) =>
         LabOrderItem.create({
           labOrderId: labOrder._id,
+          testId: test.testId || undefined,
+          testType: test.testType || undefined,
           testName: test.testName,
           testCode: test.testCode,
           price: test.price,
@@ -258,6 +333,20 @@ export const createLabOrder = async (req, res) => {
     });
 
     const populatedOrder = await LabOrder.findById(labOrder._id).populate(orderPopulate);
+
+    const doctorUserId = doctor?.userId;
+    if (doctorUserId) {
+      await notifyEmployee({
+        userId: doctorUserId,
+        key: `lab:${labOrder._id}:created:${doctorUserId}`,
+        type: "lab",
+        title: "Lab order created",
+        message: `Lab order ${labOrder.orderNumber || labOrder._id} created for ${user?.name || "patient"}.`,
+        sourceType: "labOrder",
+        sourceId: labOrder._id,
+        metadata: { urgency, totalAmount: labOrder.totalAmount },
+      });
+    }
 
     if (["urgent", "stat"].includes(urgency)) {
       await notifyRole({
@@ -377,7 +466,8 @@ export const downloadLabOrderPDF = async (req, res) => {
     }
 
     const items = await LabOrderItem.find({ labOrderId: labOrder._id });
-    generateLabOrderPDF(res, labOrder, items);
+    const settings = await HospitalSettings.findOne({ isActive: true }).sort({ updatedAt: -1 });
+    await generateLabOrderPDF(res, labOrder, items, settings || {});
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -435,7 +525,15 @@ export const listLabOrdersForWorkflow = async (req, res) => {
 
     if (urgency) query.urgency = urgency;
     if (paymentStatus) query.paymentStatus = paymentStatus;
-    if (status) query.status = status;
+    if (status) {
+      const statusMap = {
+        ordered: ["ordered", "pending"],
+        inProcessing: ["inProcessing", "inProgress"],
+        reportReleasedToPortal: ["reportReleasedToPortal", "released"],
+      };
+      const mapped = statusMap[status] || [status];
+      query.status = { $in: mapped };
+    }
     if (orderId) {
       query.$or = [
         { orderNumber: { $regex: orderId, $options: "i" } },

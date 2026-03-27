@@ -8,6 +8,14 @@ const labOrderItemSchema = new mongoose.Schema(
       ref: "LabOrder",
       required: true,
     },
+    testId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "LabTest",
+    },
+    testType: {
+      type: String,
+      enum: ["BLOOD", "RADIOLOGY", "PATHOLOGY", "OTHER"],
+    },
     diagnosticServiceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "DiagnosticService",
@@ -31,9 +39,25 @@ const labOrderItemSchema = new mongoose.Schema(
       ref: "LabReport",
     },
     sampleCollectedAt: Date,
+    accessionedAt: Date,
+    accessionedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     processingStartedAt: Date,
     reportReadyAt: Date,
     reportReleasedAt: Date,
+    rejectedAt: Date,
+    rejectionReason: String,
+    isCriticalResult: {
+      type: Boolean,
+      default: false,
+    },
+    criticalNotes: String,
+    resultValue: String,
+    resultUnit: String,
+    referenceRange: String,
+    resultNotes: String,
   },
   { timestamps: true }
 );

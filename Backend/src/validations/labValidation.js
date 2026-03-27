@@ -1,10 +1,11 @@
 import Joi from "joi";
 
 const testItemSchema = Joi.object({
-  testName: Joi.string().trim().required(),
+  testId: Joi.string(),
+  testName: Joi.string().trim(),
   testCode: Joi.string().trim().allow(""),
   price: Joi.alternatives().try(Joi.number(), Joi.string()),
-}).unknown(true);
+}).or("testId", "testName").unknown(true);
 
 export const createLabOrderSchema = Joi.object({
   patientId: Joi.string().required(),

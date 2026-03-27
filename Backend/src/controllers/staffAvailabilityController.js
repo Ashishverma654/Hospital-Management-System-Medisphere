@@ -7,6 +7,7 @@ import LabTechnician from "../models/LabTechnician.js";
 import Pharmacist from "../models/Pharmacist.js";
 import Receptionist from "../models/Receptionist.js";
 import { EMPLOYEE_ROLES, normalizeSystemRole } from "../constants/roles.js";
+import { autoCloseDutyIfNeeded } from "../utils/staffDutyAutoClose.js";
 
 const getTodayRange = () => {
   const start = new Date();
@@ -49,6 +50,14 @@ const buildShiftMap = (shifts) => {
   });
   return map;
 };
+
+const findShiftForDuty = (shifts, duty) =>
+  shifts.find(
+    (shift) =>
+      String(shift.userId) === String(duty.userId)
+      && new Date(shift.startTime) <= new Date(duty.startTime)
+      && new Date(shift.endTime) >= new Date(duty.startTime)
+  );
 
 const buildDepartmentMaps = async (users) => {
   const roleBuckets = users.reduce(
@@ -145,6 +154,13 @@ export const getStaffAvailability = async (req, res) => {
       }).populate("userId", "name role email employeeId"),
     ]);
 
+    const autoCloseTasks = duties
+      .filter((duty) => duty.status === "onDuty")
+      .map((duty) => autoCloseDutyIfNeeded({ duty, shift: findShiftForDuty(shifts, duty) }));
+    if (autoCloseTasks.length) {
+      await Promise.all(autoCloseTasks);
+    }
+
     const dutyMap = buildDutyMap(duties);
     const shiftMap = buildShiftMap(shifts);
     const departmentMaps = await buildDepartmentMaps(users);
@@ -200,8 +216,15 @@ export const getStaffAvailabilitySummary = async (req, res) => {
           { date: todayKey },
           { startTime: { $lte: end }, endTime: { $gte: start } },
         ],
-      }).select("userId"),
+      }).select("userId startTime endTime shiftType"),
     ]);
+
+    const autoCloseTasks = duties
+      .filter((duty) => duty.status === "onDuty")
+      .map((duty) => autoCloseDutyIfNeeded({ duty, shift: findShiftForDuty(shifts, duty) }));
+    if (autoCloseTasks.length) {
+      await Promise.all(autoCloseTasks);
+    }
 
     const dutyMap = buildDutyMap(duties);
     const shiftMap = buildShiftMap(shifts);

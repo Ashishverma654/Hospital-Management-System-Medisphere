@@ -9,6 +9,8 @@ import Nurse from "../models/Nurse.js";
 import Pharmacist from "../models/Pharmacist.js";
 import LabTechnician from "../models/LabTechnician.js";
 import Receptionist from "../models/Receptionist.js";
+import Ward from "../models/Ward.js";
+import StaffDuty from "../models/StaffDuty.js";
 import CreationLog from "../models/CreationLog.js";
 import AuditLog from "../models/AuditLog.js";
 import bcrypt from "bcryptjs";
@@ -25,6 +27,7 @@ import { generateUniqueId } from "../utils/idGenerator.js";
 import { ID_PREFIXES } from "../constants/roles.js";
 import mongoose from "mongoose";
 import logger from "../utils/logger.js";
+import NotificationPreference from "../models/NotificationPreference.js";
 
 const MANAGEABLE_ROLE_OVERRIDES = {
   superadmin: ["admin", "subadmin", "doctor", "nurse", "receptionist", "labTechnician", "pharmacist", "patient"],
@@ -48,6 +51,65 @@ const buildUserSummary = (user) => ({
   createdAt: user.createdAt,
   profileImage: user.profileImage,
 });
+
+const DEFAULT_NOTIFICATION_PREFERENCES = {
+  receptionist: {
+    mutedTypes: ["lab", "stock", "pharmacy", "billing", "admission"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: true,
+  },
+  doctor: {
+    mutedTypes: ["stock"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: true,
+  },
+  nurse: {
+    mutedTypes: ["appointment", "lab", "pharmacy", "stock", "billing"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: true,
+  },
+  labTechnician: {
+    mutedTypes: ["appointment", "pharmacy", "stock", "billing"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: true,
+  },
+  pharmacist: {
+    mutedTypes: ["appointment", "lab", "admission"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: true,
+  },
+  admin: {
+    mutedTypes: ["appointment"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: false,
+  },
+  superadmin: {
+    mutedTypes: ["appointment"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: false,
+  },
+  subadmin: {
+    mutedTypes: ["appointment"],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: false,
+  },
+};
+
+const buildDefaultNotificationPreferences = (role) =>
+  DEFAULT_NOTIFICATION_PREFERENCES[normalizeSystemRole(role)] || {
+    mutedTypes: [],
+    mutedPriorities: [],
+    muteAll: false,
+    allowUrgentSound: true,
+  };
 
 // Helper: Generate unique Employee ID (e.g., EMP-123456)
 const sanitizeDate = (date) => {
@@ -168,6 +230,132 @@ export const getDashboardStats = async (req, res) => {
   }
 };
 
+export const getSubadminDashboard = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const todayStart = new Date(`${today}T00:00:00`);
+    const todayEnd = new Date(`${today}T23:59:59.999`);
+
+    const [appointments, beds, wards, duties] = await Promise.all([
+      Appointment.find({ date: today }).select("status checkInAt arrivalTime createdAt").lean(),
+      Bed.find({}).select("status wardId bedNumber").lean(),
+      Ward.find({}).select("name wardNumber wardCode departmentId").populate("departmentId", "name").lean(),
+      StaffDuty.find({ date: today }).select("status").lean(),
+    ]);
+
+    const flowCounts = appointments.reduce(
+      (acc, appt) => {
+        acc.total += 1;
+        if (["arrived", "waiting", "checked-in"].includes(appt.status)) acc.waiting += 1;
+        if (appt.status === "inConsultation") acc.inConsultation += 1;
+        if (appt.status === "completed") acc.completed += 1;
+        return acc;
+      },
+      { total: 0, waiting: 0, inConsultation: 0, completed: 0 }
+    );
+
+    const waitSamples = appointments
+      .filter((appt) => ["arrived", "waiting", "checked-in"].includes(appt.status))
+      .map((appt) => {
+        const checkIn = appt.checkInAt || appt.arrivalTime || appt.createdAt;
+        if (!checkIn) return null;
+        return (Date.now() - new Date(checkIn).getTime()) / 60000;
+      })
+      .filter((value) => Number.isFinite(value));
+
+    const avgWaitMinutes = waitSamples.length
+      ? Math.round(waitSamples.reduce((sum, value) => sum + value, 0) / waitSamples.length)
+      : 0;
+
+    const bedCounts = beds.reduce(
+      (acc, bed) => {
+        acc.total += 1;
+        acc[bed.status] = (acc[bed.status] || 0) + 1;
+        return acc;
+      },
+      { total: 0, available: 0, occupied: 0, reserved: 0, maintenance: 0 }
+    );
+
+    const wardMap = new Map();
+    wards.forEach((ward) => {
+      wardMap.set(String(ward._id), {
+        id: ward._id,
+        name: ward.name,
+        wardNumber: ward.wardNumber,
+        wardCode: ward.wardCode,
+        department: ward.departmentId?.name || "General",
+        total: 0,
+        available: 0,
+        occupied: 0,
+        reserved: 0,
+        maintenance: 0,
+      });
+    });
+    beds.forEach((bed) => {
+      const key = String(bed.wardId || "");
+      const ward = wardMap.get(key);
+      if (!ward) return;
+      ward.total += 1;
+      ward[bed.status] = (ward[bed.status] || 0) + 1;
+    });
+
+    const dutyCounts = duties.reduce(
+      (acc, duty) => {
+        acc[duty.status] = (acc[duty.status] || 0) + 1;
+        return acc;
+      },
+      { onDuty: 0, offDuty: 0, leave: 0, holiday: 0 }
+    );
+
+    const alerts = [];
+    const occupancyRate = bedCounts.total ? (bedCounts.occupied / bedCounts.total) * 100 : 0;
+    if (occupancyRate > 90) {
+      alerts.push({
+        title: "High bed occupancy",
+        message: `Occupancy at ${Math.round(occupancyRate)}%.`,
+        priority: "high",
+      });
+    }
+    if (avgWaitMinutes > 30) {
+      alerts.push({
+        title: "Queue delays",
+        message: `Average wait time is ${avgWaitMinutes} minutes.`,
+        priority: "medium",
+      });
+    }
+    wardMap.forEach((ward) => {
+      if (ward.total > 0 && ward.available === 0) {
+        alerts.push({
+          title: "No available beds",
+          message: `${ward.name} has no available beds.`,
+          priority: "high",
+        });
+      }
+    });
+
+    res.json({
+      date: today,
+      patientFlow: {
+        ...flowCounts,
+        avgWaitMinutes,
+      },
+      bedOccupancy: bedCounts,
+      wardStatus: Array.from(wardMap.values()),
+      dutyTracker: dutyCounts,
+      alerts,
+      quickActions: [
+        { label: "Manage Roles", path: "/employee/manage-roles" },
+        { label: "Bed Management", path: "/employee/beds" },
+        { label: "Ward Management", path: "/employee/wards" },
+        { label: "Staff Duty", path: "/employee/nurse-assignments" },
+        { label: "Shift Calendar", path: "/employee/shifts/calendar" },
+      ],
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // 2. Create Staff User (hierarchy-aware)
 export const createStaffUser = async (req, res) => {
   try {
@@ -249,6 +437,17 @@ export const createStaffUser = async (req, res) => {
       mustResetPassword: true,
     });
     console.log("CREATE_STAFF_USER: Base User created", { userId: user._id, employeeId: user.employeeId });
+
+    try {
+      const defaults = buildDefaultNotificationPreferences(normalizedTargetRole);
+      await NotificationPreference.findOneAndUpdate(
+        { userId: user._id },
+        { $set: { ...defaults, userId: user._id } },
+        { upsert: true, new: true }
+      );
+    } catch (prefErr) {
+      logger.error(`[NOTIFICATION_PREF] Failed to set defaults for ${user.email}: ${prefErr.message}`);
+    }
 
     // Create role-specific profile object
     const profileData = {
@@ -441,11 +640,14 @@ Mediflow Hospital Management System`;
 // 3. Get All Users (with filters, search, pagination)
 export const getAllUsers = async (req, res) => {
   try {
-    const { role, search, page = 1, limit = 20, isActive } = req.query;
+    const { role, search, page = 1, limit = 20, isActive, excludePatients } = req.query;
     const requesterRole = normalizeSystemRole(req.user.role);
 
     const filter = {};
     if (role) filter.role = role;
+    if (!role && excludePatients === "true") {
+      filter.role = { $ne: "patient" };
+    }
     if (isActive !== undefined) filter.isActive = isActive === "true";
     if (search) {
       filter.$or = [

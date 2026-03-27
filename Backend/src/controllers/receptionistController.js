@@ -284,10 +284,34 @@ export const registerPatientAtDesk = async (req, res) => {
 
 export const searchPatientsForDesk = async (req, res) => {
   try {
-    const { query = "" } = req.query;
+    const { query = "", departmentId, doctorId } = req.query;
     const trimmedQuery = query.trim();
 
     const userFilter = { role: "patient" };
+    if (departmentId || doctorId) {
+      let doctorIds = [];
+      if (departmentId) {
+        const doctors = await Doctor.find({ departmentId }).select("_id").lean();
+        doctorIds = doctors.map((doc) => doc._id.toString());
+      }
+
+      if (doctorId) {
+        if (doctorIds.length && !doctorIds.includes(doctorId)) {
+          return res.json({ patients: [] });
+        }
+        doctorIds = doctorIds.length ? doctorIds.filter((id) => id === doctorId) : [doctorId];
+      }
+
+      if (!doctorIds.length) {
+        return res.json({ patients: [] });
+      }
+
+      const appointmentUserIds = await Appointment.find({
+        doctorId: { $in: doctorIds },
+      }).distinct("patientId");
+
+      userFilter._id = { $in: appointmentUserIds };
+    }
     if (trimmedQuery) {
       if (/^[a-f\d]{24}$/i.test(trimmedQuery)) {
         const patientByProfile = await Patient.findById(trimmedQuery).populate(

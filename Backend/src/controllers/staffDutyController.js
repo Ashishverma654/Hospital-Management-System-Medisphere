@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import StaffDuty from "../models/StaffDuty.js";
 import User from "../models/User.js";
 import { normalizeSystemRole } from "../constants/roles.js";
+import { autoCloseDutyIfNeeded } from "../utils/staffDutyAutoClose.js";
 
 const getDateKey = (date = new Date()) => date.toISOString().split("T")[0];
 
@@ -48,6 +49,14 @@ export const startDuty = async (req, res) => {
     const { user, targetUserId, isAdminOverride } = await resolveTargetUser(req);
     const now = new Date();
     const dateKey = getDateKey(now);
+
+    const activeDuty = await StaffDuty.findOne({
+      userId: targetUserId,
+      status: "onDuty",
+    }).sort({ startTime: -1 });
+    if (activeDuty) {
+      await autoCloseDutyIfNeeded({ duty: activeDuty, now });
+    }
 
     const existingOnDuty = await StaffDuty.findOne({
       userId: targetUserId,
@@ -97,6 +106,14 @@ export const endDuty = async (req, res) => {
 
     if (!duty) {
       return res.status(400).json({ message: "No active duty session found." });
+    }
+
+    const autoClosed = await autoCloseDutyIfNeeded({ duty, now });
+    if (autoClosed) {
+      return res.json({
+        message: "Duty auto clocked-out based on shift rules.",
+        data: autoClosed,
+      });
     }
 
     const totalHours = Math.max(0, (now.getTime() - new Date(duty.startTime).getTime()) / (1000 * 60 * 60));
@@ -168,6 +185,15 @@ export const getStats = async (req, res) => {
   try {
     const { targetUserId } = await resolveTargetUser(req);
     const todayKey = getDateKey(new Date());
+    const now = new Date();
+
+    const activeDuty = await StaffDuty.findOne({
+      userId: targetUserId,
+      status: "onDuty",
+    }).sort({ startTime: -1 });
+    if (activeDuty) {
+      await autoCloseDutyIfNeeded({ duty: activeDuty, now });
+    }
 
     const duties = await StaffDuty.find({ userId: targetUserId });
 
@@ -219,6 +245,29 @@ export const getStats = async (req, res) => {
         })(),
       },
     });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({ message: error.message });
+  }
+};
+
+export const getHistory = async (req, res) => {
+  try {
+    const { targetUserId } = await resolveTargetUser(req);
+    const now = new Date();
+    const monthParam = req.query.month;
+    const monthKey =
+      typeof monthParam === "string" && /^\d{4}-\d{2}$/.test(monthParam)
+        ? monthParam
+        : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    const duties = await StaffDuty.find({
+      userId: targetUserId,
+      date: { $regex: `^${monthKey}` },
+    })
+      .sort({ date: 1, startTime: 1 })
+      .lean();
+
+    return res.json({ success: true, data: duties });
   } catch (error) {
     return res.status(error.statusCode || 500).json({ message: error.message });
   }

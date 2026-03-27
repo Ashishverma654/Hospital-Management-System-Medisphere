@@ -7,6 +7,7 @@ import {
   endDuty,
   markLeave,
   getStats,
+  getHistory,
 } from "../controllers/staffDutyController.js";
 import {
   startDutySchema,
@@ -23,5 +24,6 @@ router.post("/start", validate(startDutySchema), startDuty);
 router.post("/end", validate(endDutySchema), endDuty);
 router.post("/leave", validate(leaveDutySchema), markLeave);
 router.get("/stats", validate(statsQuerySchema, { source: "query" }), getStats);
+router.get("/history", getHistory);
 
 export default router;

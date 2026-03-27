@@ -257,32 +257,46 @@ const getScopeData = async (nurseUserId) => {
   const wardIds = [...new Set(assignments.map((assignment) => assignment.wardId?._id?.toString()).filter(Boolean))];
   const shiftIds = [...new Set(assignments.map((assignment) => assignment.shiftId?._id?.toString()).filter(Boolean))];
 
-  const [patients, beds, prescriptions, labOrders, vitalsEntries, wards, shifts] = await Promise.all([
-    patientIds.length
-      ? Patient.find({ _id: { $in: patientIds } }).populate("userId", "name email phone patientId gender dob")
-      : [],
-    patientIds.length
-      ? Bed.find({ patientProfileId: { $in: patientIds } }).populate("wardId", "name wardNumber wardType")
-      : [],
-    patientIds.length
-      ? Prescription.find({ patientId: { $in: patientIds }, status: { $ne: "cancelled" } })
-          .populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
-          .sort({ createdAt: -1 })
-      : [],
-    patientIds.length
-      ? LabOrder.find({ patientId: { $in: patientIds } }).sort({ createdAt: -1 })
-      : [],
-    patientIds.length
-      ? Vitals.find({ patientId: { $in: patientIds } })
-          .populate("nurseUserId", "name")
-          .sort({ recordedAt: -1 })
+  const [wardBeds, wards, shifts] = await Promise.all([
+    wardIds.length
+      ? Bed.find({
+          wardId: { $in: wardIds },
+          status: "occupied",
+          patientProfileId: { $exists: true, $ne: null },
+        }).populate("wardId", "name wardNumber wardType")
       : [],
     wardIds.length ? Ward.find({ _id: { $in: wardIds } }) : [],
     shiftIds.length ? Shift.find({ _id: { $in: shiftIds } }) : [],
   ]);
 
+  const wardPatientIds = [...new Set(wardBeds.map((bed) => bed.patientProfileId?.toString()).filter(Boolean))];
+  const scopedPatientIds = [...new Set([...patientIds, ...wardPatientIds])];
+
+  const [patients, beds, prescriptions, labOrders, vitalsEntries] = await Promise.all([
+    scopedPatientIds.length
+      ? Patient.find({ _id: { $in: scopedPatientIds } }).populate("userId", "name email phone patientId gender dob")
+      : [],
+    scopedPatientIds.length
+      ? Bed.find({ patientProfileId: { $in: scopedPatientIds } }).populate("wardId", "name wardNumber wardType")
+      : [],
+    scopedPatientIds.length
+      ? Prescription.find({ patientId: { $in: scopedPatientIds }, status: { $ne: "cancelled" } })
+          .populate({ path: "doctorId", populate: { path: "userId", select: "name email" } })
+          .sort({ createdAt: -1 })
+      : [],
+    scopedPatientIds.length
+      ? LabOrder.find({ patientId: { $in: scopedPatientIds } }).sort({ createdAt: -1 })
+      : [],
+    scopedPatientIds.length
+      ? Vitals.find({ patientId: { $in: scopedPatientIds } })
+          .populate("nurseUserId", "name")
+          .sort({ recordedAt: -1 })
+      : [],
+  ]);
+
   const patientMap = new Map(patients.map((patient) => [String(patient._id), patient]));
-  const bedMap = new Map(beds.map((bed) => [String(bed.patientProfileId), bed]));
+  const combinedBeds = [...beds, ...wardBeds.filter((bed) => !beds.find((b) => String(b._id) === String(bed._id)))];
+  const bedMap = new Map(combinedBeds.map((bed) => [String(bed.patientProfileId), bed]));
   const prescriptionsByPatient = prescriptions.reduce((acc, prescription) => {
     const key = String(prescription.patientId);
     acc[key] = acc[key] || [];
@@ -305,6 +319,10 @@ const getScopeData = async (nurseUserId) => {
   const wardMap = new Map(wards.map((ward) => [String(ward._id), ward]));
   const shiftMap = new Map(shifts.map((shift) => [String(shift._id), shift]));
 
+  const assignedPatientIds = new Set(
+    assignments.map((assignment) => assignment.patientId?._id?.toString()).filter(Boolean)
+  );
+
   const patientSummaries = assignments
     .filter((assignment) => assignment.patientId)
     .map((assignment) => {
@@ -324,13 +342,31 @@ const getScopeData = async (nurseUserId) => {
     })
     .filter(Boolean);
 
+  const wardPatientSummaries = wardBeds
+    .filter((bed) => bed.patientProfileId && !assignedPatientIds.has(String(bed.patientProfileId)))
+    .map((bed) => {
+      const patient = patientMap.get(String(bed.patientProfileId));
+      if (!patient) return null;
+      const doctor = prescriptionsByPatient[String(patient._id)]?.[0]?.doctorId || null;
+      return patientSummaryMap({
+        patient,
+        assignment: null,
+        bed,
+        doctor,
+        prescriptions: prescriptionsByPatient[String(patient._id)] || [],
+        labOrders: labOrdersByPatient[String(patient._id)] || [],
+        latestVitals: latestVitalsByPatient.get(String(patient._id)),
+      });
+    })
+    .filter(Boolean);
+
   return {
     assignments,
-    patientSummaries,
+    patientSummaries: [...patientSummaries, ...wardPatientSummaries],
     wardMap,
     shiftMap,
     latestVitalsByPatient,
-    patientIds,
+    patientIds: scopedPatientIds,
     wardIds,
   };
 };

@@ -55,6 +55,16 @@ const pharmacyOrderItemSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    substitution: {
+      originalMedicineName: String,
+      substitutedMedicineName: String,
+      reason: String,
+      approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      substitutedAt: Date,
+    },
   },
   { _id: false }
 );
@@ -110,9 +120,20 @@ const pharmacyOrderSchema = new mongoose.Schema(
     preparingAt: Date,
     readyAt: Date,
     completedAt: Date,
+    dispensedAt: Date,
     cancelledAt: Date,
     lastStatusUpdatedAt: Date,
     notes: String,
+    verifiedAt: Date,
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    verificationNotes: String,
+    counselingCompleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

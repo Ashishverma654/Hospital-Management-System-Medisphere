@@ -2,6 +2,7 @@ export const LAB_STATUS_ORDER = [
   "ordered",
   "awaitingPayment",
   "paid",
+  "accessioned",
   "sampleScheduled",
   "sampleCollected",
   "inProcessing",
@@ -9,6 +10,7 @@ export const LAB_STATUS_ORDER = [
   "reportAvailableForPickup",
   "reportReleasedToPortal",
   "completed",
+  "rejected",
   "cancelled",
 ];
 

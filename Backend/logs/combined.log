@@ -99,3 +99,10 @@
 {"level":"error","message":"Image file format webp not allowed","method":"PUT","path":"/api/users/profile-image","service":"hospital-api","statusCode":500,"timestamp":"2026-03-13T07:39:55.015Z"}
 {"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-16T11:56:06.301Z"}
 {"level":"error","message":"An unknown file format not allowed","method":"POST","path":"/api/lab-techs/orders/69bbc0a94b73a5a3c8fda840/report-upload","service":"hospital-api","statusCode":500,"timestamp":"2026-03-19T09:36:17.844Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T13:20:33.000Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T13:22:52.365Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T13:24:18.486Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T13:31:48.940Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T13:35:54.593Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T13:36:52.530Z"}
+{"email":"superadmin@medanta.org","level":"info","message":"Super admin user seeded","service":"hospital-api","timestamp":"2026-03-26T14:22:41.166Z"}

@@ -11,6 +11,7 @@ import { notifyPatient } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
+import HospitalSettings from "../models/HospitalSettings.js";
 
 const INVOICE_POPULATE = [
   { path: "patientId", populate: { path: "userId", select: "name email phone patientId" } },
@@ -449,8 +450,9 @@ export const downloadInvoicePdf = async (req, res) => {
     if (!(await ensureInvoiceAccess(req, invoice))) {
       return res.status(403).json({ message: "Access forbidden." });
     }
-
-    return generateInvoicePDF(res, invoice);
+    const settings = await HospitalSettings.findOne({ isActive: true }).sort({ updatedAt: -1 });
+    await generateInvoicePDF(res, invoice, settings || {});
+    return undefined;
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

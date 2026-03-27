@@ -162,6 +162,7 @@ const buildOrderPayload = (order) => {
       stockAvailableAtReview: item.stockAvailableAtReview,
       stockCurrent: item.medicineId?.stock,
       lowStockThreshold: item.medicineId?.lowStockThreshold,
+      substitution: item.substitution || null,
     })),
     subtotal: order.subtotal,
     total: order.total,
@@ -183,7 +184,12 @@ const buildOrderPayload = (order) => {
     preparingAt: order.preparingAt,
     readyAt: order.readyAt,
     completedAt: order.completedAt,
+    dispensedAt: order.dispensedAt,
     cancelledAt: order.cancelledAt,
+    verifiedAt: order.verifiedAt,
+    verifiedBy: order.verifiedBy,
+    verificationNotes: order.verificationNotes,
+    counselingCompleted: order.counselingCompleted,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
   };
@@ -363,6 +369,19 @@ const updateOrderItemsForReview = async (order, itemUpdates = []) => {
     item.unitPrice = Number(medicine?.price ?? item.unitPrice ?? 0);
     item.lineTotal = requestedQuantity * item.unitPrice;
 
+    if (incoming?.substitution) {
+      item.substitution = {
+        originalMedicineName: incoming.substitution.originalMedicineName || item.medicineName,
+        substitutedMedicineName: incoming.substitution.substitutedMedicineName || item.medicineName,
+        reason: incoming.substitution.reason || "substituted",
+        approvedBy: incoming.substitution.approvedBy || order.pharmacistUserId || null,
+        substitutedAt: new Date(),
+      };
+      if (incoming.substitution.substitutedMedicineName) {
+        item.medicineName = incoming.substitution.substitutedMedicineName;
+      }
+    }
+
     if (fulfilledQuantity === 0 && unavailableQuantity > 0) {
       item.fulfillmentStatus = "outOfStock";
     } else if (unavailableQuantity > 0) {
@@ -439,6 +458,50 @@ export const markOrderPreparing = async (req, res) => {
     const populatedOrder = await PharmacyOrder.findById(order._id).populate(ORDER_POPULATE);
     return res.json({
       message: "Pharmacy order moved to preparation.",
+      order: buildOrderPayload(populatedOrder),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const verifyPharmacyOrder = async (req, res) => {
+  try {
+    const order = await PharmacyOrder.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Pharmacy order not found." });
+    }
+
+    if (!canTransitionPharmacyOrder(order.status, PHARMACY_STATUS.VERIFIED)) {
+      return res.status(400).json({ message: "This order cannot be verified from its current status." });
+    }
+
+    await updateOrderItemsForReview(order, req.body.items || []);
+    order.items = (order.items || []).map((item) => {
+      if (item.fulfillmentStatus === PHARMACY_STATUS.ORDER_ACCEPTED && Number(item.unavailableQuantity || 0) === 0) {
+        item.fulfillmentStatus = PHARMACY_STATUS.VERIFIED;
+      }
+      return item;
+    });
+    order.status = PHARMACY_STATUS.VERIFIED;
+    order.verifiedAt = new Date();
+    order.verifiedBy = req.user.id;
+    order.verificationNotes = req.body.verificationNotes || order.verificationNotes || "";
+    order.pharmacistUserId = req.user.id;
+    await order.save();
+    await syncInvoiceForOrder(order);
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "pharmacy_order_verified",
+      entityType: "PharmacyOrder",
+      entityId: order._id,
+      details: { status: order.status },
+    });
+
+    const populatedOrder = await PharmacyOrder.findById(order._id).populate(ORDER_POPULATE);
+    return res.json({
+      message: "Pharmacy order verified.",
       order: buildOrderPayload(populatedOrder),
     });
   } catch (error) {
@@ -547,6 +610,10 @@ export const completePharmacyOrder = async (req, res) => {
       ? PHARMACY_STATUS.PARTIALLY_FULFILLED
       : PHARMACY_STATUS.COMPLETED;
     order.completedAt = new Date();
+    order.dispensedAt = new Date();
+    if (req.body?.counselingCompleted !== undefined) {
+      order.counselingCompleted = Boolean(req.body.counselingCompleted);
+    }
     await order.save();
 
     await logAudit({

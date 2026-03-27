@@ -20,6 +20,8 @@ import adminRoutes from "./routes/adminRoutes.js";
 import patientRoutes from "./routes/patientRoutes.js";
 import labReportRoutes from "./routes/labReportRoutes.js";
 import labOrderRoutes from "./routes/labOrderRoutes.js";
+import labTestRoutes from "./routes/labTestRoutes.js";
+import testPriceRoutes from "./routes/testPriceRoutes.js";
 import billingRoutes from "./routes/billingRoutes.js";
 import pharmacyRoutes from "./routes/pharmacyRoutes.js";
 import pharmacyOrderRoutes from "./routes/pharmacyOrderRoutes.js";
@@ -132,6 +134,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/lab-reports", labReportRoutes);
 app.use("/api/lab-orders", labOrderRoutes);
+app.use("/api/tests", labTestRoutes);
+app.use("/api/test-prices", testPriceRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/medicines", pharmacyRoutes);
 app.use("/api/pharmacy-orders", pharmacyOrderRoutes);
@@ -142,7 +146,9 @@ app.use("/api/users", userRoutes);
 app.use("/api/receptionists", receptionistRoutes);
 app.use("/api/nurses", nurseRoutes);
 app.use("/api/nurse-assignments", nurseAssignmentRoutes);
-app.use("/api/shifts", shiftScheduleRoutes);
+// Shift schedules (calendar allocations)
+app.use("/api/shift-schedules", shiftScheduleRoutes);
+// Shift templates (morning/evening/night definitions)
 app.use("/api/shifts", shiftRoutes);
 app.use("/api/lab-techs", labTechRoutes);
 app.use("/api/pharmacists", pharmacistRoutes);

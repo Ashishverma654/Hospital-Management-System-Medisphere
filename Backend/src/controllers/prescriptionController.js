@@ -3,6 +3,7 @@ import Prescription from "../models/Prescription.js";
 import Appointment from "../models/Appointment.js";
 import Doctor from "../models/Doctor.js";
 import { generatePrescriptionPDF } from "../utils/generatePrescriptionPDF.js";
+import HospitalSettings from "../models/HospitalSettings.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 
 export const createPrescription = async (req, res) => {
@@ -175,7 +176,8 @@ export const downloadPrescriptionPDF = async (req, res) => {
       });
     }
 
-    generatePrescriptionPDF(res, prescription);
+    const settings = await HospitalSettings.findOne({ isActive: true }).sort({ updatedAt: -1 });
+    await generatePrescriptionPDF(res, prescription, settings || {});
 
   } catch (error) {
 

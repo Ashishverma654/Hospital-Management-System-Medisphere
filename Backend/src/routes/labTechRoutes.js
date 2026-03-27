@@ -8,16 +8,14 @@ import {
   getWorkflowOrderById,
   scheduleSampleCollection,
   scheduleReportPickup,
+  markAccessioned,
+  rejectLabOrder,
   markSampleCollected,
   markInProcessing,
   markReportReady,
   releaseReportToPortal,
 } from "../controllers/labTechController.js";
 import { verifyAccessToken, authorizeRoles } from "../middlewares/authMiddleware.js";
-import upload from "../middlewares/uploadMiddleware.js";
-import { uploadLabReport } from "../controllers/labReportController.js";
-import validate from "../middlewares/validate.js";
-import { uploadLabReportSchema } from "../validations/labValidation.js";
 
 const router = express.Router();
 
@@ -32,10 +30,11 @@ router.get("/orders", listWorkflowOrders);
 router.get("/orders/:id", getWorkflowOrderById);
 router.patch("/orders/:id/sample-schedule", scheduleSampleCollection);
 router.patch("/orders/:id/report-pickup", scheduleReportPickup);
+router.patch("/orders/:id/accession", markAccessioned);
+router.patch("/orders/:id/reject", rejectLabOrder);
 router.patch("/orders/:id/sample-collected", markSampleCollected);
 router.patch("/orders/:id/processing", markInProcessing);
 router.patch("/orders/:id/report-ready", markReportReady);
-router.post("/orders/:id/report-upload", validate(uploadLabReportSchema), upload.single("reportFile"), uploadLabReport);
 router.patch("/orders/:id/release", releaseReportToPortal);
 
 export default router;

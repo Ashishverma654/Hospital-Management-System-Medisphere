@@ -13,8 +13,11 @@ import {
   validateLabItemSelection,
 } from "./labOrderController.js";
 import { toStructuredSchedule } from "../utils/labWorkflow.js";
-import { notifyPatient } from "../services/notificationService.js";
+import { notifyEmployee, notifyPatient } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
+import Doctor from "../models/Doctor.js";
+import NurseAssignment from "../models/NurseAssignment.js";
+import Bed from "../models/Bed.js";
 
 const hydrateOrder = async (orderId) => {
   await syncLabOrderPaymentState(orderId);
@@ -37,7 +40,7 @@ export const getDashboardStats = async (req, res) => {
       readyButNotReleased,
       queue,
     ] = await Promise.all([
-      LabOrder.countDocuments({ status: { $in: ["ordered", "awaitingPayment", "paid"] } }),
+      LabOrder.countDocuments({ status: { $in: ["ordered", "awaitingPayment", "paid", "accessioned"] } }),
       LabOrder.countDocuments({
         urgency: { $in: ["urgent", "stat"] },
         status: { $nin: ["completed", "cancelled"] },
@@ -197,6 +200,105 @@ export const scheduleSampleCollection = async (req, res) => {
   }
 };
 
+export const markAccessioned = async (req, res) => {
+  try {
+    const { itemIds = [] } = req.body;
+    const validSelection = await validateLabItemSelection(req.params.id, itemIds);
+    if (!validSelection) {
+      return res.status(400).json({ message: "Selected lab items do not belong to this order." });
+    }
+
+    const now = new Date();
+    const order = await setLabOrderStatusAndItems({
+      orderId: req.params.id,
+      status: "accessioned",
+      itemStatus: "accessioned",
+      itemIds,
+      timestamps: {
+        order: { accessionedAt: now, accessionedBy: req.user.id },
+        item: { accessionedAt: now, accessionedBy: req.user.id },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Lab order not found." });
+    }
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "lab_order_accessioned",
+      entityType: "LabOrder",
+      entityId: order._id,
+      details: { itemIds },
+    });
+
+    res.json({
+      success: true,
+      message: "Order accessioned successfully.",
+      data: await formatOrder(order),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const rejectLabOrder = async (req, res) => {
+  try {
+    const { reason = "", notes = "", itemIds = [] } = req.body;
+    const validSelection = await validateLabItemSelection(req.params.id, itemIds);
+    if (!validSelection) {
+      return res.status(400).json({ message: "Selected lab items do not belong to this order." });
+    }
+
+    const now = new Date();
+    const order = await LabOrder.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Lab order not found." });
+    }
+
+    const itemFilter = {
+      labOrderId: order._id,
+      ...(itemIds.length ? { _id: { $in: itemIds } } : {}),
+    };
+    await LabOrderItem.updateMany(itemFilter, {
+      $set: {
+        status: "rejected",
+        rejectedAt: now,
+        rejectionReason: reason || "Specimen rejected",
+      },
+    });
+
+    const remaining = await LabOrderItem.countDocuments({
+      labOrderId: order._id,
+      status: { $ne: "rejected" },
+    });
+
+    if (!itemIds.length || remaining === 0) {
+      order.status = "rejected";
+      order.rejectedAt = now;
+      order.rejectionReason = reason || "Specimen rejected";
+      order.rejectionNotes = notes || "";
+    }
+    await order.save();
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "lab_order_rejected",
+      entityType: "LabOrder",
+      entityId: order._id,
+      details: { reason, itemIds },
+    });
+
+    res.json({
+      success: true,
+      message: "Lab order updated with rejection.",
+      data: await hydrateOrder(order._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const scheduleReportPickup = async (req, res) => {
   try {
     const { date, time, notes } = req.body;
@@ -300,7 +402,14 @@ export const markInProcessing = async (req, res) => {
 
 export const markReportReady = async (req, res) => {
   try {
-    const { itemIds = [] } = req.body;
+    const {
+      itemIds = [],
+      criticalItemIds = [],
+      criticalNotes = "",
+      reportName,
+      reportType,
+      results = [],
+    } = req.body;
     const validSelection = await validateLabItemSelection(req.params.id, itemIds);
     if (!validSelection) {
       return res.status(400).json({ message: "Selected lab items do not belong to this order." });
@@ -322,10 +431,127 @@ export const markReportReady = async (req, res) => {
       return res.status(404).json({ message: "Lab order not found." });
     }
 
+    if (Array.isArray(results) && results.length) {
+      await Promise.all(
+        results.map((entry) => {
+          const resolvedItemId = entry.itemId || entry.labOrderItemId;
+          if (!resolvedItemId) return null;
+          return LabOrderItem.findOneAndUpdate(
+            {
+              _id: resolvedItemId,
+              labOrderId: order._id,
+            },
+            {
+              $set: {
+                resultValue: entry.resultValue || "",
+                resultUnit: entry.resultUnit || "",
+                referenceRange: entry.referenceRange || "",
+                resultNotes: entry.resultNotes || "",
+              },
+            }
+          );
+        })
+      );
+    }
+
+    const existingReport = await LabReport.findOne({ labOrderId: order._id });
+    if (existingReport) {
+      existingReport.reportName = reportName || existingReport.reportName;
+      existingReport.reportType = reportType || existingReport.reportType;
+      existingReport.status = "ready";
+      existingReport.isSystemGenerated = true;
+      if (!existingReport.reportFile) {
+        existingReport.reportFile = "generated";
+      }
+      await existingReport.save();
+    } else {
+      await LabReport.create({
+        patientId: order.patientId,
+        patientUserId: order.patientUserId,
+        doctorId: order.doctorId,
+        appointmentId: order.appointmentId,
+        reportName: reportName || "Lab Report",
+        reportType: reportType || "Diagnostic Report",
+        reportFile: "generated",
+        uploadedBy: req.user.id,
+        labOrderId: order._id,
+        status: "ready",
+        releasedToPortal: false,
+        isSystemGenerated: true,
+      });
+    }
+
+    const criticalSet = new Set((criticalItemIds || []).map((id) => String(id)));
+    if (criticalSet.size) {
+      await LabOrderItem.updateMany(
+        { labOrderId: order._id, _id: { $in: Array.from(criticalSet) } },
+        { $set: { isCriticalResult: true, criticalNotes } }
+      );
+    }
+    await LabOrderItem.updateMany(
+      {
+        labOrderId: order._id,
+        _id: { $nin: Array.from(criticalSet) },
+        isCriticalResult: true,
+      },
+      { $set: { isCriticalResult: false, criticalNotes: "" } }
+    );
+
+    const hydrated = await formatOrder(order);
+    const flaggedItems = (hydrated.items || []).filter((item) => item.isCriticalResult);
+    if (flaggedItems.length) {
+      const doctor = hydrated.doctorId?._id
+        ? await Doctor.findById(hydrated.doctorId._id).select("userId")
+        : await Doctor.findById(hydrated.doctorId).select("userId");
+      if (doctor?.userId) {
+        await notifyEmployee({
+          userId: doctor.userId,
+          key: `lab:${order._id}:critical`,
+          type: "lab",
+          title: "Critical lab result",
+          message: `Critical lab result flagged for ${hydrated.patientName}.`,
+          priority: "urgent",
+          sourceType: "labOrder",
+          sourceId: order._id,
+          metadata: { criticalTests: flaggedItems.map((item) => item.testName) },
+        });
+      }
+
+      const nowDate = new Date();
+      let nurseIds = [];
+      const bed = await Bed.findOne({
+        patientProfileId: order.patientId,
+        status: "occupied",
+      }).select("wardId");
+      if (bed?.wardId) {
+        const assignments = await NurseAssignment.find({
+          wardId: bed.wardId,
+          status: { $in: ["scheduled", "active"] },
+          $or: [{ assignmentEnd: { $exists: false } }, { assignmentEnd: null }, { assignmentEnd: { $gte: nowDate } }],
+        }).select("nurseUserId");
+        nurseIds = [...new Set(assignments.map((a) => String(a.nurseUserId)).filter(Boolean))];
+      }
+      await Promise.all(
+        nurseIds.map((userId) =>
+          notifyEmployee({
+            userId,
+            key: `lab:${order._id}:critical:${userId}`,
+            type: "lab",
+            title: "Critical lab result",
+            message: `Critical lab result flagged for ${hydrated.patientName}.`,
+            priority: "urgent",
+            sourceType: "labOrder",
+            sourceId: order._id,
+            metadata: { criticalTests: flaggedItems.map((item) => item.testName) },
+          })
+        )
+      );
+    }
+
     res.json({
       success: true,
       message: "Report marked as ready.",
-      data: await formatOrder(order),
+      data: hydrated,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -347,7 +573,7 @@ export const releaseReportToPortal = async (req, res) => {
 
     const reports = await LabReport.find({ labOrderId: order._id });
     if (!reports.length) {
-      return res.status(400).json({ message: "Upload a report before releasing it to the portal." });
+      return res.status(400).json({ message: "Generate the report before releasing it to the portal." });
     }
 
     const releasedAt = new Date();

@@ -6,6 +6,8 @@ import {
   getMyEmployeeNotifications,
   getMyNotifications,
   getUnreadCount,
+  getEmployeeNotificationPreferences,
+  updateEmployeeNotificationPreferences,
   markAllEmployeeNotificationsRead,
   markAllNotificationsRead,
   markEmployeeNotificationRead,
@@ -24,6 +26,8 @@ router.patch("/:id/read", authorizeRoles("patient"), validate(emptyBodySchema), 
 
 router.get("/employee/my", authorizeRoles(...EMPLOYEE_ROLES), getMyEmployeeNotifications);
 router.get("/employee/unread-count", authorizeRoles(...EMPLOYEE_ROLES), getEmployeeUnreadCount);
+router.get("/employee/preferences", authorizeRoles(...EMPLOYEE_ROLES), getEmployeeNotificationPreferences);
+router.put("/employee/preferences", authorizeRoles(...EMPLOYEE_ROLES), updateEmployeeNotificationPreferences);
 router.patch("/employee/read-all", authorizeRoles(...EMPLOYEE_ROLES), validate(emptyBodySchema), markAllEmployeeNotificationsRead);
 router.patch("/employee/:id/read", authorizeRoles(...EMPLOYEE_ROLES), validate(emptyBodySchema), markEmployeeNotificationRead);
 
