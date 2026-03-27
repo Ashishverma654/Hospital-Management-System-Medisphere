@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { receptionistApi } from '../../services/apiServices.js';
 import { Search } from 'lucide-react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function PatientSearch() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,11 @@ export default function PatientSearch() {
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [doctorFilter, setDoctorFilter] = useState('');
   const [showFilters, setShowFilters] = useState(true);
+
+  const goToHistory = (patientId) => {
+    if (!patientId) return;
+    navigate(`/employee/receptionist/history?patientId=${patientId}`);
+  };
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -124,18 +130,20 @@ export default function PatientSearch() {
                 >
                   Book Appointment
                 </Link>
-                <Link
-                  to={`/employee/receptionist/history?patientId=${patient.id}`}
+                <button
+                  type="button"
+                  onClick={() => goToHistory(patient.id)}
                   className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
                 >
                   View History
-                </Link>
-                <Link
-                  to={`/employee/receptionist/history?patientId=${patient.id}`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToHistory(patient.id)}
                   className="rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
                 >
                   Review
-                </Link>
+                </button>
               </div>
             </article>
           ))}
