@@ -339,11 +339,31 @@ export const findAccountForHelp = async (req, res) => {
       return res.status(400).json({ message: "First name, last name, and date of birth are required" });
     }
 
-    // Attempt to match name exactly (case-insensitive)
-    const fullNameRegex = new RegExp(`^${firstName}\\s+${lastName}$`, 'i');
-    
-    // Find users by name
-    const users = await User.find({ name: fullNameRegex });
+    const normalize = (value = "") => value.trim().toLowerCase().replace(/\s+/g, " ");
+    const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const first = normalize(firstName);
+    const last = normalize(lastName);
+    const firstRegex = new RegExp(`\\b${escapeRegex(first)}\\b`, "i");
+    const lastRegex = new RegExp(`\\b${escapeRegex(last)}\\b`, "i");
+    const fullNameRegex = new RegExp(`\\b${escapeRegex(first)}\\b.*\\b${escapeRegex(last)}\\b`, "i");
+    const reverseNameRegex = new RegExp(`\\b${escapeRegex(last)}\\b.*\\b${escapeRegex(first)}\\b`, "i");
+
+    // Find patient users by name (flexible match)
+    const users = await User.find({
+      role: PATIENT_ROLE,
+      $or: [
+        { name: { $regex: fullNameRegex } },
+        { name: { $regex: reverseNameRegex } },
+        { $and: [{ name: { $regex: firstRegex } }, { name: { $regex: lastRegex } }] },
+        {
+          $and: [
+            { firstName: { $regex: new RegExp(`^${escapeRegex(first)}$`, "i") } },
+            { lastName: { $regex: new RegExp(`^${escapeRegex(last)}$`, "i") } },
+          ],
+        },
+      ],
+    });
     
     // Filter by DOB (ignoring time components)
     const targetDate = new Date(dob);
