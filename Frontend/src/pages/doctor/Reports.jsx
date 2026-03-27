@@ -31,8 +31,13 @@ export default function DoctorReports() {
       });
       const options = Array.from(map.values());
       setPatients(options);
-      if (!selectedPatientId && options.length) {
-        setSelectedPatientId(options[0].id);
+      if (options.length) {
+        const nextId = selectedPatientId || options[0].id;
+        setSelectedPatientId(nextId);
+        await loadReports(nextId);
+      } else {
+        setSelectedPatientId('');
+        setReports([]);
       }
     } catch {
       setPatients([]);
@@ -84,16 +89,23 @@ export default function DoctorReports() {
         render: (date) => (date ? new Date(date).toLocaleDateString() : '—'),
       },
       {
-        key: 'reportFile',
+        key: 'downloadUrl',
         label: 'File',
-        render: (url) =>
-          url ? (
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
-              Download
-            </a>
+        render: (_value, row) => {
+          const url = row.downloadUrl || row.reportFile;
+          return url ? (
+            <div className="flex items-center gap-3 text-sm">
+              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                View
+              </a>
+              <a href={url} download className="text-muted-foreground hover:text-foreground">
+                Download
+              </a>
+            </div>
           ) : (
             '—'
-          ),
+          );
+        },
       },
     ],
     []

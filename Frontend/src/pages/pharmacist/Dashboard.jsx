@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
+import StaffDutyCalendar from '../../components/StaffDutyCalendar.jsx';
 import { pharmacistApi, pharmacyApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -50,6 +51,7 @@ export default function PharmacistDashboard() {
       </div>
 
       <StaffDutyWidget />
+      <StaffDutyCalendar />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map(([key, label]) => (

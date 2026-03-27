@@ -28,6 +28,9 @@ export default function PharmacistOrders({
   const [itemInputs, setItemInputs] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState('');
+  const [verificationNotes, setVerificationNotes] = useState('');
+  const [counselingCompleted, setCounselingCompleted] = useState(false);
+  const [substitutions, setSubstitutions] = useState({});
 
   const loadOrders = async () => {
     setLoading(true);
@@ -61,6 +64,20 @@ export default function PharmacistOrders({
           ])
         )
       );
+      setSubstitutions(
+        Object.fromEntries(
+          (data.items || []).map((item, index) => [
+            index,
+            {
+              originalMedicineName: item.substitution?.originalMedicineName || item.medicineName,
+              substitutedMedicineName: item.substitution?.substitutedMedicineName || '',
+              reason: item.substitution?.reason || '',
+            },
+          ])
+        )
+      );
+      setVerificationNotes(data.verificationNotes || '');
+      setCounselingCompleted(Boolean(data.counselingCompleted));
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load order detail.');
     }
@@ -97,6 +114,13 @@ export default function PharmacistOrders({
     Object.entries(itemInputs).map(([index, value]) => ({
       index: Number(index),
       fulfilledQuantity: Number(value.fulfilledQuantity || 0),
+      substitution: substitutions[index]?.substitutedMedicineName
+        ? {
+            originalMedicineName: substitutions[index]?.originalMedicineName,
+            substitutedMedicineName: substitutions[index]?.substitutedMedicineName,
+            reason: substitutions[index]?.reason,
+          }
+        : undefined,
     }));
 
   const runAction = async (label, action) => {
@@ -130,6 +154,7 @@ export default function PharmacistOrders({
             <option value="">All statuses</option>
             <option value="orderPlaced">Order placed</option>
             <option value="orderAccepted">Order accepted</option>
+            <option value="verified">Verified</option>
             <option value="awaitingPayment">Awaiting payment</option>
             <option value="paid">Paid</option>
             <option value="preparing">Preparing</option>
@@ -234,6 +259,44 @@ export default function PharmacistOrders({
                           />
                         </div>
                       )}
+                      {!historyOnly && (
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                          <input
+                            value={substitutions[index]?.substitutedMedicineName || ''}
+                            onChange={(event) =>
+                              setSubstitutions((current) => ({
+                                ...current,
+                                [index]: {
+                                  ...current[index],
+                                  originalMedicineName: item.medicineName,
+                                  substitutedMedicineName: event.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Substitute medicine name"
+                            className="rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                          />
+                          <input
+                            value={substitutions[index]?.reason || ''}
+                            onChange={(event) =>
+                              setSubstitutions((current) => ({
+                                ...current,
+                                [index]: {
+                                  ...current[index],
+                                  reason: event.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Substitution reason"
+                            className="rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary"
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {item.substitution?.substitutedMedicineName
+                              ? `Substituted: ${item.substitution.substitutedMedicineName}`
+                              : 'No substitution applied'}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -246,8 +309,11 @@ export default function PharmacistOrders({
                   <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(selectedOrder.total || 0).toLocaleString()}</span></div>
                   <div className="flex items-center justify-between"><span>Payment</span><span className="capitalize">{selectedOrder.paymentStatus}</span></div>
                   <div className="flex items-center justify-between"><span>Accepted</span><span>{selectedOrder.acceptedAt ? new Date(selectedOrder.acceptedAt).toLocaleString() : 'Pending'}</span></div>
+                  <div className="flex items-center justify-between"><span>Verified</span><span>{selectedOrder.verifiedAt ? new Date(selectedOrder.verifiedAt).toLocaleString() : 'Pending'}</span></div>
                   <div className="flex items-center justify-between"><span>Ready</span><span>{selectedOrder.readyAt ? new Date(selectedOrder.readyAt).toLocaleString() : 'Pending'}</span></div>
                   <div className="flex items-center justify-between"><span>Completed</span><span>{selectedOrder.completedAt ? new Date(selectedOrder.completedAt).toLocaleString() : 'Pending'}</span></div>
+                  <div className="flex items-center justify-between"><span>Dispensed</span><span>{selectedOrder.dispensedAt ? new Date(selectedOrder.dispensedAt).toLocaleString() : 'Pending'}</span></div>
+                  <div className="flex items-center justify-between"><span>Counseling</span><span>{selectedOrder.counselingCompleted ? 'Completed' : 'Pending'}</span></div>
                 </div>
               </article>
 
@@ -258,18 +324,38 @@ export default function PharmacistOrders({
                     <Button variant="outline" disabled={saving === 'accept'} onClick={() => runAction('accept', () => pharmacyOrderApi.accept(selectedOrder.id, { items: itemPayload() }))}>
                       {saving === 'accept' ? 'Working...' : 'Accept order'}
                     </Button>
+                    <Button variant="outline" disabled={saving === 'verify'} onClick={() => runAction('verify', () => pharmacyOrderApi.verify(selectedOrder.id, { items: itemPayload(), verificationNotes }))}>
+                      {saving === 'verify' ? 'Working...' : 'Verify order'}
+                    </Button>
                     <Button variant="outline" disabled={saving === 'prepare'} onClick={() => runAction('prepare', () => pharmacyOrderApi.markPreparing(selectedOrder.id, { items: itemPayload() }))}>
                       {saving === 'prepare' ? 'Working...' : 'Move to preparing'}
                     </Button>
                     <Button variant="outline" disabled={saving === 'ready'} onClick={() => runAction('ready', () => pharmacyOrderApi.markReady(selectedOrder.id, { items: itemPayload() }))}>
                       {saving === 'ready' ? 'Working...' : 'Mark ready for pickup'}
                     </Button>
-                    <Button disabled={saving === 'complete'} onClick={() => runAction('complete', () => pharmacyOrderApi.complete(selectedOrder.id))}>
+                    <Button disabled={saving === 'complete'} onClick={() => runAction('complete', () => pharmacyOrderApi.complete(selectedOrder.id, { counselingCompleted }))}>
                       {saving === 'complete' ? 'Working...' : 'Mark completed'}
                     </Button>
                     <Button variant="destructive" disabled={saving === 'cancel'} onClick={() => runAction('cancel', () => pharmacyOrderApi.cancel(selectedOrder.id))}>
                       {saving === 'cancel' ? 'Working...' : 'Cancel order'}
                     </Button>
+                  </div>
+                  <div className="mt-4 grid gap-3">
+                    <textarea
+                      value={verificationNotes}
+                      onChange={(event) => setVerificationNotes(event.target.value)}
+                      placeholder="Verification notes (interaction check, substitutions, warnings)"
+                      className="min-h-[80px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                    />
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={counselingCompleted}
+                        onChange={(event) => setCounselingCompleted(event.target.checked)}
+                      />
+                      Counseling completed with patient
+                    </label>
                   </div>
                   {selectedOrder.paymentStatus !== 'paid' && (
                     <p className="mt-3 text-xs text-amber-700">Final completion is blocked until payment is marked paid.</p>

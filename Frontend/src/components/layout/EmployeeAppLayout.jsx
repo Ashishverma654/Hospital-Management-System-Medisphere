@@ -28,6 +28,7 @@ const buildNavItems = (role, homeRoute) => {
   const canAccessGovernance = ['superadmin', 'admin'].includes(role);
   const canManageWardsBeds = ['superadmin', 'admin', 'subadmin'].includes(role);
   const canManageDoctors = ['superadmin', 'admin'].includes(role);
+  const hasSchedulingHub = ['superadmin', 'admin', 'subadmin'].includes(role);
   const profilePath = role === 'labTechnician' ? '/employee/lab-technician/profile' : '/employee/profile';
 
   const sections = [];
@@ -37,7 +38,7 @@ const buildNavItems = (role, homeRoute) => {
     label: 'Overview',
     items: [
       { to: homeRoute, label: `Dashboard`, icon: LayoutDashboard },
-      { to: '/employee/shifts/calendar', label: 'Shift Calendar', icon: Calendar },
+      ...(hasSchedulingHub ? [] : [{ to: '/employee/shifts/calendar', label: 'Shift Calendar', icon: Calendar }]),
     ],
   });
 
@@ -50,7 +51,6 @@ const buildNavItems = (role, homeRoute) => {
         { to: '/employee/receptionist/appointments', label: 'Book Appointment', icon: Calendar },
         { to: '/employee/receptionist/queue', label: 'Today Queue', icon: Clock },
         { to: '/employee/receptionist/patients', label: 'Search Patients', icon: Users },
-        { to: '/employee/receptionist/history', label: 'Patient History', icon: NotepadText },
         { to: '/employee/billing', label: 'Billing', icon: CreditCard },
       ],
     });
@@ -92,6 +92,21 @@ const buildNavItems = (role, homeRoute) => {
     });
   }
 
+  if (role === 'doctor') {
+    sections.push({
+      label: 'Clinical',
+      items: [
+        { to: '/doctor', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/doctor/appointments', label: 'Appointments', icon: Calendar },
+        { to: '/doctor/patients', label: 'Patients', icon: Users },
+        { to: '/doctor/prescriptions', label: 'Prescriptions', icon: NotepadText },
+        { to: '/doctor/lab-orders', label: 'Lab Orders', icon: FlaskConical },
+        { to: '/doctor/reports', label: 'Lab Reports', icon: FileBarChart },
+        { to: '/doctor/availability', label: 'Availability', icon: Activity },
+      ],
+    });
+  }
+
   if (canManageUsers) {
     sections.push({
       label: 'Staff',
@@ -117,8 +132,12 @@ const buildNavItems = (role, homeRoute) => {
       items: [
         { to: '/employee/wards', label: 'Wards', icon: BedDouble },
         { to: '/employee/beds', label: 'Beds', icon: BedDouble },
-        { to: '/employee/nurse-assignments', label: 'Staff Duty', icon: ClipboardList },
-        { to: '/employee/shifts', label: 'Shifts', icon: Clock },
+        ...(hasSchedulingHub
+          ? [{ to: '/employee/scheduling', label: 'Scheduling', icon: Calendar }]
+          : [
+              { to: '/employee/nurse-assignments', label: 'Staff Duty', icon: ClipboardList },
+              { to: '/employee/shifts', label: 'Shifts', icon: Clock },
+            ]),
         { to: '/employee/staff-availability', label: 'Staff Availability', icon: Activity },
       ],
     });
@@ -130,9 +149,14 @@ const buildNavItems = (role, homeRoute) => {
       items: [
         { to: '/employee/wards', label: 'Wards', icon: BedDouble },
         { to: '/employee/beds', label: 'Beds', icon: BedDouble },
-        { to: '/employee/nurse-assignments', label: 'Staff Duty', icon: ClipboardList },
-        { to: '/employee/shifts', label: 'Shifts', icon: Clock },
+        ...(hasSchedulingHub
+          ? [{ to: '/employee/scheduling', label: 'Scheduling', icon: Calendar }]
+          : [
+              { to: '/employee/nurse-assignments', label: 'Staff Duty', icon: ClipboardList },
+              { to: '/employee/shifts', label: 'Shifts', icon: Clock },
+            ]),
         { to: '/employee/staff-availability', label: 'Staff Availability', icon: Activity },
+        { to: '/employee/test-prices', label: 'Lab Tests & Pricing', icon: FlaskConical },
         { to: '/employee/admissions', label: 'Admissions', icon: Users },
         { to: '/employee/departments', label: 'Departments', icon: Building2 },
         { to: '/employee/locations', label: 'Locations', icon: MapPin },

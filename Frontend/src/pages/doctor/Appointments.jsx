@@ -301,7 +301,7 @@ export default function DoctorAppointments() {
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{_pending}</div>
+            <div className="text-2xl font-bold text-primary">{_pending}</div>
           </CardContent>
         </Card>
         <Card className="bg-background/50">
@@ -309,7 +309,7 @@ export default function DoctorAppointments() {
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{_completed}</div>
+            <div className="text-2xl font-bold text-secondary">{_completed}</div>
           </CardContent>
         </Card>
       </div>

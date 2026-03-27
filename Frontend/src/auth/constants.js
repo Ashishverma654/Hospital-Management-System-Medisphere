@@ -69,7 +69,7 @@ export const EMPLOYEE_DASHBOARD_META = {
     eyebrow: 'Delegated Operations',
     title: 'Subadmin dashboard',
     description: 'Delegated staff-management and day-to-day operational tools for subadmins will be added here in later modules.',
-    highlights: ['Delegated access', 'Ward support', 'Staff coordination'],
+    highlights: ['Shift approvals', 'Ward escalation desk', 'Staff duty compliance'],
   },
   doctor: {
     eyebrow: 'Clinical Workspace',

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
+import StaffDutyCalendar from '../../components/StaffDutyCalendar.jsx';
 import { labTechApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { toast } from 'sonner';
@@ -66,6 +67,7 @@ export default function LabTechDashboard() {
       </div>
 
       <StaffDutyWidget />
+      <StaffDutyCalendar />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {stats.map((stat) => (

@@ -291,9 +291,7 @@ export default function WardManagement() {
         <div>
           <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Inpatient Master Data</p>
           <h2 className="mt-2 text-3xl font-semibold text-foreground">Ward management</h2>
-          <p className="mt-2 max-w-3xl text-muted-foreground">
-            Manage wards with auto-generated beds, occupancy tracking, department linking, and ward-level configurations.
-          </p>
+          
         </div>
         <Button onClick={() => { setEditingItem(null); setForm(initialForm); setShowForm(true); }}>
           <Plus className="mr-2 h-4 w-4" />

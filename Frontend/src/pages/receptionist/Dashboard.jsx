@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
+import StaffDutyCalendar from '../../components/StaffDutyCalendar.jsx';
 import { billingApi, receptionistApi } from '../../services/apiServices.js';
 import { Calendar, CreditCard, FilePlus, UserPlus, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,23 +55,34 @@ export default function ReceptionistDashboard() {
           <h2 className="text-3xl font-bold tracking-tight">Front Desk Dashboard</h2>
           <p className="text-muted-foreground">Operate today&apos;s queue, patient onboarding, and appointment flow from one receptionist workspace.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link to="/employee/receptionist/register-patient"><UserPlus className="mr-2 h-4 w-4" /> Register Patient</Link>
+        <div className="flex w-full flex-wrap gap-3 md:w-auto">
+          <Button asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">
+            <Link to="/employee/receptionist/register-patient" className="inline-flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Register Patient
+            </Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/employee/receptionist/appointments"><Calendar className="mr-2 h-4 w-4" /> Book Appointment</Link>
+          <Button variant="outline" asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">
+            <Link to="/employee/receptionist/appointments" className="inline-flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Book Appointment
+            </Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/employee/receptionist/queue">Open Today&apos;s Queue</Link>
+          <Button variant="outline" asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">
+            <Link to="/employee/receptionist/queue" className="inline-flex items-center gap-2">
+              Open Today&apos;s Queue
+            </Link>
           </Button>
-          <Button variant="outline" asChild>
-            <Link to="/employee/receptionist/patients">Search Patient</Link>
+          <Button variant="outline" asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">
+            <Link to="/employee/receptionist/patients" className="inline-flex items-center gap-2">
+              Search Patient
+            </Link>
           </Button>
         </div>
       </div>
 
       <StaffDutyWidget />
+      <StaffDutyCalendar />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (

@@ -16,6 +16,19 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const fallbackLocationImage = 'https://images.unsplash.com/photo-1504814532849-9271f9d406ac?q=80&w=1200&auto=format&fit=crop';
+  const assetBase = (() => {
+    const raw = import.meta.env.VITE_API_URL;
+    if (!raw) return '';
+    const trimmed = raw.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed.slice(0, -4) : trimmed;
+  })();
+  const resolveLocationImage = (url) => {
+    if (!url) return fallbackLocationImage;
+    if (/^https?:\/\//i.test(url)) return url;
+    if (url.startsWith('/') && assetBase) return `${assetBase}${url}`;
+    return url;
+  };
 
   useEffect(() => {
     const loadHomepage = async () => {
@@ -51,7 +64,12 @@ export default function Home() {
       )}
 
       {/* ── Hero Section ──────────────────────────────────────── */}
-      <section className="relative px-4 py-16 sm:px-6 lg:py-24">
+      <section className="relative min-h-[100svh] px-4 py-16 sm:px-6 lg:py-24">
+        <div
+          className="absolute inset-0 bg-cover bg-center brightness-75 contrast-110"
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2000&auto=format&fit=crop')" }}
+        />
+        <div className="absolute inset-0 bg-background/70" />
         {/* Decorative blobs */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary/5 blur-3xl animate-float" />
@@ -102,39 +120,53 @@ export default function Home() {
               variants={staggerContainer}
               initial="initial"
               animate="animate"
-              className="grid grid-cols-2 gap-4"
+              className="rounded-3xl p-4 sm:p-6"
             >
-              <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div className="grid grid-cols-2 gap-4">
+                <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.featuredDoctors.length}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Featured Doctors</p>
+                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                  <div className="h-full w-2/3 rounded-full bg-primary/60" />
+                </div>
               </motion.div>
 
-              <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+                <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10">
                   <Building2 className="h-5 w-5 text-secondary" />
                 </div>
                 <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.featuredDepartments.length}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Departments</p>
+                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                  <div className="h-full w-1/2 rounded-full bg-secondary/60" />
+                </div>
               </motion.div>
 
-              <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+                <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10">
                   <MapPin className="h-5 w-5 text-accent" />
                 </div>
                 <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.locations.length}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Locations</p>
+                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                  <div className="h-full w-5/6 rounded-full bg-accent/60" />
+                </div>
               </motion.div>
 
-              <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
+                <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chart-5/10">
                   <Award className="h-5 w-5 text-chart-5" />
                 </div>
                 <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.awards.length}</p>
                 <p className="mt-1 text-sm text-muted-foreground">Awards Won</p>
+                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                  <div className="h-full w-1/3 rounded-full bg-chart-5/60" />
+                </div>
               </motion.div>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -269,7 +301,7 @@ export default function Home() {
             <motion.div {...fadeInLeft}>
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Clinical</span>
               <h2 className="mt-2 text-2xl font-bold text-foreground">Departments</h2>
-              <div className="mt-5 grid gap-3">
+              <div className="mt-5 grid gap-3 md:grid-cols-2">
                 {content.featuredDepartments.map((dept) => (
                   <div key={dept._id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary/30">
                     <div className="flex items-center gap-3">
@@ -294,145 +326,108 @@ export default function Home() {
 
       {/* ── Awards & Locations ────────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 bg-muted/30">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-2">
-            {/* Awards */}
-            <motion.div {...fadeInUp}>
-              <div className="flex items-center gap-2 mb-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-chart-5/10">
-                  <Award className="h-4 w-4 text-chart-5" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-chart-5">Recognition</span>
-                  <h2 className="text-2xl font-bold text-foreground">Hospital Awards</h2>
-                </div>
+        <div className="mx-auto max-w-7xl space-y-12">
+          {/* Awards */}
+          <motion.div {...fadeInUp}>
+            <div className="flex items-center gap-2 mb-6">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-chart-5/10">
+                <Award className="h-4 w-4 text-chart-5" />
               </div>
-              <div className="space-y-3">
-                {content.awards.map((award) => (
-                  <div key={award._id} className="group rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md hover:border-chart-5/30">
-                    <div className="flex gap-4">
-                      {award.image && (
-                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                          <img 
-                            src={award.image} 
-                            alt={award.title} 
-                            className="h-full w-full object-cover transition-transform group-hover:scale-110" 
-                          />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-foreground">{award.title}</p>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                              <p className="text-sm text-muted-foreground">{award.organization}</p>
-                              {award.issuedByType && (
-                                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                                  {award.issuedByType}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1 flex items-center gap-2">
-                              <p className="text-xs text-primary font-medium">{award.category}</p>
-                              {award.year && (
-                                <span className="text-xs text-muted-foreground">•</span>
-                              )}
-                              {award.year && (
-                                <span className="text-xs text-muted-foreground">{award.year}</span>
-                              )}
-                            </div>
-                            {award.description && (
-                              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{award.description}</p>
-                            )}
-                          </div>
-                        </div>
-                        {award.certificateUrl && (
-                          <a 
-                            href={award.certificateUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-chart-5 hover:underline"
-                          >
-                            View Certificate
-                          </a>
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-chart-5">Recognition</span>
+                <h2 className="text-2xl font-bold text-foreground">Hospital Awards</h2>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {content.awards.map((award) => (
+                <div key={award._id} className="group rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md hover:border-chart-5/30">
+                  <div className="flex gap-4">
+                    {award.image && (
+                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                        <img 
+                          src={award.image} 
+                          alt={award.title} 
+                          className="h-full w-full object-cover transition-transform group-hover:scale-110" 
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-foreground">{award.title}</p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                        <p className="text-sm text-muted-foreground">{award.organization}</p>
+                        {award.issuedByType && (
+                          <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            {award.issuedByType}
+                          </span>
                         )}
                       </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="text-xs text-primary font-medium">{award.category}</p>
+                        {award.year && <span className="text-xs text-muted-foreground">•</span>}
+                        {award.year && <span className="text-xs text-muted-foreground">{award.year}</span>}
+                      </div>
+                      {award.description && (
+                        <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{award.description}</p>
+                      )}
+                      {award.certificateUrl && (
+                        <a 
+                          href={award.certificateUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-chart-5 hover:underline"
+                        >
+                          View Certificate
+                        </a>
+                      )}
                     </div>
                   </div>
-                ))}
-                {!loading && content.awards.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Awards will appear here once published.</p>
-                )}
-              </div>
-            </motion.div>
+                </div>
+              ))}
+              {!loading && content.awards.length === 0 && (
+                <p className="text-sm text-muted-foreground">Awards will appear here once published.</p>
+              )}
+            </div>
+          </motion.div>
 
-            {/* Locations */}
-            <motion.div {...fadeInUp}>
-              <div className="flex items-center gap-2 mb-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
-                  <MapPin className="h-4 w-4 text-accent" />
-                </div>
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Branches</span>
-                  <h2 className="text-2xl font-bold text-foreground">Hospital Locations</h2>
-                </div>
+          {/* Locations */}
+          <motion.div {...fadeInUp}>
+            <div className="flex items-center gap-2 mb-6">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10">
+                <MapPin className="h-4 w-4 text-accent" />
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {content.locations.map((location) => (
-                  <div key={location._id} className="rounded-xl border border-border bg-card p-4 transition-colors hover:border-accent/30">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Branches</span>
+                <h2 className="text-2xl font-bold text-foreground">Hospital Locations</h2>
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {content.locations.map((location) => (
+                <div key={location._id} className="overflow-hidden rounded-xl border border-border bg-card transition-colors hover:border-accent/30">
+                  <div className="h-32 w-full bg-muted">
+                    <img
+                      src={resolveLocationImage(location.image)}
+                      alt={location.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => { e.currentTarget.src = fallbackLocationImage; }}
+                    />
+                  </div>
+                  <div className="p-4">
                     <p className="font-semibold text-foreground">{location.name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {[location.city, location.state].filter(Boolean).join(', ')}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">{location.address}</p>
                   </div>
-                ))}
-                {!loading && content.locations.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Locations will appear once configured.</p>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA Banner ────────────────────────────────────────── */}
-      <section className="px-4 py-16 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="relative overflow-hidden rounded-3xl gradient-hero px-8 py-14 text-center text-white sm:px-16"
-          >
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 blur-3xl" />
-              <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-white/5 blur-3xl" />
-            </div>
-            <div className="relative">
-              <h2 className="text-3xl font-bold sm:text-4xl">Ready to take control of your health?</h2>
-              <p className="mx-auto mt-4 max-w-xl text-white/80">
-                Join MediFlow today and experience modern healthcare management. Book appointments, access records, and connect with top specialists.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link
-                  to="/patient/register"
-                  className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary shadow-lg transition-all hover:shadow-xl hover:brightness-95 active:scale-[0.97]"
-                >
-                  Create Free Account
-                </Link>
-                <Link
-                  to="/find-doctors"
-                  className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10"
-                >
-                  Explore Doctors
-                </Link>
-              </div>
+                </div>
+              ))}
+              {!loading && content.locations.length === 0 && (
+                <p className="text-sm text-muted-foreground">Locations will appear once configured.</p>
+              )}
             </div>
           </motion.div>
         </div>
       </section>
+
     </div>
   );
 }

@@ -152,9 +152,9 @@ export default function AnalyticsDashboard() {
           <CardHeader>
             <CardTitle className="text-base font-semibold text-foreground">Revenue breakdown</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="grid gap-3 sm:grid-cols-2">
             {revenue.breakdown.length === 0 && (
-              <p className="text-sm text-muted-foreground">No revenue data available yet.</p>
+              <p className="text-sm text-muted-foreground sm:col-span-2">No revenue data available yet.</p>
             )}
             {revenue.breakdown.map((entry) => (
               <div key={entry.billType} className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-sm">
@@ -169,8 +169,8 @@ export default function AnalyticsDashboard() {
           <CardHeader>
             <CardTitle className="text-base font-semibold text-foreground">Patient flow</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {flow.length === 0 && <p className="text-sm text-muted-foreground">No appointments yet.</p>}
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            {flow.length === 0 && <p className="text-sm text-muted-foreground sm:col-span-2">No appointments yet.</p>}
             {flow.map((entry) => (
               <div key={entry.status} className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-sm">
                 <span className="capitalize text-foreground">{entry.status}</span>

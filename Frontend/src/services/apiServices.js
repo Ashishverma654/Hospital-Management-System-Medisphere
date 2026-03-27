@@ -86,6 +86,7 @@ export const appointmentApi = {
   reschedule: (id, body) => api.put(`/appointments/${id}/reschedule`, body),
   getDoctorToday: () => api.get('/appointments/doctor/today'),
   getDoctorAll: () => api.get('/appointments/doctor/all'),
+  getDoctorById: (id) => api.get(`/appointments/doctor/${id}`),
   complete: (id) => api.put(`/appointments/${id}/complete`),
   recommendAdmission: (id, body) => api.put(`/appointments/${id}/recommend-admission`, body),
   getPatientHistory: (patientId) => api.get(`/appointments/patient-history/${patientId}`),
@@ -138,9 +139,10 @@ export const pharmacyOrderApi = {
   getPharmacistOrders: (params) => api.get('/pharmacists/orders', { params }),
   getPharmacistOrder: (id) => api.get(`/pharmacists/orders/${id}`),
   accept: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/accept`, body),
+  verify: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/verify`, body),
   markPreparing: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/preparing`, body),
   markReady: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/ready`, body),
-  complete: (id) => api.patch(`/pharmacists/orders/${id}/complete`),
+  complete: (id, body = {}) => api.patch(`/pharmacists/orders/${id}/complete`, body),
   cancel: (id) => api.patch(`/pharmacists/orders/${id}/cancel`),
 };
 
@@ -154,6 +156,18 @@ export const labReportApi = {
   getMy: () => api.get('/lab-reports/my'),
   getByPatient: (patientId) => api.get(`/lab-reports/patient/${patientId}`),
   upload: (formData) => api.post('/lab-reports/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+};
+
+export const labTestApi = {
+  getAll: (params) => api.get('/tests', { params }),
+  create: (body) => api.post('/tests', body),
+  update: (id, body) => api.put(`/tests/${id}`, body),
+};
+
+export const testPriceApi = {
+  getAll: (params) => api.get('/test-prices', { params }),
+  create: (body) => api.post('/test-prices', body),
+  update: (id, body) => api.put(`/test-prices/${id}`, body),
 };
 
 export const labOrderApi = {
@@ -174,6 +188,8 @@ export const labTechApi = {
   getPendingReports: () => api.get('/lab-techs/pending-reports'),
   scheduleSampleCollection: (id, body) => api.patch(`/lab-techs/orders/${id}/sample-schedule`, body),
   scheduleReportPickup: (id, body) => api.patch(`/lab-techs/orders/${id}/report-pickup`, body),
+  markAccessioned: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/accession`, body),
+  rejectOrder: (id, body) => api.patch(`/lab-techs/orders/${id}/reject`, body),
   markSampleCollected: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/sample-collected`, body),
   markInProcessing: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/processing`, body),
   markReportReady: (id, body = {}) => api.patch(`/lab-techs/orders/${id}/report-ready`, body),
@@ -223,6 +239,7 @@ export const staffDutyApi = {
   end: (body) => api.post('/staff-duty/end', body),
   markLeave: (body) => api.post('/staff-duty/leave', body),
   getStats: (params) => api.get('/staff-duty/stats', { params }),
+  getHistory: (params) => api.get('/staff-duty/history', { params }),
 };
 
 export const nurseAssignmentApi = {
@@ -272,6 +289,7 @@ export const analyticsApi = {
 
 export const adminApi = {
   getDashboardStats: () => api.get('/admin/dashboard'),
+  getSubadminDashboard: () => api.get('/admin/subadmin-dashboard'),
   createUser: (body) => api.post('/admin/create-user', body),
   getAllUsers: (params) => api.get('/admin/users', { params }),
   getHistory: () => api.get('/admin/history'),
@@ -294,7 +312,10 @@ export const userApi = {
 export const receptionistApi = {
   getDashboard: () => api.get('/receptionists/dashboard'),
   registerPatient: (body) => api.post('/receptionists/patients', body),
-  searchPatients: (query) => api.get('/receptionists/patients/search', { params: { query } }),
+  searchPatients: (params) => {
+    const queryParams = typeof params === 'string' ? { query: params } : params;
+    return api.get('/receptionists/patients/search', { params: queryParams });
+  },
   getBookingOptions: (params) => api.get('/receptionists/booking-options', { params }),
   getPatientHistory: (patientId) => api.get(`/receptionists/patients/${patientId}/history`),
 };
@@ -325,11 +346,13 @@ export const notificationsApi = {
   getMy: () => api.get('/notifications/my'),
   getUnreadCount: () => api.get('/notifications/unread-count'),
   markRead: (id) => api.patch(`/notifications/${id}/read`),
-  markAllRead: () => api.patch('/notifications/read-all'),
+  markAllRead: () => api.patch('/notifications/read-all', {}),
   getMyEmployee: () => api.get('/notifications/employee/my'),
   getEmployeeUnreadCount: () => api.get('/notifications/employee/unread-count'),
+  getEmployeePreferences: () => api.get('/notifications/employee/preferences'),
+  updateEmployeePreferences: (body) => api.put('/notifications/employee/preferences', body),
   markReadEmployee: (id) => api.patch(`/notifications/employee/${id}/read`),
-  markAllReadEmployee: () => api.patch('/notifications/employee/read-all'),
+  markAllReadEmployee: () => api.patch('/notifications/employee/read-all', {}),
 };
 
 export const fileApi = {

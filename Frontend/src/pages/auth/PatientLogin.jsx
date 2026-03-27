@@ -15,7 +15,7 @@ import {
   resetPassword,
   sendLoginOtp,
 } from '../../services/authService.js';
-import { loginSuccess } from '../../store/authSlice.js';
+import { loginSuccess, logout } from '../../store/authSlice.js';
 import { getEmployeeHomeRoute } from '../../auth/constants.js';
 
 const initialResetState = {
@@ -42,6 +42,7 @@ export default function PatientLogin() {
   const [form, setForm] = useState(initialResetState);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [cooldownNow, setCooldownNow] = useState(Date.now());
+  const [staffSessionDetected, setStaffSessionDetected] = useState(false);
 
   const updateField = (field, value) => {
     const digitOnlyFields = ['phone', 'pin', 'otp', 'newPin'];
@@ -54,6 +55,14 @@ export default function PatientLogin() {
     const timer = setInterval(() => setCooldownNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [cooldownUntil]);
+
+  useEffect(() => {
+    if (isAuthenticated && sessionType !== 'patient') {
+      setStaffSessionDetected(true);
+      dispatch(logout());
+      localStorage.removeItem('mediflow_auth');
+    }
+  }, [isAuthenticated, sessionType, dispatch]);
 
   const cooldownSeconds = Math.max(0, Math.ceil((cooldownUntil - cooldownNow) / 1000));
 
@@ -69,7 +78,6 @@ export default function PatientLogin() {
   if (isAuthenticated) {
     if (user?.mustResetPassword) return <Navigate to="/force-password-change" replace />;
     if (sessionType === 'patient' && user?.role === 'patient') return <Navigate to="/patient/dashboard" replace />;
-    return <Navigate to={getEmployeeHomeRoute(user?.role)} replace />;
   }
 
   const completeLogin = ({ user, token, sessionType }) => {
@@ -215,6 +223,11 @@ export default function PatientLogin() {
             This sign-in is for patients. Hospital staff should use the{' '}
             <Link to="/employee/login" className="font-medium text-primary hover:underline">employee portal</Link>.
           </div>
+          {staffSessionDetected && (
+            <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-primary">
+              You were signed in as staff. For security, the staff session was cleared. Please sign in as a patient.
+            </div>
+          )}
 
           {/* Forms */}
           <AnimatePresence mode="wait">

@@ -51,16 +51,38 @@ export default function ProfilePage() {
     saving: false
   });
 
+  const deriveNameParts = (profile) => {
+    if (!profile?.name) {
+      return { firstName: '', middleName: '', lastName: '' };
+    }
+    const parts = profile.name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      return { firstName: '', middleName: '', lastName: '' };
+    }
+    if (parts.length === 1) {
+      return { firstName: parts[0], middleName: '', lastName: '' };
+    }
+    if (parts.length === 2) {
+      return { firstName: parts[0], middleName: '', lastName: parts[1] };
+    }
+    return {
+      firstName: parts[0],
+      middleName: parts.slice(1, -1).join(' '),
+      lastName: parts[parts.length - 1],
+    };
+  };
+
   const loadProfile = async () => {
     setLoading(true);
     try {
       const response = await userApi.getMe();
       const profile = response.data || response;
+      const derivedNameParts = deriveNameParts(profile);
       
       const formData = {
-        firstName: profile.firstName || '',
-        middleName: profile.middleName || '',
-        lastName: profile.lastName || '',
+        firstName: profile.firstName || derivedNameParts.firstName || '',
+        middleName: profile.middleName || derivedNameParts.middleName || '',
+        lastName: profile.lastName || derivedNameParts.lastName || '',
         phone: profile.phone || '',
         alternativeContact: profile.alternativeContact || '',
         gender: profile.gender || '',

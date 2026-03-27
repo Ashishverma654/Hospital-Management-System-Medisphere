@@ -65,7 +65,7 @@ export default function UserManagement() {
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit: 15 };
+      const params = { page, limit: 15, excludePatients: true };
       if (filterRole) params.role = filterRole;
       if (search) params.search = search;
       if (filterStatus) params.isActive = filterStatus;

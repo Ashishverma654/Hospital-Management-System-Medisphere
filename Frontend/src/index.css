@@ -17,7 +17,7 @@
   --secondary: #0de0fe;
   --secondary-foreground: #0b2e4b;
   --muted: #f1f5f9;
-  --muted-foreground: #6b7280;
+  --muted-foreground: #4b5563;
   --accent: #f1f5f9;
   --accent-foreground: #020617;
   --destructive: #ff5a5f;
@@ -67,7 +67,7 @@
   --secondary: #0de0fe;
   --secondary-foreground: #0f172a;
   --muted: #1f2937;
-  --muted-foreground: #94a3b8;
+  --muted-foreground: #cbd5e1;
   --accent: #1f2937;
   --accent-foreground: #e2e8f0;
   --destructive: #ff5a5f;
@@ -207,7 +207,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-medium;
   }
   select,
   option {

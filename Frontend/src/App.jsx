@@ -35,6 +35,7 @@ import HospitalSettingsPage from './pages/employee/HospitalSettingsPage.jsx';
 import BillingManagement from './pages/employee/BillingManagement.jsx';
 import EmployeeNotifications from './pages/employee/Notifications.jsx';
 import AnalyticsDashboard from './pages/employee/AnalyticsDashboard.jsx';
+import SchedulingHub from './pages/employee/SchedulingHub.jsx';
 import DoctorDetail from './pages/employee/DoctorDetail.jsx';
 import PatientDetail from './pages/employee/PatientDetail.jsx';
 import LabOrderDetail from './pages/employee/LabOrderDetail.jsx';
@@ -52,6 +53,7 @@ import LocationManagement from './pages/admin/LocationManagement.jsx';
 import AddUserPage from './pages/admin/AddUserPage.jsx';
 import NurseDutyAllocation from './pages/admin/NurseDutyAllocation.jsx';
 import ShiftManagement from './pages/admin/ShiftManagement.jsx';
+import TestPriceManagement from './pages/admin/TestPriceManagement.jsx';
 import ShiftCalendar from './pages/ShiftCalendar.jsx';
 import StaffAvailability from './pages/StaffAvailability.jsx';
 import ReceptionistDashboard from './pages/receptionist/Dashboard.jsx';
@@ -242,9 +244,11 @@ function App() {
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin', 'subadmin']} />}>
               <Route path="/employee/wards" element={<WardManagement />} />
               <Route path="/employee/beds" element={<BedManagement />} />
-              <Route path="/employee/nurse-assignments" element={<NurseDutyAllocation />} />
-              <Route path="/employee/shifts" element={<ShiftManagement />} />
+              <Route path="/employee/scheduling" element={<SchedulingHub />} />
               <Route path="/employee/staff-availability" element={<StaffAvailability />} />
+            </Route>
+            <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
+              <Route path="/employee/test-prices" element={<TestPriceManagement />} />
             </Route>
             <Route element={<EmployeeRoute allowedRoles={['superadmin', 'admin']} />}>
               <Route path="/employee/patients" element={<PatientManagement />} />
@@ -252,6 +256,7 @@ function App() {
               <Route path="/employee/awards" element={<AwardManagement />} />
               <Route path="/employee/departments" element={<DepartmentManagement />} />
               <Route path="/employee/locations" element={<LocationManagement />} />
+              <Route path="/employee/lab-tests" element={<TestPriceManagement />} />
               <Route path="/employee/analytics" element={<AnalyticsDashboard />} />
               <Route path="/employee/audit" element={<AuditHistoryPage />} />
               <Route path="/employee/settings" element={<HospitalSettingsPage />} />

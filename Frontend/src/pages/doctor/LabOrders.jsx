@@ -133,9 +133,26 @@ export default function LabOrderCreation() {
         tests: [...formData.tests, test],
       });
       setSelectedTest('');
-    } else if (formData.tests.find((t) => t.testCode === selectedTest)) {
+      return;
+    }
+    if (formData.tests.find((t) => t.testCode === selectedTest)) {
       toast.error('This test is already added');
     }
+  };
+
+  const addTestByCode = (testCode) => {
+    if (!testCode) return;
+    const test = COMMON_TESTS.find((t) => t.testCode === testCode);
+    if (!test) return;
+    if (formData.tests.find((t) => t.testCode === testCode)) {
+      toast.error('This test is already added');
+      return;
+    }
+    setFormData((current) => ({
+      ...current,
+      tests: [...current.tests, test],
+    }));
+    setSelectedTest('');
   };
 
   const handleRemoveTest = (testCode) => {
@@ -143,6 +160,31 @@ export default function LabOrderCreation() {
       ...formData,
       tests: formData.tests.filter((t) => t.testCode !== testCode),
     });
+  };
+
+  const handleDownloadOrderPdf = async (orderId) => {
+    try {
+      const blob = await labOrderApi.downloadPdf(orderId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `lab-order-${orderId}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Unable to download PDF.');
+    }
+  };
+
+  const handleViewOrderPdf = async (orderId) => {
+    try {
+      const blob = await labOrderApi.downloadPdf(orderId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch {
+      toast.error('Unable to open PDF.');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -171,9 +213,10 @@ export default function LabOrderCreation() {
       toast.success('Lab order created successfully');
 
       // Option to download PDF
+      const orderId = response?._id || response?.id;
       setTimeout(() => {
-        if (confirm('Download lab order as PDF?')) {
-          labOrderApi.downloadPdf(response.labOrder._id);
+        if (orderId && confirm('Download lab order as PDF?')) {
+          handleDownloadOrderPdf(orderId);
         }
         navigate('/doctor/appointments');
       }, 1000);
@@ -198,11 +241,11 @@ export default function LabOrderCreation() {
   );
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Order Lab Tests</h2>
-        <p className="text-muted-foreground">
-          Create a lab order for the patient's diagnostic testing
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Order Lab Tests</h2>
+        <p className="mt-2 max-w-3xl text-muted-foreground">
+          Create a lab order with clinically relevant tests, urgency, and notes for the lab team.
         </p>
       </div>
 
@@ -237,204 +280,219 @@ export default function LabOrderCreation() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Patient and Appointment Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Patient & Appointment</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {appointment && (
-              <div className="grid md:grid-cols-2 gap-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div>
-                  <p className="text-sm text-muted-foreground">Patient</p>
-                  <p className="font-semibold">{appointment.patientId?.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Appointment</p>
-                  <p className="font-semibold">
-                    {appointment.slot} - {appointment.consultationMode}
-                  </p>
-                </div>
-              </div>
-            )}
+        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+          <div className="space-y-6">
+            {/* Patient and Appointment Info */}
+            <Card className="border-border/50 bg-card">
+              <CardHeader>
+                <CardTitle>Patient & Appointment</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {appointment && (
+                  <div className="grid gap-4 rounded-xl border border-border bg-muted/50 p-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Patient</p>
+                      <p className="font-semibold text-foreground">{appointment.patientId?.name || 'Patient'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Appointment</p>
+                      <p className="font-semibold text-foreground">
+                        {appointment.slot} • {appointment.consultationMode}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-            {!appointment && (
-              <div className="space-y-4">
+                {!appointment && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="patientFilter">Search patient</Label>
+                      <Input
+                        id="patientFilter"
+                        placeholder="Search by patient ID or name"
+                        value={patientQuery}
+                        onChange={(e) => setPatientQuery(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="patient">Patient *</Label>
+                      <select
+                        id="patient"
+                        value={formData.patientId}
+                        onChange={(e) =>
+                          setFormData({ ...formData, patientId: e.target.value })
+                        }
+                        className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      >
+                        <option value="">Select patient</option>
+                        {doctorPatients
+                          .filter((patient) => {
+                            if (!patientQuery.trim()) return true;
+                            const query = patientQuery.trim().toLowerCase();
+                            return (
+                              patient.patientId?.toLowerCase().includes(query) ||
+                              patient.name?.toLowerCase().includes(query)
+                            );
+                          })
+                          .map((patient) => (
+                            <option key={patient.id} value={patient.id}>
+                              {patient.name} {patient.patientId ? `(${patient.patientId})` : ''}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Test Selection */}
+            <Card className="border-border/50 bg-card">
+              <CardHeader>
+                <CardTitle>Select Tests</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Select
+                    value={selectedTest}
+                    onValueChange={(value) => {
+                      setSelectedTest(value);
+                      addTestByCode(value);
+                    }}
+                  >
+                    <SelectTrigger className="w-full sm:w-[320px]">
+                      <SelectValue placeholder="Select a test..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMMON_TESTS.map((test) => (
+                        <SelectItem key={test.testCode} value={test.testCode}>
+                          {test.testName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" onClick={handleAddTest} variant="outline" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add test
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {COMMON_TESTS.slice(0, 6).map((test) => (
+                    <button
+                      key={test.testCode}
+                      type="button"
+                      onClick={() => addTestByCode(test.testCode)}
+                      className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition hover:border-primary hover:text-primary"
+                    >
+                      {test.testName}
+                    </button>
+                  ))}
+                </div>
+
+                {formData.tests.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Selected tests ({formData.tests.length})</Label>
+                    <div className="space-y-2">
+                      {formData.tests.map((test) => (
+                        <div
+                          key={test.testCode}
+                          className="flex items-center justify-between rounded-xl border border-border bg-muted/50 p-3"
+                        >
+                          <div>
+                            <p className="font-medium text-foreground">{test.testName}</p>
+                            <p className="text-xs text-muted-foreground">{test.testCode}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-semibold text-foreground">₹{test.price}</span>
+                            <Button
+                              type="button"
+                              onClick={() => handleRemoveTest(test.testCode)}
+                              variant="ghost"
+                              size="sm"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Urgency & Notes */}
+            <Card className="border-border/50 bg-card">
+              <CardHeader>
+                <CardTitle>Clinical Notes</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="patientFilter">Filter by Patient ID</Label>
-                  <Input
-                    id="patientFilter"
-                    placeholder="Search by patient ID or email"
-                    value={patientQuery}
-                    onChange={(e) => setPatientQuery(e.target.value)}
+                  <Label htmlFor="urgency">Urgency *</Label>
+                  <Select value={formData.urgency} onValueChange={(value) => setFormData({ ...formData, urgency: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="routine">Routine</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="stat">STAT (Immediate)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="notes">Clinical Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Add clinical context or special instructions for the lab team..."
+                    value={formData.notes}
+                    onChange={(e) =>
+                      setFormData({ ...formData, notes: e.target.value })
+                    }
+                    rows={3}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="patient">Patient *</Label>
-                  <select
-                    id="patient"
-                    value={formData.patientId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, patientId: e.target.value })
-                    }
-                    className="w-full rounded-md border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  >
-                    <option value="">Select patient</option>
-                    {doctorPatients
-                      .filter((patient) => {
-                        if (!patientQuery.trim()) return true;
-                        const query = patientQuery.trim().toLowerCase();
-                        return (
-                          patient.patientId?.toLowerCase().includes(query) ||
-                          patient.name?.toLowerCase().includes(query)
-                        );
-                      })
-                      .map((patient) => (
-                        <option key={patient.id} value={patient.id}>
-                          {patient.name} {patient.patientId ? `(${patient.patientId})` : ''}
-                        </option>
-                      ))}
-                  </select>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-border bg-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Tests selected</span>
+                  <span className="font-semibold text-foreground">{formData.tests.length}</span>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Test Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Tests</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Select value={selectedTest} onValueChange={setSelectedTest}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a test..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMON_TESTS.map((test) => (
-                    <SelectItem key={test.testCode} value={test.testCode}>
-                      {test.testName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                onClick={handleAddTest}
-                variant="outline"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Selected Tests */}
-            {formData.tests.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">Tests ({formData.tests.length})</Label>
-                {formData.tests.map((test) => (
-                  <div
-                    key={test.testCode}
-                    className="flex items-center justify-between p-3 border rounded-lg bg-muted/50"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{test.testName}</p>
-                      <p className="text-xs text-muted-foreground">{test.testCode}</p>
-                    </div>
-                    <div className="text-right pr-3">
-                      <p className="font-semibold">₹{test.price}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => handleRemoveTest(test.testCode)}
-                      variant="ghost"
-                      size="sm"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Urgency & Notes */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="urgency">Urgency *</Label>
-              <Select value={formData.urgency} onValueChange={(value) => setFormData({ ...formData, urgency: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="routine">Routine</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="stat">STAT (Immediate)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Clinical Notes</Label>
-              <Textarea
-                id="notes"
-                placeholder="Any special instructions or clinical context for the lab..."
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Summary */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              Order Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Number of Tests:</span>
-                <span className="font-semibold">{formData.tests.length}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total Amount:</span>
-                <span>₹{totalAmount}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Submit */}
-        <div className="flex gap-2">
-          <Button
-            type="submit"
-            disabled={loading || formData.tests.length === 0}
-            className="gap-2"
-          >
-            <Send className="h-4 w-4" />
-            {loading ? 'Creating...' : 'Create Lab Order'}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate(-1)}
-          >
-            Cancel
-          </Button>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Urgency</span>
+                  <span className="font-semibold text-foreground capitalize">{formData.urgency}</span>
+                </div>
+                <div className="border-t border-border pt-3 text-lg font-semibold text-foreground">
+                  Total Amount: ₹{totalAmount}
+                </div>
+                <Button
+                  type="submit"
+                  disabled={loading || formData.tests.length === 0}
+                  className="w-full gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  {loading ? 'Creating...' : 'Create Lab Order'}
+                </Button>
+                <Button type="button" variant="outline" className="w-full" onClick={() => navigate(-1)}>
+                  Cancel
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </form>
 
@@ -473,7 +531,14 @@ export default function LabOrderCreation() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => labOrderApi.downloadPdf(order._id)}
+                        onClick={() => handleViewOrderPdf(order._id)}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadOrderPdf(order._id)}
                       >
                         <Download className="h-4 w-4 mr-1" /> PDF
                       </Button>

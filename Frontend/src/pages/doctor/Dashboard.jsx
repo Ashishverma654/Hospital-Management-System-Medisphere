@@ -7,6 +7,7 @@ import { Label } from '../../components/ui/label';
 import { Calendar, Clock, Activity, FileText, AlertCircle, ClipboardList, Stethoscope } from 'lucide-react';
 import { LoadingSkeleton, ErrorState } from '../../components';
 import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
+import StaffDutyCalendar from '../../components/StaffDutyCalendar.jsx';
 import { admissionApi, appointmentApi, doctorApi, pharmacyApi, prescriptionApi } from '../../services/apiServices';
 import { connectSocket } from '../../services/socket.js';
 import { toast } from 'sonner';
@@ -140,8 +141,8 @@ export default function DoctorDashboard() {
 
   const priorityTone = (priority) => (
     priority === 'Emergency'
-      ? 'bg-red-500/10 text-red-600'
-      : 'bg-emerald-500/10 text-emerald-600'
+      ? 'bg-destructive/10 text-destructive'
+      : 'bg-primary/10 text-primary'
   );
 
   useEffect(() => {
@@ -338,33 +339,36 @@ export default function DoctorDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Welcome back, {doctorName}</h2>
-          <p className="text-muted-foreground">
-            {departmentName} • {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline">
-            <Link to="/doctor/appointments">
-              <Calendar className="mr-2 h-4 w-4" /> View Queue
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link to="/doctor/availability">
-              <Clock className="mr-2 h-4 w-4" /> Schedule
-            </Link>
-          </Button>
+      <div className="rounded-2xl bg-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Welcome back, {doctorName}</h2>
+            <p className="text-muted-foreground">
+              {departmentName} • {new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/doctor/appointments">
+                <Calendar className="mr-2 h-4 w-4" /> View Queue
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/doctor/availability">
+                <Clock className="mr-2 h-4 w-4" /> Schedule
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
       <StaffDutyWidget />
+      <StaffDutyCalendar />
 
       <Card className="border-border/50 bg-background/60 backdrop-blur-sm">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -585,15 +589,15 @@ export default function DoctorDashboard() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`text-xs px-2 py-1 rounded-full ${
-                          apt.status === 'booked'
-                            ? 'bg-blue-500/10 text-blue-600'
-                            : apt.status === 'inConsultation'
-                              ? 'bg-orange-500/10 text-orange-600'
-                              : apt.status === 'completed'
-                                ? 'bg-green-500/10 text-green-600'
-                                : 'bg-muted/50 text-muted-foreground'
-                        }`}
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            apt.status === 'booked'
+                              ? 'bg-primary/10 text-primary'
+                              : apt.status === 'inConsultation'
+                                ? 'bg-secondary/10 text-secondary'
+                                : apt.status === 'completed'
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-muted/50 text-muted-foreground'
+                          }`}
                       >
                         {apt.status} {apt.queuePosition ? `• #${apt.queuePosition}` : ''} {apt.priority === 'Emergency' ? '• Emergency' : ''}
                       </span>
@@ -1076,7 +1080,7 @@ export default function DoctorDashboard() {
               <div className="space-y-4">
                 {dashboardData.pendingLabOrders.map((order) => (
                   <div key={order._id} className="flex items-start gap-4 pb-4 border-b border-border/50 last:border-0">
-                    <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-secondary mt-2 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">{order.testName || 'Lab order'}</p>
                       <p className="text-xs text-muted-foreground capitalize">{order.status || 'pending'}</p>

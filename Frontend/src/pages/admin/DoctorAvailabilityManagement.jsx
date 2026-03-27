@@ -44,7 +44,6 @@ const countSlots = (start, end, duration) => {
 };
 
 const initialForm = {
-  dayOfWeek: 'Monday',
   startTime: '09:00',
   endTime: '13:00',
   slotDuration: 15,
@@ -55,6 +54,7 @@ export default function DoctorAvailabilityManagement() {
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [availabilities, setAvailabilities] = useState([]);
   const [form, setForm] = useState(initialForm);
+  const [selectedDays, setSelectedDays] = useState(['Monday']);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [breakEnabled, setBreakEnabled] = useState(false);
@@ -140,6 +140,10 @@ export default function DoctorAvailabilityManagement() {
       toast.error('Select a doctor to manage availability.');
       return;
     }
+    if (selectedDays.length === 0) {
+      toast.error('Select at least one day.');
+      return;
+    }
     const startMinutes = toMinutes(form.startTime);
     const endMinutes = toMinutes(form.endTime);
     const breakStartMinutes = toMinutes(breakStart);
@@ -154,29 +158,37 @@ export default function DoctorAvailabilityManagement() {
 
     setLoading(true);
     try {
-      if (editingId && !breakEnabled) {
-        await availabilityApi.update(editingId, form);
-        toast.success('Availability updated.');
-      } else {
-        if (editingId) {
-          await availabilityApi.remove(editingId);
-        }
-        const payloads = breakEnabled
-          ? [
-              { ...form, endTime: breakStart },
-              { ...form, startTime: breakEnd },
-            ]
-          : [form];
+      const daysToSave = selectedDays;
+      if (editingId) {
+        await availabilityApi.remove(editingId);
+      }
+      const payloads = breakEnabled
+        ? [
+            { ...form, endTime: breakStart },
+            { ...form, startTime: breakEnd },
+          ]
+        : [form];
 
+      for (const day of daysToSave) {
         for (const payload of payloads) {
           await availabilityApi.create({
             ...payload,
+            dayOfWeek: day,
             doctorId: selectedDoctorId,
           });
         }
-        toast.success(breakEnabled ? 'Availability split with break.' : 'Availability added.');
       }
+      toast.success(
+        editingId
+          ? breakEnabled
+            ? 'Availability updated with break.'
+            : 'Availability updated.'
+          : breakEnabled
+            ? 'Availability split with break.'
+            : 'Availability added.'
+      );
       setForm(initialForm);
+      setSelectedDays(['Monday']);
       setEditingId(null);
       setBreakEnabled(false);
       const data = await availabilityApi.getByDoctor(selectedDoctorId);
@@ -191,11 +203,11 @@ export default function DoctorAvailabilityManagement() {
   const handleEdit = (item) => {
     setEditingId(item._id);
     setForm({
-      dayOfWeek: item.dayOfWeek,
       startTime: item.startTime,
       endTime: item.endTime,
       slotDuration: item.slotDuration,
     });
+    setSelectedDays([item.dayOfWeek]);
     setBreakEnabled(false);
   };
 
@@ -254,17 +266,30 @@ export default function DoctorAvailabilityManagement() {
         <CardContent>
           <form onSubmit={handleSave} className="grid gap-4 md:grid-cols-4">
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Day</label>
-              <select
-                value={form.dayOfWeek}
-                onChange={(event) => setForm((current) => ({ ...current, dayOfWeek: event.target.value }))}
-                className="w-full rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none focus:border-primary"
-                required
-              >
-                {DAYS_OF_WEEK.map((day) => (
-                  <option key={day} value={day}>{day}</option>
-                ))}
-              </select>
+              <label className="mb-2 block text-sm font-medium text-foreground">Days</label>
+              <div className="flex flex-wrap gap-2">
+                {DAYS_OF_WEEK.map((day) => {
+                  const active = selectedDays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDays((current) =>
+                          active ? current.filter((item) => item !== day) : [...current, day]
+                        );
+                      }}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                        active
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border bg-background/60 text-foreground hover:border-primary'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-foreground">Start time</label>

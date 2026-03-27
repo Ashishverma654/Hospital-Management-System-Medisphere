@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Link } from 'react-router-dom';
 import { labTechApi } from '../../services/apiServices.js';
@@ -30,8 +30,11 @@ export default function LabTechOrdersInbox({
   const [savingAction, setSavingAction] = useState('');
   const [sampleSchedule, setSampleSchedule] = useState({ date: '', time: '', notes: '' });
   const [pickupSchedule, setPickupSchedule] = useState({ date: '', time: '', notes: '' });
-  const [reportMeta, setReportMeta] = useState({ reportName: '', reportType: '', labOrderItemId: '' });
-  const fileInputRef = useRef(null);
+  const [reportMeta, setReportMeta] = useState({ reportName: '', reportType: '' });
+  const [resultsByItem, setResultsByItem] = useState({});
+  const [rejection, setRejection] = useState({ reason: '', notes: '' });
+  const [criticalItems, setCriticalItems] = useState([]);
+  const [criticalNotes, setCriticalNotes] = useState('');
 
   const loadOrders = async () => {
     setLoading(true);
@@ -75,8 +78,24 @@ export default function LabTechOrdersInbox({
       setReportMeta({
         reportName: data.reports?.[0]?.reportName || '',
         reportType: data.reports?.[0]?.reportType || '',
-        labOrderItemId: '',
       });
+      setResultsByItem(
+        (data.items || []).reduce((acc, item) => {
+          acc[item._id] = {
+            resultValue: item.resultValue || '',
+            resultUnit: item.resultUnit || '',
+            referenceRange: item.referenceRange || '',
+            resultNotes: item.resultNotes || '',
+          };
+          return acc;
+        }, {})
+      );
+      setRejection({
+        reason: data.rejectionReason || '',
+        notes: data.rejectionNotes || '',
+      });
+      setCriticalItems((data.items || []).filter((item) => item.isCriticalResult).map((item) => item._id));
+      setCriticalNotes((data.items || []).find((item) => item.isCriticalResult)?.criticalNotes || '');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load order detail.');
     }
@@ -116,6 +135,16 @@ export default function LabTechOrdersInbox({
     });
   }, [filters.doctor, filters.patient, filters.search, orders]);
 
+  const readyOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          order.status === 'reportReady' ||
+          order.status === 'reportAvailableForPickup'
+      ),
+    [orders]
+  );
+
   const runAction = async (label, fn) => {
     try {
       setSavingAction(label);
@@ -129,28 +158,22 @@ export default function LabTechOrdersInbox({
     }
   };
 
-  const handleUpload = async (file) => {
-    if (!file || !selectedOrder) return;
+  const getTatMinutes = (order) => {
+    if (!order?.createdAt || !order?.reportReadyAt) return null;
+    const start = new Date(order.createdAt).getTime();
+    const end = new Date(order.reportReadyAt).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end)) return null;
+    return Math.max(0, Math.round((end - start) / 60000));
+  };
 
-    const formData = new FormData();
-    formData.append('reportFile', file);
-    formData.append('labOrderId', selectedOrder._id);
-    formData.append('patientId', selectedOrder.patientId?._id || '');
-    formData.append('doctorId', selectedOrder.doctorId?._id || '');
-    formData.append('appointmentId', selectedOrder.appointmentId?._id || '');
-    formData.append('reportName', reportMeta.reportName || file.name);
-    formData.append('reportType', reportMeta.reportType || 'Diagnostic Report');
-    if (reportMeta.labOrderItemId) {
-      formData.append('labOrderItemId', reportMeta.labOrderItemId);
-    }
-
-    await runAction('upload report', async () => {
-      await labTechApi.uploadReport(selectedOrder._id, formData);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      toast.success('Report uploaded successfully.');
-    });
+  const handleResultChange = (itemId, field, value) => {
+    setResultsByItem((current) => ({
+      ...current,
+      [itemId]: {
+        ...(current[itemId] || {}),
+        [field]: value,
+      },
+    }));
   };
 
   return (
@@ -184,6 +207,7 @@ export default function LabTechOrdersInbox({
             <option value="ordered">Ordered</option>
             <option value="awaitingPayment">Awaiting payment</option>
             <option value="paid">Paid</option>
+            <option value="accessioned">Accessioned</option>
             <option value="sampleScheduled">Sample scheduled</option>
             <option value="sampleCollected">Sample collected</option>
             <option value="inProcessing">In processing</option>
@@ -191,6 +215,7 @@ export default function LabTechOrdersInbox({
             <option value="reportAvailableForPickup">Pickup scheduled</option>
             <option value="reportReleasedToPortal">Released to portal</option>
             <option value="completed">Completed</option>
+            <option value="rejected">Rejected</option>
             <option value="cancelled">Cancelled</option>
           </select>
           <div className="flex gap-3">
@@ -256,14 +281,52 @@ export default function LabTechOrdersInbox({
         </section>
 
         <section className="rounded-2xl bg-card p-6 shadow-sm">
+          <article className="rounded-xl border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Ready Reports</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{readyOrders.length}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Reports waiting for pickup or portal release.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={loadOrders}>
+                Refresh
+              </Button>
+            </div>
+            <div className="mt-4 space-y-2">
+              {readyOrders.slice(0, 5).map((order) => (
+                <button
+                  key={order._id}
+                  type="button"
+                  onClick={() => setSelectedOrderId(order._id)}
+                  className="flex w-full items-center justify-between rounded-xl border border-border bg-muted/40 px-3 py-2 text-left transition hover:border-primary/40"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{order.patientName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {order.orderNumber} • {order.doctorName}
+                    </p>
+                  </div>
+                  <StatusBadge status={order.status}>{order.status}</StatusBadge>
+                </button>
+              ))}
+              {readyOrders.length === 0 && (
+                <p className="rounded-xl border border-dashed border-border p-3 text-center text-sm text-muted-foreground">
+                  No reports ready yet.
+                </p>
+              )}
+            </div>
+          </article>
+
           {!selectedOrder && (
-            <div className="flex min-h-[420px] items-center justify-center text-center text-muted-foreground">
-              Select a lab order to schedule collection, update processing, upload reports, or release patient-visible results.
+            <div className="mt-6 flex min-h-[420px] items-center justify-center text-center text-muted-foreground">
+              Select a lab order to schedule collection, update processing, enter results, or release patient-visible reports.
             </div>
           )}
 
           {selectedOrder && (
-            <div className="space-y-5">
+            <div className="mt-6 space-y-5">
               <div>
                 <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Order Detail</p>
                 <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedOrder.patientName}</h3>
@@ -277,6 +340,11 @@ export default function LabTechOrdersInbox({
                     <Link to={`/employee/lab-orders/${selectedOrder._id}`}>Open Detail Page</Link>
                   </Button>
                 </div>
+                {getTatMinutes(selectedOrder) !== null && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Turnaround time: {getTatMinutes(selectedOrder)} minutes
+                  </p>
+                )}
               </div>
 
               <article className="rounded-xl border border-border p-4">
@@ -295,8 +363,60 @@ export default function LabTechOrdersInbox({
               </article>
 
               <div className="grid gap-4">
-                <article className="rounded-xl border border-border p-4">
-                  <p className="font-semibold text-foreground">Sample collection schedule</p>
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Accessioning & specimen QC</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Confirm sample integrity before processing. Use reject if specimen is unsuitable.
+                </p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <Button
+                    variant="outline"
+                    disabled={savingAction === 'accession'}
+                    onClick={() =>
+                      runAction('accession', async () => {
+                        await labTechApi.markAccessioned(selectedOrder._id);
+                        toast.success('Order accessioned.');
+                      })
+                    }
+                  >
+                    {savingAction === 'accession' ? 'Working...' : 'Mark accessioned'}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    disabled={savingAction === 'reject'}
+                    onClick={() =>
+                      runAction('reject', async () => {
+                        await labTechApi.rejectOrder(selectedOrder._id, rejection);
+                        toast.success('Order marked as rejected.');
+                      })
+                    }
+                  >
+                    {savingAction === 'reject' ? 'Working...' : 'Reject specimen'}
+                  </Button>
+                </div>
+                <div className="mt-3 grid gap-3">
+                  <input
+                    value={rejection.reason}
+                    onChange={(event) => setRejection((current) => ({ ...current, reason: event.target.value }))}
+                    placeholder="Rejection reason (e.g., hemolyzed, insufficient sample)"
+                    className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                  />
+                  <textarea
+                    value={rejection.notes}
+                    onChange={(event) => setRejection((current) => ({ ...current, notes: event.target.value }))}
+                    placeholder="Optional rejection notes"
+                    className="min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+                {selectedOrder.rejectionReason && (
+                  <p className="mt-3 text-xs text-amber-700">
+                    Rejected: {selectedOrder.rejectionReason}
+                  </p>
+                )}
+              </article>
+
+              <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Sample collection schedule</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <input type="date" value={sampleSchedule.date} onChange={(event) => setSampleSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                     <input type="time" value={sampleSchedule.time} onChange={(event) => setSampleSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
@@ -327,6 +447,52 @@ export default function LabTechOrdersInbox({
               </div>
 
               <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Results entry</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Enter measured values for each test. The system will generate the final PDF report on release.
+                </p>
+                <div className="mt-4 space-y-4">
+                  {(selectedOrder.items || []).map((item) => (
+                    <div key={item._id} className="rounded-xl border border-border p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-foreground">{item.testName}</p>
+                          <p className="text-xs text-muted-foreground">Status: {item.status}</p>
+                        </div>
+                        <StatusBadge status={item.status}>{item.status}</StatusBadge>
+                      </div>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        <input
+                          value={resultsByItem[item._id]?.resultValue || ''}
+                          onChange={(event) => handleResultChange(item._id, 'resultValue', event.target.value)}
+                          placeholder="Result value"
+                          className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                        />
+                        <input
+                          value={resultsByItem[item._id]?.resultUnit || ''}
+                          onChange={(event) => handleResultChange(item._id, 'resultUnit', event.target.value)}
+                          placeholder="Unit (e.g., mg/dL)"
+                          className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                        />
+                        <input
+                          value={resultsByItem[item._id]?.referenceRange || ''}
+                          onChange={(event) => handleResultChange(item._id, 'referenceRange', event.target.value)}
+                          placeholder="Reference range"
+                          className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                        />
+                        <input
+                          value={resultsByItem[item._id]?.resultNotes || ''}
+                          onChange={(event) => handleResultChange(item._id, 'resultNotes', event.target.value)}
+                          placeholder="Result notes (optional)"
+                          className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="rounded-xl border border-border p-4">
                 <p className="font-semibold text-foreground">Workflow actions</p>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <Button variant="outline" disabled={savingAction === 'mark collected'} onClick={() => runAction('mark collected', async () => {
@@ -342,7 +508,16 @@ export default function LabTechOrdersInbox({
                     {savingAction === 'start processing' ? 'Working...' : 'Move to processing'}
                   </Button>
                   <Button variant="outline" disabled={savingAction === 'mark ready'} onClick={() => runAction('mark ready', async () => {
-                    await labTechApi.markReportReady(selectedOrder._id);
+                    await labTechApi.markReportReady(selectedOrder._id, {
+                      reportName: reportMeta.reportName || `${selectedOrder.patientName} Report`,
+                      reportType: reportMeta.reportType || 'Diagnostic Report',
+                      results: (selectedOrder.items || []).map((item) => ({
+                        itemId: item._id,
+                        ...resultsByItem[item._id],
+                      })),
+                      criticalItemIds: criticalItems,
+                      criticalNotes,
+                    });
                     toast.success('Order marked as report ready.');
                   })}>
                     {savingAction === 'mark ready' ? 'Working...' : 'Mark report ready'}
@@ -354,6 +529,37 @@ export default function LabTechOrdersInbox({
                     {savingAction === 'release report' ? 'Working...' : 'Release to patient portal'}
                   </Button>
                 </div>
+                <div className="mt-4 rounded-xl border border-border p-3">
+                  <p className="text-sm font-semibold text-foreground">Critical result flag</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Select any tests that should trigger critical alerts for the doctor and ward nurses.
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {(selectedOrder.items || []).map((item) => (
+                      <label key={item._id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-primary"
+                          checked={criticalItems.includes(item._id)}
+                          onChange={(event) => {
+                            setCriticalItems((current) =>
+                              event.target.checked
+                                ? [...current, item._id]
+                                : current.filter((id) => id !== item._id)
+                            );
+                          }}
+                        />
+                        {item.testName}
+                      </label>
+                    ))}
+                  </div>
+                  <textarea
+                    value={criticalNotes}
+                    onChange={(event) => setCriticalNotes(event.target.value)}
+                    placeholder="Optional critical notes"
+                    className="mt-3 min-h-[80px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                  />
+                </div>
                 {selectedOrder.paymentStatus !== 'paid' && (
                   <p className="mt-3 text-xs text-amber-700">
                     Patient portal release is blocked until this lab order invoice is paid.
@@ -362,17 +568,13 @@ export default function LabTechOrdersInbox({
               </article>
 
               <article className="rounded-xl border border-border p-4">
-                <p className="font-semibold text-foreground">Upload final report</p>
+                <p className="font-semibold text-foreground">Report metadata</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  The system generates the final PDF. Provide a title and report type for the release.
+                </p>
                 <div className="mt-3 grid gap-3">
                   <input value={reportMeta.reportName} onChange={(event) => setReportMeta((current) => ({ ...current, reportName: event.target.value }))} placeholder="Report title" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                   <input value={reportMeta.reportType} onChange={(event) => setReportMeta((current) => ({ ...current, reportType: event.target.value }))} placeholder="Test type / report type" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-                  <select value={reportMeta.labOrderItemId} onChange={(event) => setReportMeta((current) => ({ ...current, labOrderItemId: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
-                    <option value="">Attach to whole order</option>
-                    {(selectedOrder.items || []).map((item) => (
-                      <option key={item._id} value={item._id}>{item.testName}</option>
-                    ))}
-                  </select>
-                  <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" className="rounded-2xl border border-border px-4 py-3 text-sm" onChange={(event) => handleUpload(event.target.files?.[0])} />
                 </div>
                 <div className="mt-4 space-y-2">
                   {(selectedOrder.reports || []).map((report) => (
@@ -385,9 +587,9 @@ export default function LabTechOrdersInbox({
                         <div className="flex flex-wrap gap-2">
                           <StatusBadge status={report.status}>{report.status}</StatusBadge>
                           {report.patientVisible && <StatusBadge status="completed">Visible to patient</StatusBadge>}
-                          {report.reportFile && (
+                          {(report.downloadUrl || report.reportFile) && (
                             <a
-                              href={report.reportFile}
+                              href={report.downloadUrl || report.reportFile}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
@@ -400,7 +602,7 @@ export default function LabTechOrdersInbox({
                     </div>
                   ))}
                   {(!selectedOrder.reports || selectedOrder.reports.length === 0) && (
-                    <p className="text-sm text-muted-foreground">No report file uploaded yet.</p>
+                    <p className="text-sm text-muted-foreground">No reports generated yet.</p>
                   )}
                 </div>
               </article>

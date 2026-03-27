@@ -124,6 +124,7 @@ export const getStatusColor = (status) => {
     awaitingPayment: { bg: 'bg-amber-100', text: 'text-amber-800' },
     paid: { bg: 'bg-green-100', text: 'text-green-800' },
     partiallyPaid: { bg: 'bg-amber-100', text: 'text-amber-800' },
+    verified: { bg: 'bg-blue-100', text: 'text-blue-800' },
     sampleScheduled: { bg: 'bg-sky-100', text: 'text-sky-800' },
     sampleCollected: { bg: 'bg-cyan-100', text: 'text-cyan-800' },
     inProcessing: { bg: 'bg-violet-100', text: 'text-violet-800' },

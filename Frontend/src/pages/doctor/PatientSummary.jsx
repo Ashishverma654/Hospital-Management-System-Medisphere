@@ -29,6 +29,7 @@ export default function PatientSummary() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completing, setCompleting] = useState(false);
+  const [startingConsultation, setStartingConsultation] = useState(false);
 
   useEffect(() => {
     const loadSummary = async () => {
@@ -36,12 +37,7 @@ export default function PatientSummary() {
         setLoading(true);
         setError(null);
         
-        // Fetch appointment first to get patient ID
-        const appointmentResponse = await appointmentApi.getDoctorAll();
-        const list = Array.isArray(appointmentResponse) ? appointmentResponse : appointmentResponse?.data || [];
-        const appointment = Array.isArray(list)
-          ? list.find((a) => a._id === appointmentId)
-          : null;
+        const appointment = await appointmentApi.getDoctorById(appointmentId);
 
         if (!appointment) {
           setError('Appointment not found');
@@ -73,12 +69,7 @@ export default function PatientSummary() {
       setLoading(true);
       setError(null);
       
-      // Fetch appointment first to get patient ID
-      const appointmentResponse = await appointmentApi.getDoctorAll();
-      const list = Array.isArray(appointmentResponse) ? appointmentResponse : appointmentResponse?.data || [];
-      const appointment = Array.isArray(list)
-        ? list.find((a) => a._id === appointmentId)
-        : null;
+      const appointment = await appointmentApi.getDoctorById(appointmentId);
 
       if (!appointment) {
         setError('Appointment not found');
@@ -140,7 +131,7 @@ export default function PatientSummary() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -157,11 +148,30 @@ export default function PatientSummary() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild className="gap-2">
-            <a href="#consultation">
-              <Stethoscope className="h-4 w-4" />
-              Start Prescription
-            </a>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              if (!appointmentId) return;
+              try {
+                setStartingConsultation(true);
+                await appointmentApi.startConsultation(appointmentId);
+                toast.success('Consultation started.');
+              } catch (err) {
+                toast.error(err.response?.data?.message || 'Failed to start consultation.');
+              } finally {
+                setStartingConsultation(false);
+              }
+            }}
+            disabled={startingConsultation || !['arrived', 'checked-in', 'booked', 'confirmed'].includes(summaryData.appointment?.status)}
+          >
+            {startingConsultation ? 'Starting...' : 'Start Consultation'}
+          </Button>
+          <Button
+            className="gap-2"
+            onClick={() => navigate(`/doctor/prescriptions?appointmentId=${appointmentId}`)}
+          >
+            <Stethoscope className="h-4 w-4" />
+            Start Prescription
           </Button>
           <Button
             variant="outline"
@@ -178,7 +188,7 @@ export default function PatientSummary() {
                 setCompleting(false);
               }
             }}
-            disabled={completing}
+            disabled={completing || summaryData.appointment?.status !== 'inConsultation'}
           >
             {completing ? 'Completing...' : 'Mark Completed'}
           </Button>
@@ -186,7 +196,7 @@ export default function PatientSummary() {
       </div>
 
       {/* Patient Identity Card */}
-      <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200">
+      <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
@@ -219,11 +229,11 @@ export default function PatientSummary() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Age</p>
-              <p className="text-lg font-semibold">{patient?.age || 'N/A'} years</p>
+              <p className="text-lg font-semibold">{patient?.age ? `${patient.age} years` : 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Gender</p>
-              <p className="text-lg font-semibold capitalize">{patient?.gender || 'N/A'}</p>
+              <p className="text-lg font-semibold capitalize">{patient?.gender || 'Unknown'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Blood Group</p>
@@ -259,7 +269,7 @@ export default function PatientSummary() {
       </Card>
 
       {/* Triage Flags */}
-      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+      <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5" />
@@ -271,13 +281,13 @@ export default function PatientSummary() {
             triageFlags.map((flag) => (
               <span
                 key={flag}
-                className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-600"
+                className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive"
               >
                 {flag}
               </span>
             ))
           ) : (
-            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               No high-risk flags identified
             </span>
           )}
@@ -288,9 +298,9 @@ export default function PatientSummary() {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Allergies */}
         {patient?.allergies && patient.allergies.length > 0 && (
-          <Card className="border-orange-200 bg-orange-50/50">
+          <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-900">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <AlertCircle className="h-5 w-5" />
                 Allergies
               </CardTitle>
@@ -300,7 +310,7 @@ export default function PatientSummary() {
                 {patient.allergies.map((allergy, idx) => (
                   <div
                     key={idx}
-                    className="px-3 py-2 bg-orange-100 rounded-md text-sm font-medium"
+                    className="px-3 py-2 rounded-md text-sm font-medium bg-muted/60 text-foreground"
                   >
                     {allergy}
                   </div>
@@ -312,9 +322,9 @@ export default function PatientSummary() {
 
         {/* Chronic Diseases */}
         {patient?.chronicDiseases && patient.chronicDiseases.length > 0 && (
-          <Card className="border-red-200 bg-red-50/50">
+          <Card className="border-border bg-card">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-900">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Heart className="h-5 w-5" />
                 Chronic Conditions
               </CardTitle>
@@ -324,7 +334,7 @@ export default function PatientSummary() {
                 {patient.chronicDiseases.map((disease, idx) => (
                   <div
                     key={idx}
-                    className="px-3 py-2 bg-red-100 rounded-md text-sm font-medium"
+                    className="px-3 py-2 rounded-md text-sm font-medium bg-muted/60 text-foreground"
                   >
                     {disease}
                   </div>
@@ -380,19 +390,19 @@ export default function PatientSummary() {
               {recentPrescriptions.map((prescription) => (
                 <div
                   key={prescription._id}
-                  className="border-l-4 border-blue-500 pl-4 py-3"
+                  className="border-l-4 border-primary/60 pl-4 py-3"
                 >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-600">
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                       {prescription.status || 'active'}
                     </span>
                     {prescription.followUpDate && (
-                      <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
+                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                         Follow-up {new Date(prescription.followUpDate).toLocaleDateString()}
                       </span>
                     )}
                     {prescription.admissionRecommended && (
-                      <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700">
+                      <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                         Admission recommended
                       </span>
                     )}
@@ -423,7 +433,7 @@ export default function PatientSummary() {
               {recentLabOrders.map((order) => (
                 <div
                   key={order._id}
-                  className="border-l-4 border-amber-500 pl-4 py-2"
+                  className="border-l-4 border-secondary/60 pl-4 py-2"
                 >
                   <p className="font-medium text-sm">{order.orderNumber || 'Lab order'}</p>
                   <p className="text-xs text-muted-foreground">
@@ -450,7 +460,7 @@ export default function PatientSummary() {
               {recentLabReports.map((report) => (
                 <div
                   key={report._id}
-                  className="border-l-4 border-green-500 pl-4 py-2"
+                  className="border-l-4 border-primary/60 pl-4 py-2"
                 >
                   <p className="font-medium text-sm">{report.reportName}</p>
                   <p className="text-xs text-muted-foreground">
@@ -485,7 +495,9 @@ export default function PatientSummary() {
                     </p>
                     <p className="text-xs text-muted-foreground">{apt.slot}</p>
                   </div>
-                  <div className="text-xs badge">{apt.status}</div>
+                  <div className="text-xs rounded-full border border-border px-2 py-1 text-muted-foreground">
+                    {apt.status}
+                  </div>
                 </div>
               ))}
             </div>
@@ -504,7 +516,7 @@ export default function PatientSummary() {
         <CardContent>
           <div className="space-y-3">
             {nursingNotes.length > 0 ? nursingNotes.map((note) => (
-              <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-2">
+              <div key={note.id} className="border-l-4 border-primary/60 pl-4 py-2">
                 <p className="font-medium text-sm">{note.noteType || 'Note'}</p>
                 <p className="text-xs text-muted-foreground">
                   {note.nurseName || 'Nurse'} • {note.createdAt ? new Date(note.createdAt).toLocaleString() : ''}
@@ -529,7 +541,7 @@ export default function PatientSummary() {
         <CardContent>
           <div className="space-y-3">
             {recentVitals.length > 0 ? recentVitals.map((vital) => (
-              <div key={vital.id} className="border-l-4 border-emerald-500 pl-4 py-2">
+              <div key={vital.id} className="border-l-4 border-secondary/60 pl-4 py-2">
                 <p className="font-medium text-sm">
                   {vital.recordedAt ? new Date(vital.recordedAt).toLocaleString() : 'Vitals entry'}
                 </p>
@@ -552,17 +564,9 @@ export default function PatientSummary() {
 
       {/* Action Buttons */}
       <div className="flex flex-wrap gap-3">
-        <Button asChild className="gap-2">
-          <a href="#consultation">
-            <Stethoscope className="h-4 w-4" />
-            Start Consultation
-          </a>
-        </Button>
         <Button
           variant="outline"
-          onClick={() =>
-            navigate(`/doctor/prescriptions?appointmentId=${appointmentId}`)
-          }
+          onClick={() => navigate(`/doctor/prescriptions?appointmentId=${appointmentId}`)}
         >
           <Plus className="h-4 w-4 mr-2" />
           Create Prescription

@@ -246,9 +246,7 @@ export default function DoctorManagement() {
         <div>
           <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Doctor Administration</p>
           <h2 className="mt-2 text-3xl font-semibold text-foreground">Doctors</h2>
-          <p className="mt-2 max-w-3xl text-muted-foreground">
-            Create doctor employee accounts, assign departments, and locations, and control whether profiles are active and ready for public publishing later.
-          </p>
+          
         </div>
         <Button onClick={() => navigate('/employee/manage-roles/add?role=doctor')}>
           <Plus className="mr-2 h-4 w-4" />
@@ -266,7 +264,7 @@ export default function DoctorManagement() {
         </article>
       )}
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr),200px,170px,190px,220px,60px]">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -274,32 +272,32 @@ export default function DoctorManagement() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by doctor name or email"
-            className="w-full rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary"
+            className="w-[260px] min-w-[220px] rounded-2xl border border-border bg-card py-3 pl-9 pr-4 text-sm outline-none focus:border-primary md:w-[320px]"
           />
         </div>
-        <select value={filterDepartment} onChange={(event) => setFilterDepartment(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
+        <select value={filterDepartment} onChange={(event) => setFilterDepartment(event.target.value)} className="h-11 min-w-[180px] rounded-2xl border border-border bg-card px-4 text-sm outline-none focus:border-primary">
           <option value="">All Departments</option>
           {departments.map((dept) => (
             <option key={dept._id} value={dept._id}>{dept.name}</option>
           ))}
         </select>
-        <select value={filterActive} onChange={(event) => setFilterActive(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
+        <select value={filterActive} onChange={(event) => setFilterActive(event.target.value)} className="h-11 min-w-[150px] rounded-2xl border border-border bg-card px-4 text-sm outline-none focus:border-primary">
           <option value="">All Active</option>
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </select>
-        <select value={filterPublished} onChange={(event) => setFilterPublished(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
+        <select value={filterPublished} onChange={(event) => setFilterPublished(event.target.value)} className="h-11 min-w-[170px] rounded-2xl border border-border bg-card px-4 text-sm outline-none focus:border-primary">
           <option value="">All Published</option>
           <option value="true">Published</option>
           <option value="false">Unpublished</option>
         </select>
-        <select value={filterOnboarding} onChange={(event) => setFilterOnboarding(event.target.value)} className="rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary">
+        <select value={filterOnboarding} onChange={(event) => setFilterOnboarding(event.target.value)} className="h-11 min-w-[170px] rounded-2xl border border-border bg-card px-4 text-sm outline-none focus:border-primary">
           <option value="">All Onboarding</option>
           {onboardingOptions.map((item) => (
             <option key={item} value={item}>{item}</option>
           ))}
         </select>
-        <Button type="button" variant="outline" onClick={loadDoctors}>
+        <Button type="button" variant="outline" onClick={loadDoctors} className="h-11">
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>

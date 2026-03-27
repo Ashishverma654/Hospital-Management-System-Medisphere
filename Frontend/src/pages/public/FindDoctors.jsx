@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { MapPin, Search, ArrowRight, Sparkles } from 'lucide-react';
-import { getDepartments, getDoctors, getLocations, getSpecializations } from '../../services/apiServices.js';
+import { getDepartments, getDoctors, getLocations } from '../../services/apiServices.js';
 import { SkeletonCard } from '../../components/ui/skeleton.jsx';
 import { staggerContainer, staggerItem, fadeInUp } from '../../lib/animation-variants.js';
 
@@ -12,20 +12,17 @@ export default function FindDoctors() {
   const isPatient = isAuthenticated && sessionType === 'patient' && user?.role === 'patient';
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [specializations, setSpecializations] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState('');
-  const [specializationId, setSpecializationId] = useState('');
   const [locationId, setLocationId] = useState('');
 
   useEffect(() => {
     const loadMasterData = async () => {
-      const [deptData, locationData, specializationData] = await Promise.all([getDepartments(), getLocations(), getSpecializations()]);
+      const [deptData, locationData] = await Promise.all([getDepartments(), getLocations()]);
       setDepartments(Array.isArray(deptData) ? deptData : []);
       setLocations(Array.isArray(locationData) ? locationData : []);
-      setSpecializations(Array.isArray(specializationData) ? specializationData : []);
     };
     loadMasterData();
   }, []);
@@ -34,12 +31,12 @@ export default function FindDoctors() {
     const loadDoctors = async () => {
       setLoading(true);
       try {
-        const data = await getDoctors({ departmentId: departmentId || undefined, specializationId: specializationId || undefined, locationId: locationId || undefined });
+        const data = await getDoctors({ departmentId: departmentId || undefined, locationId: locationId || undefined });
         setDoctors(Array.isArray(data) ? data : []);
       } finally { setLoading(false); }
     };
     loadDoctors();
-  }, [departmentId, specializationId, locationId]);
+  }, [departmentId, locationId]);
 
   const visibleDoctors = useMemo(() => {
     if (!search.trim()) return doctors;
@@ -69,7 +66,7 @@ export default function FindDoctors() {
               <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">specialist</span>
             </h1>
             <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-              Browse published doctor profiles, filter by department and specialization, and view live availability from the hospital directory.
+              Browse published doctor profiles, filter by department, and view live availability from the hospital directory.
             </p>
             <div className="mt-6 flex gap-3">
               {isPatient ? (
@@ -92,8 +89,8 @@ export default function FindDoctors() {
       <section className="px-4 pb-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),200px,220px,200px]">
-              <div className="relative">
+            <div className="grid gap-3 md:grid-cols-2 md:items-center">
+              <div className="relative md:col-span-2">
                 <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text" value={search} onChange={(e) => setSearch(e.target.value)}
@@ -101,15 +98,10 @@ export default function FindDoctors() {
                   className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              <select value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); setSpecializationId(''); }}
+              <select value={departmentId} onChange={(e) => { setDepartmentId(e.target.value); }}
                 className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary">
                 <option value="">All Departments</option>
                 {departments.map((i) => <option key={i._id} value={i._id}>{i.name}</option>)}
-              </select>
-              <select value={specializationId} onChange={(e) => setSpecializationId(e.target.value)}
-                className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary">
-                <option value="">All Specializations</option>
-                {specializations.filter((i) => !departmentId || i.departmentId?._id === departmentId).map((i) => <option key={i._id} value={i._id}>{i.name}</option>)}
               </select>
               <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
                 className="rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary">

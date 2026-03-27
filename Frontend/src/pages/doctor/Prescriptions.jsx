@@ -36,6 +36,7 @@ export default function DoctorPrescriptions() {
     medicines: [],
     notes: '',
   });
+  const [noMedicationRequired, setNoMedicationRequired] = useState(false);
 
   const [medicineInput, setMedicineInput] = useState({
     medicineId: '',
@@ -43,7 +44,6 @@ export default function DoctorPrescriptions() {
     frequency: '',
     duration: '',
     quantity: '',
-    unit: '',
     instructions: '',
   });
 
@@ -106,10 +106,17 @@ export default function DoctorPrescriptions() {
       ...formData,
       medicines: [
         ...formData.medicines,
-        { ...medicineInput, medicineId: medicineInput.medicineId },
+        {
+          medicineId: medicineInput.medicineId,
+          dosage: medicineInput.dosage,
+          frequency: medicineInput.frequency,
+          duration: medicineInput.duration,
+          quantity: medicineInput.quantity,
+          instructions: medicineInput.instructions,
+        },
       ],
     });
-    setMedicineInput({ medicineId: '', dosage: '', frequency: '', duration: '', quantity: '', unit: '', instructions: '' });
+    setMedicineInput({ medicineId: '', dosage: '', frequency: '', duration: '', quantity: '', instructions: '' });
   };
 
   const handleRemoveMedicine = (index) => {
@@ -121,7 +128,7 @@ export default function DoctorPrescriptions() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.appointmentId || !formData.diagnosis || formData.medicines.length === 0) {
+    if (!formData.appointmentId || !formData.diagnosis) {
       toast.error('Please fill all required fields');
       return;
     }
@@ -249,20 +256,37 @@ export default function DoctorPrescriptions() {
             </div>
 
             {/* Medicines */}
-            <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
-              <h3 className="font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Medicines
-              </h3>
+            <div className="space-y-4 rounded-lg bg-muted/30 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <h3 className="font-semibold">Medicines</h3>
+                </div>
+                <span className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">Optional</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Add medicines only when required. You can submit a diagnosis without prescribing medication.
+              </p>
+
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={noMedicationRequired}
+                  onChange={(e) => setNoMedicationRequired(e.target.checked)}
+                  className="h-4 w-4 rounded border border-border text-primary focus:ring-primary"
+                />
+                No medication required for this consultation
+              </label>
 
               {/* Add Medicine Form */}
-              <div className="space-y-4 p-3 bg-background/50 rounded border border-border/50">
+              <div className={`space-y-4 rounded border border-border/50 bg-background/50 p-3 ${noMedicationRequired ? 'pointer-events-none opacity-60' : ''}`}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="medicine">Medicine</Label>
                     <Select
                       value={medicineInput.medicineId}
                       onValueChange={(value) =>
-                        setMedicineInput({ ...medicineInput, medicineId: value })
+                        setMedicineInput({ ...medicineInput, medicineId: String(value) })
                       }
                     >
                       <SelectTrigger>
@@ -270,7 +294,7 @@ export default function DoctorPrescriptions() {
                       </SelectTrigger>
                       <SelectContent>
                         {medicines.map((med) => (
-                          <SelectItem key={med._id} value={med._id}>
+                          <SelectItem key={med._id} value={String(med._id)}>
                             {med.name} ({med.strength})
                           </SelectItem>
                         ))}
@@ -338,21 +362,6 @@ export default function DoctorPrescriptions() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="unit">Unit</Label>
-                    <Input
-                      id="unit"
-                      value={medicineInput.unit}
-                      onChange={(e) =>
-                        setMedicineInput({
-                          ...medicineInput,
-                          unit: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., tablets"
-                    />
-                  </div>
-
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="instructions">Instructions</Label>
                     <Input
@@ -374,6 +383,7 @@ export default function DoctorPrescriptions() {
                   onClick={handleAddMedicine}
                   variant="outline"
                   className="w-full"
+                  disabled={noMedicationRequired}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add Medicine
                 </Button>
@@ -395,9 +405,9 @@ export default function DoctorPrescriptions() {
                           <p className="text-xs text-muted-foreground">
                             {med.dosage} - {med.frequency} for {med.duration}
                           </p>
-                          {(med.quantity || med.unit) && (
+                          {med.quantity && (
                             <p className="text-xs text-muted-foreground">
-                              Qty: {med.quantity || '—'} {med.unit || ''}
+                              Qty: {med.quantity}
                             </p>
                           )}
                           {med.instructions && (

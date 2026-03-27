@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import CalendarView from '../components/shifts/CalendarView.jsx';
 import ShiftModal from '../components/shifts/ShiftModal.jsx';
-import { adminApi } from '../services/apiServices.js';
+import { adminApi, shiftApi } from '../services/apiServices.js';
 import { createShift, deleteShift, getAllShifts, getMyShifts, updateShift, getShiftHistory } from '../services/shiftService.js';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
@@ -13,15 +13,52 @@ import { getRoleLabel } from '../auth/constants.js';
 
 const ADMIN_ROLES = ['superadmin', 'admin', 'subadmin'];
 
-const toEvent = (shift) => {
-  const staffName = shift.userId?.name || 'Staff';
-  const shiftType = shift.shiftType || 'morning';
+const normalizeShiftType = (value) =>
+  typeof value === 'string' ? value.toLowerCase() : '';
+
+const deriveScheduleShiftType = (shift) => {
+  const rawType = normalizeShiftType(shift?.shiftType);
+  if (['morning', 'evening', 'night'].includes(rawType)) return rawType;
+  const name = normalizeShiftType(shift?.name);
+  if (name.includes('morning')) return 'morning';
+  if (name.includes('evening') || name.includes('afternoon')) return 'evening';
+  if (name.includes('night')) return 'night';
+  const start = shift?.startTime;
+  if (typeof start === 'string' && start.includes(':')) {
+    const [h, m] = start.split(':').map(Number);
+    if (!Number.isNaN(h)) {
+      const minutes = h * 60 + (Number.isNaN(m) ? 0 : m);
+      if (minutes >= 300 && minutes < 720) return 'morning';
+      if (minutes >= 720 && minutes < 1080) return 'evening';
+      return 'night';
+    }
+  }
+  return 'morning';
+};
+
+const toEvent = (shift, staffNameMap = new Map(), currentUser = null) => {
+  const userId =
+    shift.userId?._id ||
+    shift.userId?.id ||
+    shift.userId ||
+    shift.userIdId ||
+    shift.user;
+  const staffName =
+    shift.userId?.name ||
+    staffNameMap.get(String(userId)) ||
+    (currentUser && (currentUser.id === userId || currentUser._id === userId) ? currentUser.name : null) ||
+    shift.userId?.email ||
+    'Staff';
+  const shiftType = shift.shiftType || shift.scheduleShiftType || 'morning';
   return {
     id: shift._id || shift.id,
     title: `${staffName} (${shiftType})`,
     start: new Date(shift.startTime),
     end: new Date(shift.endTime),
-    resource: shift,
+    resource: {
+      ...shift,
+      userId: shift.userId?.name ? shift.userId : { _id: userId, name: staffName },
+    },
   };
 };
 
@@ -45,18 +82,24 @@ const normalizeShiftWindow = ({ startTime, endTime }) => {
 export default function ShiftCalendar() {
   const user = useSelector((state) => state.auth.user);
   const isAdmin = ADMIN_ROLES.includes(user?.role);
+  const restrictDoctorForSubadmin = user?.role === 'subadmin';
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeEvent, setActiveEvent] = useState(null);
   const [saving, setSaving] = useState(false);
   const [staffOptions, setStaffOptions] = useState([]);
+  const [shiftTemplates, setShiftTemplates] = useState([]);
   const [range, setRange] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLogs, setHistoryLogs] = useState([]);
   const [historyFilters, setHistoryFilters] = useState({ date: '', role: '' });
   const [calendarView, setCalendarView] = useState('week');
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const staffNameMap = useMemo(
+    () => new Map(staffOptions.map((staff) => [String(staff.id), staff.name])),
+    [staffOptions]
+  );
 
   const loadShifts = useCallback(async () => {
     setLoading(true);
@@ -68,13 +111,33 @@ export default function ShiftCalendar() {
       const items = Array.isArray(response)
         ? response
         : response?.items || response?.data || [];
-      setEvents(items.map(toEvent));
+      setEvents(items.map((item) => toEvent(item, staffNameMap, user)));
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load shifts.');
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, range]);
+  }, [isAdmin, range, staffNameMap]);
+
+  useEffect(() => {
+    if (!staffOptions.length) return;
+    setEvents((current) =>
+      current.map((event) => {
+        const eventUserId = event.resource?.userId?._id || event.resource?.userId;
+        const resolvedName = staffNameMap.get(String(eventUserId));
+        if (!resolvedName) return event;
+        const shiftType = event.resource?.shiftType || event.resource?.scheduleShiftType || 'morning';
+        return {
+          ...event,
+          title: `${resolvedName} (${shiftType})`,
+          resource: {
+            ...event.resource,
+            userId: { _id: eventUserId, name: resolvedName },
+          },
+        };
+      })
+    );
+  }, [staffOptions, staffNameMap]);
 
   useEffect(() => {
     loadShifts();
@@ -86,7 +149,11 @@ export default function ShiftCalendar() {
       try {
         const data = await adminApi.getAllUsers({ limit: 200, isActive: true });
         const users = data?.users || [];
-        const filtered = users.filter((staff) => staff.role && staff.role !== 'patient');
+        const filtered = users.filter((staff) => {
+          if (!staff.role || staff.role === 'patient') return false;
+          if (restrictDoctorForSubadmin && staff.role === 'doctor') return false;
+          return true;
+        });
         setStaffOptions(
           filtered.map((staff) => ({
             id: staff._id,
@@ -100,6 +167,24 @@ export default function ShiftCalendar() {
       }
     };
     loadStaff();
+  }, [isAdmin, restrictDoctorForSubadmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const loadShiftTemplates = async () => {
+      try {
+        const data = await shiftApi.getAll({ isActive: true, page: 1, limit: 100 });
+        const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+        const mapped = items.map((shift) => ({
+          ...shift,
+          scheduleShiftType: deriveScheduleShiftType(shift),
+        }));
+        setShiftTemplates(mapped);
+      } catch {
+        setShiftTemplates([]);
+      }
+    };
+    loadShiftTemplates();
   }, [isAdmin]);
 
   const loadHistory = useCallback(async () => {
@@ -123,9 +208,13 @@ export default function ShiftCalendar() {
     if (Array.isArray(rangeValue)) {
       const start = rangeValue[0];
       const end = rangeValue[rangeValue.length - 1];
-      setRange({ start, end });
+      const endOfDay = end ? new Date(end) : end;
+      if (endOfDay) endOfDay.setHours(23, 59, 59, 999);
+      setRange({ start, end: endOfDay });
     } else if (rangeValue?.start && rangeValue?.end) {
-      setRange({ start: rangeValue.start, end: rangeValue.end });
+      const endOfDay = new Date(rangeValue.end);
+      endOfDay.setHours(23, 59, 59, 999);
+      setRange({ start: rangeValue.start, end: endOfDay });
     }
   };
 
@@ -137,23 +226,93 @@ export default function ShiftCalendar() {
       return start < event.end && end > event.start;
     });
 
+  // normalizeShiftType and deriveScheduleShiftType moved to module scope.
+
+  const getShiftTemplateByType = (type) => {
+    const normalizedType = normalizeShiftType(type);
+    return (
+      shiftTemplates.find(
+        (shift) =>
+          normalizeShiftType(shift.scheduleShiftType || shift.shiftType) === normalizedType &&
+          shift.isActive !== false
+      )
+      || shiftTemplates.find((shift) =>
+        normalizeShiftType(shift.scheduleShiftType || shift.shiftType) === normalizedType
+      )
+    );
+  };
+
+  const getShiftTemplateById = (id) =>
+    shiftTemplates.find((shift) => shift._id === id);
+
+  const isPastDate = (date) => {
+    if (!date) return false;
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return date < startOfToday;
+  };
+
+  const pickShiftTemplateForSlot = (slotInfo) => {
+    if (!slotInfo?.start || !shiftTemplates.length) return null;
+    const slotMinutes = slotInfo.start.getHours() * 60 + slotInfo.start.getMinutes();
+    for (const template of shiftTemplates) {
+      if (!template?.startTime || !template?.endTime) continue;
+      const [startHour, startMinute] = template.startTime.split(':').map(Number);
+      const [endHour, endMinute] = template.endTime.split(':').map(Number);
+      if (Number.isNaN(startHour) || Number.isNaN(endHour)) continue;
+      const startMinutes = startHour * 60 + (startMinute || 0);
+      const endMinutes = endHour * 60 + (endMinute || 0);
+      if (endMinutes > startMinutes) {
+        if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
+          return template;
+        }
+      } else {
+        if (slotMinutes >= startMinutes || slotMinutes < endMinutes) {
+          return template;
+        }
+      }
+    }
+    return null;
+  };
+
   const openCreateModal = (slotInfo) => {
+    if (isPastDate(slotInfo?.start)) {
+      toast.error('Cannot create shifts for past dates.');
+      return;
+    }
+    const suggestedTemplate = pickShiftTemplateForSlot(slotInfo);
     setActiveEvent({
       start: slotInfo.start,
       end: slotInfo.end,
-      resource: {},
+      resource: suggestedTemplate
+        ? {
+            shiftType: suggestedTemplate.scheduleShiftType || normalizeShiftType(suggestedTemplate.shiftType),
+            shiftTemplateId: suggestedTemplate._id,
+          }
+        : {},
     });
     setModalOpen(true);
   };
 
   const openEditModal = (event) => {
+    const eventStart = event?.start || event?.resource?.startTime;
+    if (isPastDate(eventStart)) {
+      toast.error('Past shifts cannot be edited.');
+      return;
+    }
     setActiveEvent(event);
     setModalOpen(true);
   };
 
   const handleSave = async (form) => {
-    const startDateTime = buildDateTime(form.date, form.startTime);
-    const endDateTime = buildDateTime(form.date, form.endTime);
+    const shiftTemplate =
+      getShiftTemplateById(form.shiftTemplateId)
+      || getShiftTemplateByType(form.shiftType);
+    if (!shiftTemplate) {
+      return toast.error('Shift timings are missing. Configure shift timings in Shift Management.');
+    }
+    const startDateTime = buildDateTime(form.date, shiftTemplate.startTime);
+    const endDateTime = buildDateTime(form.date, shiftTemplate.endTime);
     const normalized = normalizeShiftWindow({ startTime: startDateTime, endTime: endDateTime });
 
     if (!form.userId) return toast.error('Select a staff member.');
@@ -162,14 +321,22 @@ export default function ShiftCalendar() {
 
     const start = normalized.start;
     const end = normalized.end;
+    if (isPastDate(start)) {
+      return toast.error(activeEvent?.id ? 'Cannot edit shifts in the past.' : 'Cannot create shifts for past dates.');
+    }
     if (hasOverlap({ start, end, userId: form.userId, excludeId: activeEvent?.id })) {
       return toast.error('Shift overlaps with another schedule for this staff.');
+    }
+
+    const finalShiftType = deriveScheduleShiftType(shiftTemplate);
+    if (!['morning', 'evening', 'night'].includes(finalShiftType)) {
+      return toast.error('Shift type must be morning, evening, or night. Update Shift Management timings.');
     }
 
     const payload = {
       userId: form.userId,
       role: form.role,
-      shiftType: form.shiftType,
+      shiftType: finalShiftType,
       startTime: start.toISOString(),
       endTime: end.toISOString(),
     };
@@ -200,12 +367,47 @@ export default function ShiftCalendar() {
         await updateShift(activeEvent.id, payload);
         toast.success('Shift updated.');
       } else {
-        const response = await createShift(payload);
-        const created = response;
-        if (created) {
-          setEvents((current) => [...current, toEvent(created)]);
+        const days = Array.isArray(form.days) ? form.days : [];
+        if (days.length && form.date) {
+          const base = new Date(form.date);
+          const weekStart = new Date(base);
+          weekStart.setDate(base.getDate() - base.getDay());
+          const createdEvents = [];
+          for (const day of days) {
+            const targetDate = new Date(weekStart);
+            targetDate.setDate(weekStart.getDate() + day);
+            if (isPastDate(targetDate)) {
+              continue;
+            }
+            const dateString = targetDate.toISOString().split('T')[0];
+            const dayStart = buildDateTime(dateString, shiftTemplate.startTime);
+            const dayEnd = buildDateTime(dateString, shiftTemplate.endTime);
+            const normalizedWindow = normalizeShiftWindow({ startTime: dayStart, endTime: dayEnd });
+            if (!normalizedWindow) continue;
+            if (hasOverlap({ start: normalizedWindow.start, end: normalizedWindow.end, userId: form.userId })) {
+              continue;
+            }
+            const response = await createShift({
+              ...payload,
+              startTime: normalizedWindow.start.toISOString(),
+              endTime: normalizedWindow.end.toISOString(),
+            });
+            if (response) createdEvents.push(toEvent(response, staffNameMap, user));
+          }
+          if (createdEvents.length) {
+            setEvents((current) => [...current, ...createdEvents]);
+            toast.success(`Created ${createdEvents.length} shifts.`);
+          } else {
+            toast.error('No shifts created. Check for overlaps or past dates.');
+          }
+        } else {
+          const response = await createShift(payload);
+          const created = response;
+          if (created) {
+            setEvents((current) => [...current, toEvent(created, staffNameMap, user)]);
+          }
+          toast.success('Shift created.');
         }
-        toast.success('Shift created.');
       }
       setModalOpen(false);
       setActiveEvent(null);
@@ -236,6 +438,10 @@ export default function ShiftCalendar() {
   };
 
   const handleDrop = async ({ event, start, end }) => {
+    if (isPastDate(start)) {
+      toast.error('Cannot move shifts to past dates.');
+      return;
+    }
     const updatedEvent = { ...event, start, end };
     const eventUserId = event.resource?.userId?._id || event.resource?.userId;
     if (hasOverlap({ start, end, userId: eventUserId, excludeId: event.id })) {
@@ -257,6 +463,10 @@ export default function ShiftCalendar() {
   };
 
   const handleResize = async ({ event, start, end }) => {
+    if (isPastDate(start)) {
+      toast.error('Cannot move shifts to past dates.');
+      return;
+    }
     const updatedEvent = { ...event, start, end };
     const eventUserId = event.resource?.userId?._id || event.resource?.userId;
     if (hasOverlap({ start, end, userId: eventUserId, excludeId: event.id })) {
@@ -329,6 +539,7 @@ export default function ShiftCalendar() {
         eventData={activeEvent}
         canEdit={isAdmin}
         staffOptions={staffOptions}
+        shiftTemplates={shiftTemplates}
         saving={saving}
       />
 
