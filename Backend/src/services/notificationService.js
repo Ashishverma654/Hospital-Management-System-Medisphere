@@ -68,7 +68,7 @@ export const createNotification = async ({
         read: false,
       },
     },
-    { new: true, upsert: true }
+    { upsert: true, returnDocument: "after" }
   );
 };
 

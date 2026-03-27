@@ -648,7 +648,8 @@ export const completeAppointment = async (req, res) => {
 
     await Token.findOneAndUpdate(
       { appointmentId: appointment._id },
-      { $set: { status: "Completed" } }
+      { $set: { status: "Completed" } },
+      { returnDocument: "after" }
     );
 
     emitToRoom(`doctor_${appointment.doctorId}`, "consultation:completed", {
@@ -976,7 +977,8 @@ export const startConsultation = async (req, res) => {
 
     await Token.findOneAndUpdate(
       { appointmentId: appointment._id },
-      { $set: { status: "In Consultation" } }
+      { $set: { status: "In Consultation" } },
+      { returnDocument: "after" }
     );
 
     emitToRoom(`doctor_${appointment.doctorId}`, "consultation:started", {

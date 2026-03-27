@@ -443,7 +443,7 @@ export const createStaffUser = async (req, res) => {
       await NotificationPreference.findOneAndUpdate(
         { userId: user._id },
         { $set: { ...defaults, userId: user._id } },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: "after" }
       );
     } catch (prefErr) {
       logger.error(`[NOTIFICATION_PREF] Failed to set defaults for ${user.email}: ${prefErr.message}`);

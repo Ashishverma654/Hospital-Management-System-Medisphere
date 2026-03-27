@@ -449,6 +449,8 @@ export const markReportReady = async (req, res) => {
                 resultNotes: entry.resultNotes || "",
               },
             }
+            ,
+            { returnDocument: "after" }
           );
         })
       );

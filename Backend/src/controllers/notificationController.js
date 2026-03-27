@@ -463,7 +463,7 @@ export const updateEmployeeNotificationPreferences = async (req, res) => {
           allowUrgentSound: allowUrgentSound !== false,
         },
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     await logAudit({
