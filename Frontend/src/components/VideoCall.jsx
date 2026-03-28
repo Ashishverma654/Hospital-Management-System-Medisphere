@@ -14,6 +14,8 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
   const localStreamRef = useRef(null);
   const socketRef = useRef(null);
   const [status, setStatus] = useState('Connecting...');
+  const [sessionKey, setSessionKey] = useState(0);
+  const [participantRole, setParticipantRole] = useState(null);
 
   useEffect(() => {
     if (!appointmentId) return undefined;
@@ -59,7 +61,7 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     const handleJoined = async () => {
       try {
         await attachLocalStream();
-        setStatus('Waiting for participant...');
+        setStatus(role === 'doctor' ? 'Waiting for patient to join...' : 'Waiting for doctor to join...');
         if (role === 'doctor') {
           await createOffer();
         }
@@ -73,7 +75,9 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     socket.on('join-error', (payload) => {
       setStatus(payload?.message || 'Unable to join video room.');
     });
-    socket.on('participant-joined', async () => {
+    socket.on('participant-joined', async ({ role: joinedRole }) => {
+      setParticipantRole(joinedRole || 'participant');
+      setStatus(joinedRole === 'doctor' ? 'Doctor joined. Connecting...' : 'Patient joined. Connecting...');
       if (role === 'doctor') {
         await createOffer();
       }
@@ -127,8 +131,24 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
-  };
-}, [appointmentId, role]);
+    return () => {
+      socket.off('joined-room', handleJoined);
+      socket.off('join-error');
+      socket.off('participant-joined');
+      socket.off('offer');
+      socket.off('answer');
+      socket.off('ice-candidate');
+      socket.off('participant-left');
+
+      if (peerRef.current) {
+        peerRef.current.close();
+      }
+
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [appointmentId, role, sessionKey]);
 
   useEffect(() => {
     if (typeof onStatusChange === 'function') {
@@ -136,10 +156,17 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     }
   }, [status, onStatusChange]);
 
+  const canReconnect = ['Participant disconnected.', 'Connection failed.', 'Unable to start call.'].includes(status);
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-3 text-xs text-muted-foreground">
         {status}
+        {participantRole && (
+          <span className="ml-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {participantRole}
+          </span>
+        )}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-background/60 p-3">
@@ -151,7 +178,12 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
           <video ref={remoteVideoRef} autoPlay playsInline className="mt-2 aspect-video w-full rounded-xl bg-black" />
         </div>
       </div>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {canReconnect && (
+          <Button variant="outline" onClick={() => setSessionKey((k) => k + 1)}>
+            Rejoin call
+          </Button>
+        )}
         <Button variant="destructive" onClick={onEnd}>End call</Button>
       </div>
     </div>

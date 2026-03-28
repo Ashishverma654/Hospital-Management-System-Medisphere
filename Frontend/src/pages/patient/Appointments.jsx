@@ -71,19 +71,27 @@ export default function PatientAppointments() {
     if (!patientId) return undefined;
     const socket = connectSocket({ patientId });
     const handleUpdate = () => loadAppointments();
+    const handleConsultationStarted = (payload) => {
+      loadAppointments();
+      const appointmentId = payload?.appointmentId;
+      const match = appointments.find((item) => (item._id || item.id) === appointmentId);
+      if (match?.consultationMode === 'video') {
+        toast.success('Doctor has started the video consultation. Tap Join to connect.');
+      }
+    };
 
     socket.on('queue:update', handleUpdate);
     socket.on('token:generated', handleUpdate);
-    socket.on('consultation:started', handleUpdate);
+    socket.on('consultation:started', handleConsultationStarted);
     socket.on('consultation:completed', handleUpdate);
 
     return () => {
       socket.off('queue:update', handleUpdate);
       socket.off('token:generated', handleUpdate);
-      socket.off('consultation:started', handleUpdate);
+      socket.off('consultation:started', handleConsultationStarted);
       socket.off('consultation:completed', handleUpdate);
     };
-  }, [loadAppointments, user?.id, user?._id]);
+  }, [appointments, loadAppointments, user?.id, user?._id]);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const upcoming = appointments.filter((item) => isUpcoming(item, today));
@@ -205,12 +213,15 @@ export default function PatientAppointments() {
                         }}
                         className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
                       >
-                        Join
+                        Join now
                       </button>
                     )}
                     <StatusBadge status={appointment.status}>{appointment.status}</StatusBadge>
                   </div>
                 </div>
+                {appointment.consultationMode === 'video' && appointment.status === 'inConsultation' && (
+                  <p className="mt-2 text-xs font-semibold text-primary">Doctor is waiting.</p>
+                )}
               </button>
             ))}
             {upcoming.length === 0 && !loading && (
@@ -318,7 +329,9 @@ export default function PatientAppointments() {
                 <article className="rounded-xl border border-border p-4">
                   <p className="text-sm font-semibold text-foreground">Video consultation</p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Join when the doctor starts the consultation.
+                    {selected.status === 'inConsultation'
+                      ? 'Doctor is waiting for you to join.'
+                      : 'Join when the doctor starts the consultation.'}
                   </p>
                   <button
                     type="button"

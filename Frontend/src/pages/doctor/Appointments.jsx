@@ -226,7 +226,7 @@ export default function DoctorAppointments() {
               onClick={() => handleStartVideo(row)}
               className="text-xs"
             >
-              <Video className="h-3 w-3 mr-1" /> Start video
+              <Video className="h-3 w-3 mr-1" /> {row.status === 'inConsultation' ? 'Rejoin video' : 'Start video'}
             </Button>
           )}
           <Button

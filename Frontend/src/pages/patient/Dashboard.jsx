@@ -81,6 +81,13 @@ export default function PatientDashboard() {
 
   const upcomingAppointments = overview?.lists?.upcomingAppointments || [];
   const recentAppointments = overview?.lists?.recentAppointments || [];
+  const activeVideoAppointment = useMemo(
+    () =>
+      recentAppointments.find(
+        (appt) => appt.consultationMode === 'video' && appt.status === 'inConsultation'
+      ),
+    [recentAppointments]
+  );
   const recentPrescriptions = overview?.lists?.recentPrescriptions || [];
   const activeLabOrders = overview?.lists?.activeLabOrders || [];
   const medicineOrders = overview?.lists?.medicineOrders || [];
@@ -132,6 +139,27 @@ export default function PatientDashboard() {
           </div>
         </div>
       </div>
+
+      {activeVideoAppointment && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/10 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-primary">Video consultation live</p>
+              <p className="mt-2 text-lg font-semibold text-foreground">
+                Dr. {activeVideoAppointment.doctorId?.userId?.name || 'Doctor'} is waiting for you.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {activeVideoAppointment.date} • {activeVideoAppointment.slot}
+              </p>
+            </div>
+            <Button asChild>
+              <Link to={`/patient/appointments?appointmentId=${activeVideoAppointment._id}&autoJoin=1`}>
+                Join now
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Main stat cards */}
       {loading ? (
