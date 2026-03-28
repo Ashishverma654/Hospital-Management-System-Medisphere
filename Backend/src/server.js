@@ -5,6 +5,7 @@ import { ensureSuperAdmin } from "./utils/ensureSuperAdmin.js";
 import { migrateLegacyRoles } from "./utils/migrateLegacyRoles.js";
 import { initSocket } from "./services/socketService.js";
 import { startNoShowScheduler } from "./services/noShowScheduler.js";
+import { startConsultationAutoCompleteScheduler } from "./services/consultationAutoCompleteScheduler.js";
 
 const PORT = process.env.PORT || 3500;
 
@@ -22,6 +23,7 @@ const bootstrap = async () => {
       await ensureSuperAdmin();
       await migrateLegacyRoles();
       startNoShowScheduler();
+      startConsultationAutoCompleteScheduler();
     } catch (e) {
       console.error("Startup role setup failed:", e?.message || e);
     }

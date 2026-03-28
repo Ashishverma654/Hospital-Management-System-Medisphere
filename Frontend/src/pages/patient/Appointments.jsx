@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { appointmentApi } from '../../services/apiServices.js';
 import VideoCall from '../../components/VideoCall.jsx';
@@ -24,6 +24,9 @@ const STATUS_OPTIONS = [
 const isUpcoming = (appointment, today) => appointment.date >= today && appointment.status !== 'cancelled';
 
 export default function PatientAppointments() {
+  const [searchParams] = useSearchParams();
+  const preselectId = searchParams.get('appointmentId');
+  const autoJoin = searchParams.get('autoJoin') === '1';
   const user = useSelector((state) => state.auth.user);
   const [appointments, setAppointments] = useState([]);
   const [selectedId, setSelectedId] = useState('');
@@ -45,7 +48,9 @@ export default function PatientAppointments() {
       });
       const list = Array.isArray(data) ? data : [];
       setAppointments(list);
-      if (list.length && !selectedId) {
+      if (preselectId && list.find((item) => (item._id || item.id) === preselectId)) {
+        setSelectedId(preselectId);
+      } else if (list.length && !selectedId) {
         setSelectedId(list[0]._id || list[0].id);
       }
     } catch (error) {
@@ -86,6 +91,12 @@ export default function PatientAppointments() {
   const selected = appointments.find((item) => (item._id || item.id) === selectedId);
   const canJoinVideo = selected?.consultationMode === 'video' && ['arrived', 'checked-in', 'inConsultation'].includes(selected?.status);
   const waitingRoomVisible = videoOpen && videoStatus === 'Waiting for participant...';
+
+  useEffect(() => {
+    if (!autoJoin || !selected || !canJoinVideo) return;
+    setVideoAppointment(selected);
+    setVideoOpen(true);
+  }, [autoJoin, canJoinVideo, selected]);
 
   useEffect(() => {
     if (!waitingRoomVisible) {
@@ -182,7 +193,23 @@ export default function PatientAppointments() {
                       {appointment.doctorId?.departmentId?.name || 'Department'} • {appointment.date} • {appointment.slot}
                     </p>
                   </div>
-                  <StatusBadge status={appointment.status}>{appointment.status}</StatusBadge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {appointment.consultationMode === 'video' && appointment.status === 'inConsultation' && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedId(appointment._id);
+                          setVideoAppointment(appointment);
+                          setVideoOpen(true);
+                        }}
+                        className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground"
+                      >
+                        Join
+                      </button>
+                    )}
+                    <StatusBadge status={appointment.status}>{appointment.status}</StatusBadge>
+                  </div>
                 </div>
               </button>
             ))}

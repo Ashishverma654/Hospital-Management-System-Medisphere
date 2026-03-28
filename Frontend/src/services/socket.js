@@ -6,6 +6,7 @@ const normalizeSocketBase = (rawBase) => {
   if (base.endsWith('/api')) {
     base = base.slice(0, -4);
   }
+  if (!base) return 'http://localhost:3500';
   return base;
 };
 

@@ -40,12 +40,49 @@ export default function DoctorPrescriptions() {
 
   const [medicineInput, setMedicineInput] = useState({
     medicineId: '',
+    medicineName: '',
     dosage: '',
     frequency: '',
     duration: '',
     quantity: '',
+    frequencyTimes: { morning: false, afternoon: false, night: false, all: false },
+    frequencyCount: '',
+    mealTiming: '',
     instructions: '',
   });
+
+  useEffect(() => {
+    if (!medicineInput.medicineId) return;
+    const match = medicines.find((med) => String(med.id) === String(medicineInput.medicineId));
+    if (!match) {
+      setMedicineInput((current) => ({ ...current, medicineId: '', medicineName: '' }));
+      return;
+    }
+    if (match.name && match.name !== medicineInput.medicineName) {
+      setMedicineInput((current) => ({ ...current, medicineName: match.name }));
+    }
+  }, [medicines, medicineInput.medicineId, medicineInput.medicineName]);
+
+  const computeQuantity = (input) => {
+    const days = Number(input.duration) || 0;
+    const count = Number(input.frequencyCount) || 1;
+    const times = input.frequencyTimes?.all
+      ? 3
+      : ['morning', 'afternoon', 'night'].filter((key) => input.frequencyTimes?.[key]).length;
+    if (!days || !times) return '';
+    return String(days * times * (count || 1));
+  };
+
+  const buildFrequencyLabel = (input) => {
+    const parts = input.frequencyTimes?.all
+      ? ['Morning', 'Afternoon', 'Night']
+      : ['morning', 'afternoon', 'night']
+          .filter((key) => input.frequencyTimes?.[key])
+          .map((key) => key.charAt(0).toUpperCase() + key.slice(1));
+    if (!parts.length) return '';
+    const count = Number(input.frequencyCount) || 1;
+    return `${parts.join(', ')}${count > 1 ? ` • ${count}x` : ''}`;
+  };
 
   useEffect(() => {
     Promise.all([fetchMedicines(), fetchDoctorAppointments(), appointmentId && fetchAppointment(appointmentId), fetchRecentPrescriptions()]);
@@ -64,7 +101,14 @@ export default function DoctorPrescriptions() {
   const fetchMedicines = async () => {
     try {
       const data = await pharmacyApi.getAll();
-      setMedicines(Array.isArray(data) ? data : []);
+      const raw = Array.isArray(data) ? data : data?.data || [];
+      const normalized = (raw || [])
+        .map((med) => ({
+          ...med,
+          id: med?.id || med?._id || null,
+        }))
+        .filter((med) => med.id);
+      setMedicines(normalized);
     } catch {
       toast.error('Failed to load medicines');
     }
@@ -98,8 +142,10 @@ export default function DoctorPrescriptions() {
   };
 
   const handleAddMedicine = () => {
-    if (!medicineInput.medicineId || !medicineInput.dosage || !medicineInput.frequency) {
-      toast.error('Please fill all medicine fields');
+    const derivedFrequency = buildFrequencyLabel(medicineInput);
+    const derivedQuantity = computeQuantity(medicineInput);
+    if (!medicineInput.medicineId) {
+      toast.error('Select a medicine first.');
       return;
     }
     setFormData({
@@ -108,15 +154,27 @@ export default function DoctorPrescriptions() {
         ...formData.medicines,
         {
           medicineId: medicineInput.medicineId,
+          name: medicineInput.medicineName,
           dosage: medicineInput.dosage,
-          frequency: medicineInput.frequency,
+          frequency: derivedFrequency || medicineInput.frequency,
           duration: medicineInput.duration,
-          quantity: medicineInput.quantity,
-          instructions: medicineInput.instructions,
+          quantity: derivedQuantity || medicineInput.quantity,
+          instructions: [medicineInput.mealTiming, medicineInput.instructions].filter(Boolean).join(' • '),
         },
       ],
     });
-    setMedicineInput({ medicineId: '', dosage: '', frequency: '', duration: '', quantity: '', instructions: '' });
+    setMedicineInput({
+      medicineId: '',
+      medicineName: '',
+      dosage: '',
+      frequency: '',
+      duration: '',
+      quantity: '',
+      frequencyTimes: { morning: false, afternoon: false, night: false, all: false },
+      frequencyCount: '',
+      mealTiming: '',
+      instructions: '',
+    });
   };
 
   const handleRemoveMedicine = (index) => {
@@ -284,15 +342,30 @@ export default function DoctorPrescriptions() {
                   <div className="space-y-2">
                     <Label htmlFor="medicine">Medicine</Label>
                     <Select
-                      value={medicineInput.medicineId}
+                      value={medicineInput.medicineId || ''}
                       onValueChange={(value) =>
-                        setMedicineInput({ ...medicineInput, medicineId: String(value) })
+                        setMedicineInput((current) => {
+                          const nextId = value ? String(value) : '';
+                          const match = medicines.find((med) => String(med.id) === String(nextId));
+                          return {
+                            ...current,
+                            medicineId: nextId,
+                            medicineName: match?.name || '',
+                          };
+                        })
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select medicine" />
+                        <span className="text-left text-sm text-foreground">
+                          {medicineInput.medicineName || 'Select medicine'}
+                        </span>
                       </SelectTrigger>
                       <SelectContent>
+                        {medicines.length === 0 && (
+                          <SelectItem value="__empty" disabled>
+                            No medicines available
+                          </SelectItem>
+                        )}
                         {medicines.map((med) => {
                           const medId = med.id || med._id;
                           return (
@@ -322,47 +395,116 @@ export default function DoctorPrescriptions() {
 
                   <div className="space-y-2">
                     <Label htmlFor="frequency">Frequency</Label>
-                    <Input
-                      id="frequency"
-                      value={medicineInput.frequency}
-                      onChange={(e) =>
-                        setMedicineInput({
-                          ...medicineInput,
-                          frequency: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., twice daily"
-                    />
+                    <div className="space-y-3 rounded-xl border border-border bg-background/60 p-3">
+                      <div className="flex flex-wrap gap-2">
+                        {['morning', 'afternoon', 'night', 'all'].map((time) => (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() =>
+                              setMedicineInput((current) => {
+                                const next = { ...current.frequencyTimes };
+                                if (time === 'all') {
+                                  const nextValue = !next.all;
+                                  next.all = nextValue;
+                                  next.morning = nextValue;
+                                  next.afternoon = nextValue;
+                                  next.night = nextValue;
+                                } else {
+                                  next[time] = !next[time];
+                                  if (!next[time]) {
+                                    next.all = false;
+                                  } else if (next.morning && next.afternoon && next.night) {
+                                    next.all = true;
+                                  }
+                                }
+                                return { ...current, frequencyTimes: next };
+                              })
+                            }
+                            className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                              medicineInput.frequencyTimes?.[time]
+                                ? 'bg-primary text-primary-foreground'
+                                : 'border border-border bg-card text-foreground hover:bg-muted'
+                            }`}
+                          >
+                            {time.charAt(0).toUpperCase() + time.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                      <Input
+                        id="frequency"
+                        type="number"
+                        min="1"
+                        max="4"
+                        value={medicineInput.frequencyCount}
+                        onChange={(e) =>
+                          setMedicineInput((current) => {
+                            const raw = e.target.value.replace(/\D/g, '');
+                            let next = raw ? Math.min(4, Math.max(1, Number(raw))) : '';
+                            const nextStr = next === '' ? '' : String(next);
+                            return {
+                              ...current,
+                              frequencyCount: nextStr,
+                              quantity: computeQuantity({
+                                ...current,
+                                frequencyCount: nextStr,
+                              }),
+                            };
+                          })
+                        }
+                        placeholder="Times per day (1–4)"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="duration">Duration</Label>
                     <Input
                       id="duration"
+                      type="number"
+                      min="1"
                       value={medicineInput.duration}
                       onChange={(e) =>
                         setMedicineInput({
                           ...medicineInput,
                           duration: e.target.value,
+                          quantity: computeQuantity({
+                            ...medicineInput,
+                            duration: e.target.value,
+                          }),
                         })
                       }
-                      placeholder="e.g., 7 days"
+                      placeholder="e.g., 7"
                     />
                   </div>
+                  {computeQuantity(medicineInput) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantity</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        value={computeQuantity(medicineInput)}
+                        readOnly
+                        placeholder="Auto-calculated"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity</Label>
-                    <Input
-                      id="quantity"
-                      type="number"
-                      value={medicineInput.quantity}
-                      onChange={(e) =>
-                        setMedicineInput({
-                          ...medicineInput,
-                          quantity: e.target.value,
-                        })
+                    <Label htmlFor="mealTiming">Meal timing</Label>
+                    <Select
+                      value={medicineInput.mealTiming || ''}
+                      onValueChange={(value) =>
+                        setMedicineInput((current) => ({ ...current, mealTiming: value }))
                       }
-                      placeholder="e.g., 10"
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Before / After meals" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Before meals">Before meals</SelectItem>
+                        <SelectItem value="After meals">After meals</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
@@ -404,9 +546,9 @@ export default function DoctorPrescriptions() {
                         className="flex justify-between items-start p-3 bg-muted/50 rounded text-sm"
                       >
                         <div>
-                          <p className="font-medium">{medicine?.name}</p>
+                          <p className="font-medium">{medicine?.name || med.name || 'Medicine'}</p>
                           <p className="text-xs text-muted-foreground">
-                            {med.dosage} - {med.frequency} for {med.duration}
+                            {med.dosage} • {med.frequency} • {med.duration} days
                           </p>
                           {med.quantity && (
                             <p className="text-xs text-muted-foreground">

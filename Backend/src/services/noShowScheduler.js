@@ -4,7 +4,17 @@ import { emitToRoom } from "./socketService.js";
 
 const parseSlotDate = (date, slot) => {
   if (!date || !slot) return null;
-  const parsed = new Date(`${date}T${slot}:00`);
+  const raw = String(slot).split("-")[0].trim();
+  const match = raw.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return null;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const meridiem = match[3] ? match[3].toUpperCase() : null;
+  if (meridiem === "PM" && hours !== 12) hours += 12;
+  if (meridiem === "AM" && hours === 12) hours = 0;
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(minutes).padStart(2, "0");
+  const parsed = new Date(`${date}T${hh}:${mm}:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 

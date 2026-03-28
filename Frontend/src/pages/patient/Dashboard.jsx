@@ -183,12 +183,21 @@ export default function PatientDashboard() {
             {loading ? <SkeletonList count={2} /> : (
               <>
                 {recentAppointments.slice(0, 3).map((appt) => (
-                  <div key={appt._id} className="flex items-center justify-between rounded-xl border border-border p-4 transition-colors hover:bg-muted/30">
+                  <div key={appt._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-muted/30">
                     <div>
                       <p className="font-semibold text-foreground">{appt.doctorId?.userId?.name || 'Doctor'}</p>
                       <p className="text-sm text-muted-foreground">{appt.date} • {appt.slot}</p>
                     </div>
-                    <StatusBadge status={appt.status}>{appt.status}</StatusBadge>
+                    <div className="flex items-center gap-2">
+                      {appt.consultationMode === 'video' && appt.status === 'inConsultation' && (
+                        <Button size="sm" asChild>
+                          <Link to={`/patient/appointments?appointmentId=${appt._id}&autoJoin=1`}>
+                            Join video
+                          </Link>
+                        </Button>
+                      )}
+                      <StatusBadge status={appt.status}>{appt.status}</StatusBadge>
+                    </div>
                   </div>
                 ))}
                 {recentAppointments.length === 0 && (
