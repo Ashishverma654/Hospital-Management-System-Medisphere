@@ -293,11 +293,14 @@ export default function DoctorPrescriptions() {
                         <SelectValue placeholder="Select medicine" />
                       </SelectTrigger>
                       <SelectContent>
-                        {medicines.map((med) => (
-                          <SelectItem key={med._id} value={String(med._id)}>
-                            {med.name} ({med.strength})
-                          </SelectItem>
-                        ))}
+                        {medicines.map((med) => {
+                          const medId = med.id || med._id;
+                          return (
+                            <SelectItem key={medId} value={String(medId)}>
+                              {med.name || 'Medicine'}{med.unit ? ` • ${med.unit}` : ''}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -394,7 +397,7 @@ export default function DoctorPrescriptions() {
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Added Medicines:</p>
                   {formData.medicines.map((med, idx) => {
-                    const medicine = medicines.find((m) => m._id === med.medicineId);
+                    const medicine = medicines.find((m) => String(m.id || m._id) === String(med.medicineId));
                     return (
                       <div
                         key={idx}
