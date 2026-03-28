@@ -219,7 +219,7 @@ export default function DoctorAppointments() {
               {startingConsultation === row._id ? 'Starting...' : 'Start'}
             </Button>
           )}
-          {row.consultationMode === 'video' && (
+          {row.consultationMode === 'video' && row.status !== 'completed' && (
             <Button
               size="sm"
               variant="outline"
@@ -229,14 +229,16 @@ export default function DoctorAppointments() {
               <Video className="h-3 w-3 mr-1" /> {row.status === 'inConsultation' ? 'Rejoin video' : 'Start video'}
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openQuickView(row)}
-            className="text-xs"
-          >
-            <Stethoscope className="h-3 w-3 mr-1" /> Quick view
-          </Button>
+          {row.status !== 'completed' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openQuickView(row)}
+              className="text-xs"
+            >
+              <Stethoscope className="h-3 w-3 mr-1" /> Quick view
+            </Button>
+          )}
           <Button
             size="sm"
             variant="outline"

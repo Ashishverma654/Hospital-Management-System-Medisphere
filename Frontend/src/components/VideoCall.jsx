@@ -131,22 +131,6 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
-    return () => {
-      socket.off('joined-room', handleJoined);
-      socket.off('join-error');
-      socket.off('participant-joined');
-      socket.off('offer');
-      socket.off('answer');
-      socket.off('ice-candidate');
-      socket.off('participant-left');
-
-      if (peerRef.current) {
-        peerRef.current.close();
-      }
-
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
     };
   }, [appointmentId, role, sessionKey]);
 
