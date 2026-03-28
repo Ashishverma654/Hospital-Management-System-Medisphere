@@ -7,7 +7,7 @@ import VideoCall from '../../components/VideoCall.jsx';
 import { StatusBadge, DataTable, LoadingSkeleton, ErrorState } from '../../components';
 import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
-import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText, Video } from 'lucide-react';
+import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText, Video, CheckCircle } from 'lucide-react';
 
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
@@ -26,14 +26,43 @@ export default function DoctorAppointments() {
   const [viewMode, setViewMode] = useState('today');
 
   const slotToMinutes = (slot = '') => {
-    const match = slot.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-    if (!match) return null;
-    let hours = Number(match[1]);
-    const minutes = Number(match[2]);
-    const meridiem = match[3].toUpperCase();
-    if (meridiem === 'PM' && hours !== 12) hours += 12;
-    if (meridiem === 'AM' && hours === 12) hours = 0;
+    const trimmed = `${slot}`.trim();
+    const match = trimmed.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (match) {
+      let hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const meridiem = match[3].toUpperCase();
+      if (meridiem === 'PM' && hours !== 12) hours += 12;
+      if (meridiem === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+    const [rawHours, rawMinutes] = trimmed.split(':');
+    const hours = Number(rawHours);
+    const minutes = Number(rawMinutes);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
     return hours * 60 + minutes;
+  };
+
+  const buildSlotDateTime = (date, slot) => {
+    if (!date || !slot) return null;
+    const minutes = slotToMinutes(slot);
+    if (minutes == null) return null;
+    const base = new Date(`${date}T00:00:00`);
+    if (Number.isNaN(base.getTime())) return null;
+    base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+    return base;
+  };
+
+  const isSlotFuture = (appointment) => {
+    const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+    if (!slotDateTime) return false;
+    return slotDateTime.getTime() > Date.now();
+  };
+
+  const sortBySlotDateTime = (a, b) => {
+    const aTime = buildSlotDateTime(a.date, a.slot)?.getTime() ?? 0;
+    const bTime = buildSlotDateTime(b.date, b.slot)?.getTime() ?? 0;
+    return aTime - bTime;
   };
 
   const fetchAppointments = useCallback(async () => {
@@ -46,16 +75,11 @@ export default function DoctorAppointments() {
       const normalized = Array.isArray(response) ? response : response?.data || [];
       if (viewMode === 'upcoming') {
         const now = new Date();
-        const todayKey = now.toISOString().split('T')[0];
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
         const upcoming = normalized.filter((appt) => {
-          if (!appt?.date) return false;
-          if (appt.date > todayKey) return true;
-          if (appt.date < todayKey) return false;
-          const slotMinutes = slotToMinutes(appt.slot);
-          return slotMinutes == null ? false : slotMinutes > nowMinutes;
+          const slotDateTime = buildSlotDateTime(appt?.date, appt?.slot);
+          return slotDateTime ? slotDateTime.getTime() > now.getTime() : false;
         });
-        setTodayAppointments(upcoming);
+        setTodayAppointments(upcoming.sort(sortBySlotDateTime));
       } else {
         setTodayAppointments(Array.isArray(normalized) ? normalized : []);
       }
@@ -212,8 +236,13 @@ export default function DoctorAppointments() {
               size="sm"
               variant="default"
               onClick={() => handleStartConsultation(row._id)}
-              disabled={startingConsultation === row._id}
+              disabled={startingConsultation === row._id || (!row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && isSlotFuture(row))}
               className="text-xs"
+              title={
+                !row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && isSlotFuture(row)
+                  ? 'This appointment is scheduled later.'
+                  : undefined
+              }
             >
               <Play className="h-3 w-3 mr-1" />
               {startingConsultation === row._id ? 'Starting...' : 'Start'}
@@ -225,6 +254,12 @@ export default function DoctorAppointments() {
               variant="outline"
               onClick={() => handleStartVideo(row)}
               className="text-xs"
+              disabled={!row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && row.status !== 'inConsultation' && isSlotFuture(row)}
+              title={
+                !row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && row.status !== 'inConsultation' && isSlotFuture(row)
+                  ? 'Video starts at the scheduled time.'
+                  : undefined
+              }
             >
               <Video className="h-3 w-3 mr-1" /> {row.status === 'inConsultation' ? 'Rejoin video' : 'Start video'}
             </Button>
@@ -263,12 +298,19 @@ export default function DoctorAppointments() {
   if (loading) return <LoadingSkeleton />;
 
   const _completed = todayAppointments.filter((a) => a.status === 'completed').length;
-  const _inProgress = todayAppointments.filter((a) =>
-    ['arrived', 'checked-in', 'inConsultation'].includes(a.status)
-  ).length;
   const _pending = todayAppointments.filter((a) =>
     ['booked', 'confirmed'].includes(a.status)
   ).length;
+  const upcomingAppointments = todayAppointments
+    .filter(
+      (appointment) =>
+        !['completed', 'cancelled', 'no-show'].includes(appointment.status) &&
+        (appointment.status === 'inConsultation' || isSlotFuture(appointment))
+    )
+    .sort(sortBySlotDateTime);
+  const completedAppointments = todayAppointments
+    .filter((appointment) => appointment.status === 'completed')
+    .sort(sortBySlotDateTime);
 
   return (
     <div className="space-y-6">
@@ -360,22 +402,45 @@ export default function DoctorAppointments() {
 
       {error && <ErrorState error={error} onRetry={fetchAppointments} />}
 
-      {/* Appointments Table */}
+      {/* Upcoming Queue */}
       <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" /> Appointments Queue ({todayAppointments.length})
+            <Calendar className="h-5 w-5" /> Upcoming appointments ({upcomingAppointments.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {todayAppointments.length === 0 ? (
+          {upcomingAppointments.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No appointments scheduled for today</p>
+              <p className="text-muted-foreground">No upcoming appointments in this view</p>
             </div>
           ) : (
             <DataTable
-              data={todayAppointments}
+              data={upcomingAppointments}
+              columns={columns}
+              keyField="_id"
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Completed Appointments */}
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" /> Completed appointments ({completedAppointments.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {completedAppointments.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle className="mx-auto h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">No completed appointments in this view</p>
+            </div>
+          ) : (
+            <DataTable
+              data={completedAppointments}
               columns={columns}
               keyField="_id"
             />

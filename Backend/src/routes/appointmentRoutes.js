@@ -13,6 +13,7 @@ import {
   rescheduleAppointment,
   recommendAdmission,
   startConsultation,
+  startConsultationEarly,
   getDoctorTodayDetailed,
   getPatientSummary,
   getDoctorAppointmentById,
@@ -65,6 +66,12 @@ router.put(
 
 // Doctor workflow routes
 router.post("/:appointmentId/start-consultation", verifyAccessToken, authorizeRoles("doctor"), startConsultation);
+router.post(
+  "/:appointmentId/start-consultation-early",
+  verifyAccessToken,
+  authorizeRoles("receptionist", "admin", "superadmin"),
+  startConsultationEarly
+);
 router.get("/doctor/today", verifyAccessToken, authorizeRoles("doctor"), getDoctorTodayDetailed);
 router.get("/doctor/all", verifyAccessToken, authorizeRoles("doctor"), getDoctorAppointments);
 router.get("/doctor/:id", verifyAccessToken, authorizeRoles("doctor"), getDoctorAppointmentById);

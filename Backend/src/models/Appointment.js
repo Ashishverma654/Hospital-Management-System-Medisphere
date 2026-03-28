@@ -102,6 +102,19 @@ const appointmentSchema = new mongoose.Schema(
       ref: "User",
     },
 
+    earlyCheckInReason: {
+      type: String,
+    },
+
+    earlyCheckInAt: {
+      type: Date,
+    },
+
+    earlyCheckInBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
     cancellationReason: {
       type: String,
     },

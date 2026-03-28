@@ -23,6 +23,36 @@ const OCCUPIED_SLOT_STATUSES = ["booked", "confirmed", "arrived", "waiting", "ch
 const QUEUE_ACTIVE_STATUSES = ["booked", "confirmed", "arrived", "waiting", "checked-in", "inConsultation"];
 const DEFAULT_WAIT_MINUTES = Number(process.env.QUEUE_AVG_WAIT_MINUTES || 15);
 
+const parseSlotToMinutes = (slot = "") => {
+  const trimmed = `${slot}`.trim();
+  if (!trimmed) return null;
+  const match = trimmed.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = match[3].toUpperCase();
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    if (meridiem === "PM" && hours !== 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+  const [rawHours, rawMinutes] = trimmed.split(":");
+  const hours = Number(rawHours);
+  const minutes = Number(rawMinutes);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+const buildSlotDateTime = (date, slot) => {
+  if (!date) return null;
+  const minutes = parseSlotToMinutes(slot);
+  if (minutes == null) return null;
+  const base = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(base.getTime())) return null;
+  base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return base;
+};
+
 const getQueueSortKey = (appointment) => {
   const priorityRank = appointment.priority === "Emergency" ? 0 : 1;
   const arrivalTime = appointment.arrivalTime || appointment.checkInAt || appointment.createdAt || new Date(0);
@@ -189,6 +219,13 @@ export const bookAppointment = async (req, res) => {
       return res
         .status(400)
         .json({ message: "Cannot book appointments for past dates." });
+    }
+
+    if (req.user.role === "patient") {
+      const slotDateTime = buildSlotDateTime(date, slot);
+      if (slotDateTime && slotDateTime.getTime() <= Date.now()) {
+        return res.status(400).json({ message: "This slot has already passed. Please choose a future time." });
+      }
     }
 
     // Search by _id or userId to be more flexible
@@ -1016,6 +1053,17 @@ export const startConsultation = async (req, res) => {
       });
     }
 
+    const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+    if (
+      slotDateTime &&
+      slotDateTime.getTime() > Date.now() &&
+      !appointment.earlyCheckInBy
+    ) {
+      return res.status(400).json({
+        message: "This appointment is scheduled for later. Ask reception to start early with a reason if needed.",
+      });
+    }
+
     appointment.status = "inConsultation";
     await appointment.save();
 
@@ -1042,6 +1090,86 @@ export const startConsultation = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const startConsultationEarly = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { reason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(appointmentId)) {
+      return res.status(400).json({ message: "Invalid appointment ID format" });
+    }
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ message: "Early consultation reason is required." });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found." });
+    }
+
+    if (["completed", "cancelled", "no-show"].includes(appointment.status)) {
+      return res.status(400).json({ message: "This appointment cannot be started." });
+    }
+
+    if (!["arrived", "waiting", "checked-in"].includes(appointment.status)) {
+      return res.status(400).json({ message: "Mark the patient as arrived before starting early." });
+    }
+
+    const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+    if (slotDateTime && slotDateTime.getTime() <= Date.now()) {
+      return res.status(400).json({ message: "The scheduled time has started. Ask the doctor to start the consultation." });
+    }
+
+    appointment.status = "inConsultation";
+    appointment.earlyCheckInReason = reason.trim();
+    appointment.earlyCheckInBy = req.user.id;
+    appointment.earlyCheckInAt = new Date();
+    appointment.updatedBy = req.user.id;
+    await appointment.save();
+
+    const doctor = await Doctor.findById(appointment.doctorId);
+    const token = await createTokenForAppointment({ appointment, doctor });
+    emitToRoom(`doctor_${appointment.doctorId}`, "token:generated", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      patientId: appointment.patientId,
+      tokenNumber: token?.tokenNumber,
+    });
+    emitToRoom(`patient_${appointment.patientId}`, "token:generated", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      tokenNumber: token?.tokenNumber,
+    });
+
+    emitToRoom(`doctor_${appointment.doctorId}`, "consultation:started", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+      patientId: appointment.patientId,
+    });
+    emitToRoom(`patient_${appointment.patientId}`, "consultation:started", {
+      appointmentId: appointment._id,
+      doctorId: appointment.doctorId,
+    });
+    emitQueueUpdate(appointment);
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "appointment_early_started",
+      entityType: "Appointment",
+      entityId: appointment._id,
+      details: { reason: appointment.earlyCheckInReason },
+    });
+
+    return res.json({
+      message: "Consultation started early.",
+      appointment,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 

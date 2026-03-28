@@ -36,6 +36,33 @@ const initialWalkIn = {
   emergencyContactRelation: '',
 };
 
+const slotToMinutes = (slot = '') => {
+  const match = `${slot}`.trim().match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (match) {
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const meridiem = match[3].toUpperCase();
+    if (meridiem === 'PM' && hours !== 12) hours += 12;
+    if (meridiem === 'AM' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+  }
+  const [rawHours, rawMinutes] = `${slot}`.split(':');
+  const hours = Number(rawHours);
+  const minutes = Number(rawMinutes);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+};
+
+const buildSlotDateTime = (date, slot) => {
+  if (!date || !slot) return null;
+  const minutes = slotToMinutes(slot);
+  if (minutes == null) return null;
+  const base = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(base.getTime())) return null;
+  base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return base;
+};
+
 export default function AppointmentDesk() {
   const [searchParams] = useSearchParams();
   const preselectedPatientId = searchParams.get('patientId') || '';
@@ -318,6 +345,20 @@ export default function AppointmentDesk() {
       loadQueue();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to complete appointment.');
+    }
+  };
+
+  const handleEarlyStart = async (appointment) => {
+    const reason = window.prompt('Reason for early consultation start:', '');
+    if (!reason || !reason.trim()) {
+      return toast.error('Reason is required to start early.');
+    }
+    try {
+      await appointmentApi.startConsultationEarly(appointment._id, { reason: reason.trim() });
+      toast.success('Consultation started early.');
+      loadQueue();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to start consultation early.');
     }
   };
 
@@ -698,6 +739,16 @@ export default function AppointmentDesk() {
                     <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">{appointment.visitType}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+                      const isBeforeSlot = slotDateTime ? slotDateTime.getTime() > Date.now() : false;
+                      const canStartEarly = isBeforeSlot && appointment.status === 'arrived';
+                      return canStartEarly ? (
+                        <Button size="sm" variant="outline" onClick={() => handleEarlyStart(appointment)}>
+                          Start early
+                        </Button>
+                      ) : null;
+                    })()}
                     <span className="rounded-full bg-muted px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                       {appointment.status}
                     </span>

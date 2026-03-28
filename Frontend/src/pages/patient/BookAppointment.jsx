@@ -31,10 +31,10 @@ const buildWeekDates = (baseDate) => {
   });
 };
 
-const toMinutes = (value = '00:00') => {
-  const [h, m] = value.split(':').map(Number);
-  return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
-};
+  const toMinutes = (value = '00:00') => {
+    const [h, m] = value.split(':').map(Number);
+    return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+  };
 
 export default function PatientBookAppointment() {
   const [form, setForm] = useState(initialForm);
@@ -60,6 +60,14 @@ export default function PatientBookAppointment() {
   const [weekStart, setWeekStart] = useState(() => buildWeekDates()[0]);
   const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart]);
   const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const isPastSlotForDate = (date, slot) => {
+    if (!date || !slot) return false;
+    if (date !== todayKey) return false;
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const slotMinutes = toMinutes(slot);
+    return slotMinutes <= nowMinutes;
+  };
   const visibleWeekDates = useMemo(
     () => weekDates.filter((date) => date >= todayKey),
     [weekDates, todayKey]
@@ -246,8 +254,11 @@ export default function PatientBookAppointment() {
   const bookedSlotSet = useMemo(() => new Set((bookedSlots || []).map(normalizeSlot)), [bookedSlots]);
 
   const nextAvailableSlot = useMemo(
-    () => filteredSlots.find((slot) => !bookedSlotSet.has(normalizeSlot(slot))),
-    [filteredSlots, bookedSlotSet]
+    () =>
+      filteredSlots.find(
+        (slot) => !bookedSlotSet.has(normalizeSlot(slot)) && !isPastSlotForDate(form.date, normalizeSlot(slot))
+      ),
+    [filteredSlots, bookedSlotSet, form.date]
   );
 
   const slotCountsByDate = useMemo(() => {
@@ -560,15 +571,16 @@ export default function PatientBookAppointment() {
                         {group.slots.map((slot) => {
                           const normalized = normalizeSlot(slot);
                           const isBooked = bookedSlotSet.has(normalized);
+                          const isPastSlot = isPastSlotForDate(form.date, normalized);
                           const isSelected = normalizeSlot(form.slot) === normalized;
                           return (
                             <button
                               key={slot}
                               type="button"
-                              disabled={isBooked}
+                              disabled={isBooked || isPastSlot}
                               onClick={() => setForm((current) => ({ ...current, slot: normalizeSlot(slot) }))}
                               className={`min-w-[120px] rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                                isBooked
+                                isBooked || isPastSlot
                                   ? 'border-red-500/40 bg-red-500/10 text-red-500 cursor-not-allowed'
                                   : isSelected
                                     ? 'border-emerald-600 bg-emerald-600 text-white'

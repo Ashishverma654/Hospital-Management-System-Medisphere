@@ -91,6 +91,8 @@ export const appointmentApi = {
   recommendAdmission: (id, body) => api.put(`/appointments/${id}/recommend-admission`, body),
   getPatientHistory: (patientId) => api.get(`/appointments/patient-history/${patientId}`),
   startConsultation: (appointmentId) => api.post(`/appointments/${appointmentId}/start-consultation`),
+  startConsultationEarly: (appointmentId, body) =>
+    api.post(`/appointments/${appointmentId}/start-consultation-early`, body),
   getPatientSummary: (patientId) => api.get(`/appointments/patient/${patientId}/summary`),
 };
 
