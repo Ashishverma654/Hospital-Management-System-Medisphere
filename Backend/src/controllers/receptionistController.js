@@ -212,7 +212,7 @@ export const registerPatientAtDesk = async (req, res) => {
     }
 
     const normalizedEmail = email ? email.trim().toLowerCase() : "";
-    const fallbackEmail = normalizedEmail || `noemail+${phone}@mediflow.local`;
+    const fallbackEmail = normalizedEmail || `noemail+${phone}@medisphere.tech`;
     const existingUser = await User.findOne(
       normalizedEmail
         ? { $or: [{ email: normalizedEmail }, { phone }] }
@@ -487,3 +487,5 @@ export const getPatientHistoryForDesk = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+

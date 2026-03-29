@@ -31,7 +31,7 @@ export default function PatientRegister() {
     try {
       const auth = await registerPatient(formData);
       dispatch(loginSuccess(auth));
-      localStorage.setItem('mediflow_auth', JSON.stringify(auth));
+      localStorage.setItem('Medisphere_auth', JSON.stringify(auth));
       toast.success('Account created successfully.');
       navigate('/patient', { replace: true });
     } catch (err) { toast.error(err.response?.data?.message || 'Registration failed.'); }
@@ -101,3 +101,4 @@ function Field({ id, label, type, placeholder, maxLength, pattern, value, onChan
     </div>
   );
 }
+

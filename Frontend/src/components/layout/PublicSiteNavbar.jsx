@@ -3,7 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Menu, X } from 'lucide-react';
-import logoImg from '../../assets/logo.png';
+import logoNameImg from '../../assets/logoName.png';
 import { PUBLIC_NAV_ITEMS } from '../../patient/constants.js';
 
 const navLinkClass = ({ isActive }) =>
@@ -40,22 +40,17 @@ export default function PublicSiteNavbar() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/" className="flex items-center gap-2 group">
             <motion.img
-              src={logoImg}
-              alt="MediFlow"
-              className="h-9 w-auto"
-              whileHover={{ scale: 1.05 }}
+              src={logoNameImg}
+              alt="Medisphere"
+              className="h-7 w-auto"
+              whileHover={{ scale: 1.02 }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             />
-            <div>
-              <span className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                MediFlow
-              </span>
-              <span className="hidden sm:block text-[10px] uppercase tracking-[0.2em] text-muted-foreground -mt-0.5">
-                Healthcare Platform
-              </span>
-            </div>
+            <span className="text-2xl font-bold tracking-wide bg-gradient-to-r from-primary via-accent to-secondary text-transparent bg-clip-text">
+              Medisphere
+            </span>
           </Link>
 
           {/* Desktop nav */}
@@ -135,3 +130,4 @@ export default function PublicSiteNavbar() {
     </>
   );
 }
+

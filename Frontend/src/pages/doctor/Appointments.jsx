@@ -25,7 +25,7 @@ export default function DoctorAppointments() {
   const [endingCall, setEndingCall] = useState(false);
   const [viewMode, setViewMode] = useState('today');
 
-  const slotToMinutes = (slot = '') => {
+  const slotToMinutes = useCallback((slot = '') => {
     const trimmed = `${slot}`.trim();
     const match = trimmed.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
     if (match) {
@@ -41,9 +41,9 @@ export default function DoctorAppointments() {
     const minutes = Number(rawMinutes);
     if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
     return hours * 60 + minutes;
-  };
+  }, []);
 
-  const buildSlotDateTime = (date, slot) => {
+  const buildSlotDateTime = useCallback((date, slot) => {
     if (!date || !slot) return null;
     const minutes = slotToMinutes(slot);
     if (minutes == null) return null;
@@ -59,11 +59,11 @@ export default function DoctorAppointments() {
     return slotDateTime.getTime() > Date.now();
   };
 
-  const sortBySlotDateTime = (a, b) => {
+  const sortBySlotDateTime = useCallback((a, b) => {
     const aTime = buildSlotDateTime(a.date, a.slot)?.getTime() ?? 0;
     const bTime = buildSlotDateTime(b.date, b.slot)?.getTime() ?? 0;
     return aTime - bTime;
-  };
+  }, [buildSlotDateTime]);
 
   const fetchAppointments = useCallback(async () => {
     try {
@@ -89,7 +89,7 @@ export default function DoctorAppointments() {
     } finally {
       setLoading(false);
     }
-  }, [viewMode]);
+  }, [viewMode, buildSlotDateTime, sortBySlotDateTime]);
 
   useEffect(() => {
     fetchAppointments();

@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
-import { Heart, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import logoNameImg from '../../assets/logoName.png';
 import PublicSiteNavbar from './PublicSiteNavbar.jsx';
 import { pageVariants } from '../../lib/animation-variants.js';
 
@@ -39,11 +40,8 @@ export default function PublicPatientLayout() {
           <div className="grid gap-8 lg:grid-cols-[1.2fr,0.8fr]">
             {/* Brand + Quick actions */}
             <div className="space-y-6">
-              <Link to="/" className="inline-flex items-center gap-2">
-                <Heart className="h-6 w-6 text-primary" />
-                <span className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  MediFlow
-                </span>
+              <Link to="/" className="inline-flex items-center">
+                <img src={logoNameImg} alt="Medisphere" className="h-6 w-auto" />
               </Link>
               <p className="max-w-lg text-sm text-muted-foreground leading-relaxed">
                 Enterprise-grade hospital management platform delivering modern healthcare experiences with
@@ -126,7 +124,7 @@ export default function PublicPatientLayout() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Mail className="h-3.5 w-3.5 text-primary" />
-                  <a href="mailto:info@mediflow.care" className="hover:text-foreground transition-colors">info@mediflow.care</a>
+                  <a href="mailto:info@medisphere.tech" className="hover:text-foreground transition-colors">info@medisphere.tech</a>
                 </li>
                 <li className="flex items-start gap-2">
                   <MapPin className="h-3.5 w-3.5 text-primary mt-0.5" /> Healthcare Complex, India
@@ -134,7 +132,7 @@ export default function PublicPatientLayout() {
               </ul>
               <div className="mt-4 overflow-hidden rounded-xl border border-border bg-muted/20">
                 <iframe
-                  title="MediFlow Hospital Map"
+                  title="Medisphere Hospital Map"
                   src="https://www.openstreetmap.org/export/embed.html?bbox=78.4500%2C17.3600%2C78.5200%2C17.4200&layer=mapnik&marker=17.3850%2C78.4867"
                   className="h-36 w-full"
                   loading="lazy"
@@ -169,7 +167,7 @@ export default function PublicPatientLayout() {
 
           <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} MediFlow Healthcare. All rights reserved.
+              © {new Date().getFullYear()} Medisphere Healthcare. All rights reserved.
             </p>
             <div className="flex gap-4 text-xs text-muted-foreground">
               <span className="hover:text-foreground transition-colors cursor-pointer">Privacy Policy</span>
@@ -182,3 +180,5 @@ export default function PublicPatientLayout() {
     </div>
   );
 }
+
+

@@ -58,7 +58,7 @@ export default function PatientAppointments() {
     } finally {
       setLoading(false);
     }
-  }, [filters.endDate, filters.startDate, filters.status, selectedId]);
+  }, [filters.endDate, filters.startDate, filters.status, selectedId, preselectId]);
 
   useEffect(() => {
     loadAppointments();

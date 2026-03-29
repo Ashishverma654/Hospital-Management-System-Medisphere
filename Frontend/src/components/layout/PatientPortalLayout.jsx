@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { logout } from '../../store/authSlice.js';
 import { pageVariants } from '../../lib/animation-variants.js';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.jsx';
-import logoImg from '../../assets/logo.png';
+import logoNameImg from '../../assets/logoName.png';
 import ThemeToggle from '../ThemeToggle.jsx';
 import { userApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -53,7 +53,7 @@ export default function PatientPortalLayout() {
 
   const handleLogout = () => {
     dispatch(logout());
-    localStorage.removeItem('mediflow_auth');
+    localStorage.removeItem('Medisphere_auth');
     navigate('/patient/login');
   };
 
@@ -133,10 +133,14 @@ export default function PatientPortalLayout() {
               {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             <div className="flex items-center gap-2.5">
-              <img src={logoImg} alt="Hospital logo" className="h-9 w-auto" />
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">MediFlow Hospital</p>
-                <h2 className="text-base font-semibold text-foreground">Patient Portal</h2>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <img src={logoNameImg} alt="Medisphere" className="h-6 w-auto" />
+                  <span className="text-2xl font-bold tracking-wide bg-gradient-to-r from-primary via-accent to-secondary text-transparent bg-clip-text">
+                    Medisphere
+                  </span>
+                </div>
+                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-[0.2em]">Patient Portal</h2>
               </div>
             </div>
           </div>
@@ -294,3 +298,4 @@ export default function PatientPortalLayout() {
     </div>
   );
 }
+

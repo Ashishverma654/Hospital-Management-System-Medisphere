@@ -58,7 +58,7 @@ export default function ForcePasswordChange() {
 
   const handleLogout = () => {
     dispatch(logout());
-    localStorage.removeItem('mediflow_auth');
+    localStorage.removeItem('Medisphere_auth');
     navigate('/');
   };
 
@@ -145,9 +145,10 @@ export default function ForcePasswordChange() {
         </div>
         
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          &copy; 2026 Mediflow Hospital Management System. All rights reserved.
+          &copy; 2026 Medisphere Hospital Management System. All rights reserved.
         </p>
       </motion.section>
     </main>
   );
 }
+

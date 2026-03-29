@@ -20,7 +20,7 @@ export const socket = io(SOCKET_URL, {
 
 const getAuthToken = () => {
   try {
-    const stored = localStorage.getItem('mediflow_auth');
+    const stored = localStorage.getItem('Medisphere_auth');
     const parsed = stored ? JSON.parse(stored) : null;
     return parsed?.token || null;
   } catch {
@@ -42,3 +42,4 @@ export const disconnectSocket = () => {
     socket.disconnect();
   }
 };
+

@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import ThemeToggle from '../ThemeToggle.jsx';
+import logoNameImg from '../../assets/logoName.png';
 
 const buildNavItems = (role, homeRoute) => {
   const canManageUsers = STAFF_MANAGEMENT_ROLES.includes(role);
@@ -204,7 +205,7 @@ export default function EmployeeAppLayout() {
 
   const handleLogout = () => {
     dispatch(logout());
-    localStorage.removeItem('mediflow_auth');
+    localStorage.removeItem('Medisphere_auth');
     navigate('/employee/login');
   };
 
@@ -213,14 +214,19 @@ export default function EmployeeAppLayout() {
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-sidebar-border">
         <Link to={homeRoute} className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Heart className="h-4 w-4 text-sidebar-primary-foreground" />
-          </div>
           {(!collapsed || isMobile) && (
-            <div>
-              <p className="text-sm font-bold text-sidebar-foreground">MediFlow</p>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <img src={logoNameImg} alt="Medisphere" className="h-6 w-auto" />
+                <span className="text-xl font-bold tracking-wide bg-gradient-to-r from-primary via-accent to-secondary text-transparent bg-clip-text">
+                  Medisphere
+                </span>
+              </div>
               <p className="text-[9px] uppercase tracking-[0.15em] text-sidebar-foreground/50">Staff Portal</p>
             </div>
+          )}
+          {collapsed && !isMobile && (
+            <img src={logoNameImg} alt="Medisphere" className="h-6 w-auto" />
           )}
         </Link>
         {!isMobile && (
@@ -387,3 +393,4 @@ export default function EmployeeAppLayout() {
     </div>
   );
 }
+

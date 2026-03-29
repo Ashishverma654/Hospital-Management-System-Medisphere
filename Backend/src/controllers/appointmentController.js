@@ -14,6 +14,7 @@ import Token from "../models/Token.js";
 import { generateSlots } from "../utils/generateSlots.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { sendSms } from "../utils/sendSms.js";
+import { buildAppointmentBookedTemplate, buildAppointmentCancelledTemplate } from "../utils/emailTemplates.js";
 import { resolvePatientContext } from "../utils/patientContext.js";
 import { notifyEmployee, notifyPatient, notifyRole } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
@@ -359,19 +360,7 @@ export const bookAppointment = async (req, res) => {
         updatedBy: req.user.id,
       });
 
-      if (patientUser?.email) {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const apiUrl = process.env.BACKEND_URL || "http://localhost:3500/api";
-        try {
-          await sendEmail(
-            patientUser.email,
-            "Appointment Invoice Ready",
-            `Your consultation invoice is ready. View it here: ${frontendUrl}/patient/bills?invoice=${createdInvoice._id} or download PDF: ${apiUrl}/billing/${createdInvoice._id}/pdf`
-          );
-        } catch (emailError) {
-          console.error("Invoice email failed:", emailError.message);
-        }
-      }
+    // Invoice emails are handled by billing controller when the invoice is generated.
     }
 
     res.status(201).json({
@@ -412,11 +401,14 @@ export const bookAppointment = async (req, res) => {
 
     if (patientUser?.email) {
       try {
-        await sendEmail(
-          patientUser.email,
-          "Appointment Confirmed",
-          `Your appointment has been booked successfully for ${appointment.date} at ${appointment.slot}.`
-        );
+        const emailPayload = buildAppointmentBookedTemplate({
+          name: patientUser.name,
+          date: appointment.date,
+          slot: appointment.slot,
+          doctorName: doctor?.userId?.name,
+          mode: appointment.consultationMode,
+        });
+        await sendEmail(patientUser.email, emailPayload.subject, emailPayload.text, emailPayload.html);
       } catch (emailError) {
         console.error("Appointment confirmation email failed:", emailError.message);
       }
@@ -425,7 +417,7 @@ export const bookAppointment = async (req, res) => {
       try {
         await sendSms(
           patientUser.phone,
-          `MediFlow: Your appointment is booked for ${appointment.date} at ${appointment.slot}.`
+          `Medisphere: Your appointment is booked for ${appointment.date} at ${appointment.slot}.`
         );
       } catch (smsError) {
         console.error("Appointment confirmation SMS failed:", smsError.message);
@@ -607,15 +599,14 @@ export const cancelAppointment = async (req, res) => {
     emitQueueUpdate(appointment);
 
     if (patientUser?.email) {
-      const cancelText = [
-        `Your appointment on ${appointment.date} at ${appointment.slot} has been cancelled.`,
-        cancellationReason ? `Reason: ${cancellationReason}` : null,
-      ]
-        .filter(Boolean)
-        .join(" ");
-
       try {
-        await sendEmail(patientUser.email, "Appointment Cancelled", cancelText);
+        const emailPayload = buildAppointmentCancelledTemplate({
+          name: patientUser.name,
+          date: appointment.date,
+          slot: appointment.slot,
+          reason: cancellationReason,
+        });
+        await sendEmail(patientUser.email, emailPayload.subject, emailPayload.text, emailPayload.html);
       } catch (emailError) {
         console.error("Appointment cancellation email failed:", emailError.message);
       }
@@ -1407,3 +1398,4 @@ export const getDoctorAppointmentById = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+

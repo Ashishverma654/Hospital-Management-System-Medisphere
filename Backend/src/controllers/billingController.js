@@ -10,6 +10,7 @@ import { getOrderStatusForPayment as getPharmacyStatusForPayment } from "../util
 import { notifyPatient } from "../services/notificationService.js";
 import { logAudit } from "../services/auditLogService.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { buildInvoiceReadyTemplate } from "../utils/emailTemplates.js";
 import { generateInvoicePDF } from "../utils/generateInvoicePDF.js";
 import HospitalSettings from "../models/HospitalSettings.js";
 
@@ -413,14 +414,13 @@ export const createInvoice = async (req, res) => {
 
     if (user?.email) {
       const frontendUrl = getFrontendBase();
-      const apiUrl = getApiBase();
       const invoiceLink = `${frontendUrl}/patient/bills?invoice=${invoice._id}`;
-      const pdfLink = `${apiUrl}/billing/${invoice._id}/pdf`;
-      await sendEmail(
-        user.email,
-        "Your Invoice is Ready",
-        `Your invoice ${invoice.invoiceNumber} is ready. View it in the patient portal: ${invoiceLink} or download PDF: ${pdfLink}`
-      );
+      const emailPayload = buildInvoiceReadyTemplate({
+        name: user.name,
+        invoiceUrl: invoiceLink,
+        amount: invoice.totalAmount,
+      });
+      await sendEmail(user.email, emailPayload.subject, emailPayload.text, emailPayload.html);
     }
 
     await logAudit({
@@ -475,15 +475,14 @@ export const emailInvoice = async (req, res) => {
     }
 
     const frontendUrl = getFrontendBase();
-    const apiUrl = getApiBase();
     const invoiceLink = `${frontendUrl}/patient/bills?invoice=${invoice._id}`;
-    const pdfLink = `${apiUrl}/billing/${invoice._id}/pdf`;
+    const emailPayload = buildInvoiceReadyTemplate({
+      name: patientUser.name,
+      invoiceUrl: invoiceLink,
+      amount: invoice.totalAmount,
+    });
 
-    await sendEmail(
-      patientUser.email,
-      "Your Invoice Receipt",
-      `Here is your invoice ${invoice.invoiceNumber}. View it: ${invoiceLink} or download PDF: ${pdfLink}`
-    );
+    await sendEmail(patientUser.email, emailPayload.subject, emailPayload.text, emailPayload.html);
 
     return res.json({ message: "Invoice email sent successfully." });
   } catch (error) {

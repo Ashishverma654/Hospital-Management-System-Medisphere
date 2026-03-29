@@ -60,7 +60,17 @@ export default function PatientBookAppointment() {
   const [weekStart, setWeekStart] = useState(() => buildWeekDates()[0]);
   const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart]);
   const todayKey = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const isPastSlotForDate = (date, slot) => {
+  const isPastSlotForDate = useCallback(
+    (date, slot) => {
+      if (!date || !slot) return false;
+      if (date !== todayKey) return false;
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const slotMinutes = toMinutes(slot);
+      return slotMinutes <= nowMinutes;
+    },
+    [todayKey]
+  );
     if (!date || !slot) return false;
     if (date !== todayKey) return false;
     const now = new Date();
@@ -258,7 +268,7 @@ export default function PatientBookAppointment() {
       filteredSlots.find(
         (slot) => !bookedSlotSet.has(normalizeSlot(slot)) && !isPastSlotForDate(form.date, normalizeSlot(slot))
       ),
-    [filteredSlots, bookedSlotSet, form.date]
+    [filteredSlots, bookedSlotSet, form.date, isPastSlotForDate]
   );
 
   const slotCountsByDate = useMemo(() => {

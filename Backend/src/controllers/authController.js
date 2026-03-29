@@ -18,6 +18,7 @@ import { ensurePatientProfileForUser } from "../utils/patientContext.js";
 import { logAudit } from "../services/auditLogService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { generateUniqueId } from "../utils/idGenerator.js";
+import { buildForgotPasswordTemplate } from "../utils/emailTemplates.js";
 
 // Helper to generate a 6-digit OTP
 const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -434,11 +435,12 @@ export const forgotPassword = async (req, res) => {
 
     // Send OTP via email
     try {
-      await sendEmail(
-        user.email,
-        "Password Reset OTP - Mediflow Hospital",
-        `Your password reset OTP is: ${otp}. It expires in 15 minutes.`
-      );
+      const emailPayload = buildForgotPasswordTemplate({
+        name: user.name || user.firstName,
+        otp,
+        expiresMinutes: 15,
+      });
+      await sendEmail(user.email, emailPayload.subject, emailPayload.text, emailPayload.html);
       return res.json({ message: "Password reset OTP sent to your email" });
     } catch (mailError) {
       return res.status(503).json({
@@ -522,3 +524,4 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+

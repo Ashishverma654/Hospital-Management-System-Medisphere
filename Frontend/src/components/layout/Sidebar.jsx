@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fi';
 import { FaPills, FaBed } from 'react-icons/fa';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar.jsx';
+import logoNameImg from '../../assets/logoName.png';
 
 export default function Sidebar({ isOpen }) {
   const { user } = useSelector(state => state.auth);
@@ -111,15 +112,18 @@ export default function Sidebar({ isOpen }) {
       className="bg-card border-r border-border min-h-screen hidden md:flex flex-col z-20 transition-all duration-300 relative"
     >
       <div className="flex items-center justify-center h-16 border-b border-border p-4">
-        {isOpen ? (
-          <h1 className="text-xl font-bold text-foreground">
-            MediFlow
-          </h1>
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-            M
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <img
+            src={logoNameImg}
+            alt="Medisphere"
+            className={isOpen ? "h-6 w-auto" : "h-7 w-auto"}
+          />
+          {isOpen && (
+            <span className="text-lg font-bold tracking-wide bg-gradient-to-r from-primary via-accent to-secondary text-transparent bg-clip-text">
+              Medisphere
+            </span>
+          )}
+        </div>
       </div>
 
       {isOpen && (
@@ -184,9 +188,10 @@ export default function Sidebar({ isOpen }) {
 
       {isOpen && (
         <div className="p-4 border-t border-border text-xs text-center text-muted-foreground">
-          MediFlow v2.0
+          Medisphere v2.0
         </div>
       )}
     </motion.aside>
   );
 }
+

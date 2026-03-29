@@ -63,7 +63,7 @@ export default function EmployeeLogin() {
     try {
       const auth = await loginEmployee(formData.identifier, formData.password, formData.role);
       dispatch(loginSuccess(auth));
-      localStorage.setItem('mediflow_auth', JSON.stringify(auth));
+      localStorage.setItem('Medisphere_auth', JSON.stringify(auth));
       toast.success(`Signed in as ${auth.user.role}.`);
 
       if (auth.user.mustResetPassword) {
@@ -183,3 +183,4 @@ export default function EmployeeLogin() {
     </main>
   );
 }
+

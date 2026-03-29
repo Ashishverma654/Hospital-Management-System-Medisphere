@@ -21,13 +21,13 @@ const calcAge = (dob) => {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const localLogoPath = path.resolve(__dirname, "..", "assets", "mediflow-logo.png");
+const localLogoPath = path.resolve(__dirname, "..", "assets", "Medisphere-logo.png");
 
 const resolveBranding = (settings = {}) => ({
-  hospitalName: settings.hospitalName || "MediFlow Diagnostics",
+  hospitalName: settings.hospitalName || "Medisphere Diagnostics",
   phone: settings.phone || "+91 12345 67890",
-  email: settings.email || "lab@mediflow.com",
-  website: settings.website || process.env.FRONTEND_URL || "https://mediflow.care",
+  email: settings.email || "lab@medisphere.tech",
+  website: settings.website || process.env.FRONTEND_URL || "https://medisphere.tech",
   regNo: settings.registrationNumber || "HMS-0001",
   logoUrl: settings.logo || "",
   logoPath: localLogoPath,
@@ -353,3 +353,5 @@ export const generateLabReportPDF = async ({
 
   doc.end();
 };
+
+

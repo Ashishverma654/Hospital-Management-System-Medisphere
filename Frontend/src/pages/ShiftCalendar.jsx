@@ -117,7 +117,7 @@ export default function ShiftCalendar() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, range, staffNameMap]);
+  }, [isAdmin, range, staffNameMap, user]);
 
   useEffect(() => {
     if (!staffOptions.length) return;

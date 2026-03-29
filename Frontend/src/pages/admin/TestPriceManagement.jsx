@@ -25,11 +25,9 @@ const initialTestForm = {
 
 export default function TestPriceManagement() {
   const role = useSelector((state) => state.auth.user?.role);
-  const canEdit = ['admin', 'superadmin'].includes(role);
   const canManageTests = ['admin', 'superadmin'].includes(role);
   const canView = ['admin', 'superadmin'].includes(role);
   const [prices, setPrices] = useState([]);
-  const [priceTests, setPriceTests] = useState([]);
   const [catalogTests, setCatalogTests] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,11 +63,10 @@ export default function TestPriceManagement() {
   useEffect(() => {
     const loadReferenceData = async () => {
       try {
-        const [testData, deptData] = await Promise.all([
+        const [_, deptData] = await Promise.all([
           labTestApi.getAll({ isActive: true }),
           departmentApi.getAll({ isActive: true }),
         ]);
-        setPriceTests(Array.isArray(testData) ? testData : []);
         setDepartments(Array.isArray(deptData) ? deptData : []);
       } catch (error) {
         toast.error(error.response?.data?.message || 'Failed to load reference data.');
@@ -167,18 +164,7 @@ export default function TestPriceManagement() {
     }
   };
 
-  const getTestLabel = (price) => {
-    if (price?.testId?.name) return price.testId.name;
-    const match = priceTests.find((test) => test._id === price.testId);
-    return match?.name || 'Unknown';
-  };
-
   const typeLabel = (value) => TEST_TYPES.find((type) => type.value === value)?.label || value;
-
-  const getDepartmentLabel = (value) => {
-    if (!value) return 'All Departments';
-    return departmentMap.get(String(value)) || 'Unassigned';
-  };
 
   const MotionSection = motion.section;
 

@@ -38,7 +38,7 @@ const createTransporter = () => {
   });
 };
 
-const sendResendEmail = ({ to, subject, text }) =>
+const sendResendEmail = ({ to, subject, text, html }) =>
   new Promise((resolve, reject) => {
     const apiKey = (process.env.RESEND_API_KEY || "").trim();
     const from =
@@ -56,6 +56,7 @@ const sendResendEmail = ({ to, subject, text }) =>
       to,
       subject,
       text,
+      html,
     });
 
     const request = https.request(
@@ -110,14 +111,14 @@ const logEmail = (message) => {
   }
 };
 
-export const sendEmail = async (to, subject, text) => {
+export const sendEmail = async (to, subject, text, html) => {
   try {
     const forceSmtpOnly =
       (process.env.EMAIL_PROVIDER || "").toLowerCase() === "smtp" ||
       process.env.SMTP_ONLY === "true";
 
     if (!forceSmtpOnly && process.env.RESEND_API_KEY) {
-      const info = await sendResendEmail({ to, subject, text });
+      const info = await sendResendEmail({ to, subject, text, html });
       logEmail(`SUCCESS: Resend email sent to ${to}. Status: ${info.status}`);
       return info;
     }
@@ -129,6 +130,7 @@ export const sendEmail = async (to, subject, text) => {
         to,
         subject,
         text,
+        html,
       };
 
       const info = await transporter.sendMail(mailOptions);
@@ -137,7 +139,7 @@ export const sendEmail = async (to, subject, text) => {
     } catch (smtpError) {
       // Fallback to Resend if SMTP fails and API key is available.
       if (process.env.RESEND_API_KEY) {
-        const info = await sendResendEmail({ to, subject, text });
+        const info = await sendResendEmail({ to, subject, text, html });
         logEmail(`FALLBACK: Resend email sent to ${to}. Status: ${info.status}`);
         return info;
       }

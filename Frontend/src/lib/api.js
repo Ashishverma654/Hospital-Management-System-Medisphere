@@ -30,7 +30,7 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const auth = localStorage.getItem('mediflow_auth');
+  const auth = localStorage.getItem('Medisphere_auth');
   if (auth) {
     try {
       const { token } = JSON.parse(auth);
@@ -68,7 +68,7 @@ api.interceptors.response.use(
     }
 
     if (err.response?.status === 401) {
-      const auth = localStorage.getItem('mediflow_auth');
+      const auth = localStorage.getItem('Medisphere_auth');
       let sessionType = null;
       try {
         sessionType = auth ? JSON.parse(auth).sessionType : null;
@@ -76,7 +76,7 @@ api.interceptors.response.use(
         /* ignore malformed local auth */
       }
 
-      localStorage.removeItem('mediflow_auth');
+      localStorage.removeItem('Medisphere_auth');
       const isEmployeePath = window.location.pathname.startsWith('/employee');
       const nextLocation = isEmployeePath || sessionType === 'employee'
         ? '/employee/login'
@@ -91,3 +91,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

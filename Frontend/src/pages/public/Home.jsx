@@ -188,7 +188,7 @@ export default function Home() {
       <section className="px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <motion.div {...fadeInUp} className="text-center mb-10">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Why MediFlow</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Why Medisphere</span>
             <h2 className="mt-2 text-3xl font-bold text-foreground">Everything you need, in one place</h2>
           </motion.div>
 
@@ -452,3 +452,4 @@ function SpotlightCard({ icon: Icon, title, description, ctaLabel, ctaTo }) { //
     </motion.article>
   );
 }
+

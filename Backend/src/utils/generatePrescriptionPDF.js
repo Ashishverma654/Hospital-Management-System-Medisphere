@@ -7,14 +7,14 @@ import https from "https";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const localLogoPath = path.resolve(__dirname, "..", "assets", "mediflow-logo.png");
+const localLogoPath = path.resolve(__dirname, "..", "assets", "Medisphere-logo.png");
 
 const resolveBranding = (settings = {}) => ({
-  hospitalName: settings.hospitalName || "MediFlow Hospital",
+  hospitalName: settings.hospitalName || "Medisphere Hospital",
   address: settings.address || "Ambedkar Road, City Center",
   phone: settings.phone || "9247 422727, 9550 422727",
-  email: settings.email || "info@mediflow.care",
-  website: settings.website || process.env.FRONTEND_URL || "https://mediflow.care",
+  email: settings.email || "info@medisphere.tech",
+  website: settings.website || process.env.FRONTEND_URL || "https://medisphere.tech",
   logoUrl: settings.logo || "",
   logoPath: localLogoPath,
 });
@@ -88,3 +88,5 @@ export const generatePrescriptionPDF = async (res, prescription, settings = {}) 
 
     doc.end();
 };
+
+

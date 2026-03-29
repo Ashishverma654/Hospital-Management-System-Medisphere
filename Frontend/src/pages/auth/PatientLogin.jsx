@@ -16,7 +16,6 @@ import {
   sendLoginOtp,
 } from '../../services/authService.js';
 import { loginSuccess, logout } from '../../store/authSlice.js';
-import { getEmployeeHomeRoute } from '../../auth/constants.js';
 
 const initialResetState = {
   phone: '', pin: '', email: '', password: '', otp: '',
@@ -60,7 +59,7 @@ export default function PatientLogin() {
     if (isAuthenticated && sessionType !== 'patient') {
       setStaffSessionDetected(true);
       dispatch(logout());
-      localStorage.removeItem('mediflow_auth');
+      localStorage.removeItem('Medisphere_auth');
     }
   }, [isAuthenticated, sessionType, dispatch]);
 
@@ -82,7 +81,7 @@ export default function PatientLogin() {
 
   const completeLogin = ({ user, token, sessionType }) => {
     dispatch(loginSuccess({ user, token, sessionType }));
-    localStorage.setItem('mediflow_auth', JSON.stringify({ user, token, sessionType }));
+    localStorage.setItem('Medisphere_auth', JSON.stringify({ user, token, sessionType }));
     toast.success(`Welcome back, ${user.name}!`);
 
     if (user.mustResetPassword) {
@@ -343,3 +342,4 @@ function SubmitButton({ children, loading, disabled }) {
     </button>
   );
 }
+

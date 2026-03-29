@@ -1,5 +1,5 @@
 /**
- * MediFlow – Shared Framer Motion animation variants
+ * Medisphere – Shared Framer Motion animation variants
  * Used across all pages for consistent, premium micro-interactions.
  */
 
@@ -129,3 +129,4 @@ export const navbarVariants = {
   transparent: { backgroundColor: 'rgba(255,255,255,0)', backdropFilter: 'blur(0px)' },
   solid: { backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)' },
 };
+

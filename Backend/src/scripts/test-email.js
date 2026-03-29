@@ -23,7 +23,7 @@ const sendTestEmail = async () => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: process.env.EMAIL_USER, // Send to self
-      subject: "Mediflow Test Email",
+      subject: "Medisphere Test Email",
       text: "This is a test email to verify SMTP configuration.",
     };
 
@@ -36,3 +36,4 @@ const sendTestEmail = async () => {
 };
 
 sendTestEmail();
+

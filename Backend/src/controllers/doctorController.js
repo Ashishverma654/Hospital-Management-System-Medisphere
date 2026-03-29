@@ -12,6 +12,7 @@ import Specialization from "../models/Specialization.js";
 import User from "../models/User.js";
 import { normalizeSystemRole, ID_PREFIXES } from "../constants/roles.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { buildEmployeeCredentialsTemplate } from "../utils/emailTemplates.js";
 import { generateUniqueId } from "../utils/idGenerator.js";
 
 const parseStringArray = (value) => {
@@ -374,31 +375,18 @@ export const createDoctor = async (req, res) => {
       .populate("hospitalLocations", "name city state");
 
     // Send welcome email with credentials
-    const emailSubject = `Welcome to Mediflow Hospital - Your Doctor Account`;
-    const emailBody = `Dear Dr. ${user.lastName || user.firstName},
-
-Your doctor account has been successfully created in Mediflow Hospital Management System.
-
-Here are your login credentials:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Username: ${user.email}
-Password: ${temporaryPassword}
-Employee ID: ${user.employeeId}
-Role: Doctor
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Important: Please change your password after your first login.
-
-To access your account, visit: ${process.env.FRONTEND_URL || 'https://your-hospital-url.com'}/employee/login
-
-If you have any questions or issues, please contact the IT support team.
-
-Best regards,
-Mediflow Hospital Management System`;
+    const emailPayload = buildEmployeeCredentialsTemplate({
+      name: user.lastName || user.firstName || user.name,
+      roleLabel: "Doctor",
+      email: user.email,
+      employeeId: user.employeeId,
+      temporaryPassword,
+      loginUrl: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/employee/login` : undefined,
+    });
 
     const triggerEmail = async () => {
       try {
-        await sendEmail(user.email, emailSubject, emailBody);
+        await sendEmail(user.email, emailPayload.subject, emailPayload.text, emailPayload.html);
         console.log(`[EMAIL] Doctor welcome email sent to: ${user.email}`);
       } catch (emailErr) {
         console.error(`[EMAIL] Doctor welcome email failed for ${user.email}:`, emailErr?.message || emailErr);
@@ -933,3 +921,4 @@ export const getDoctorDashboard = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+

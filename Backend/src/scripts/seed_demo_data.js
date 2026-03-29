@@ -157,7 +157,7 @@ const seed = async () => {
   if (!superadmin) {
     superadmin = await createUser({
       name: "Super Admin",
-      email: "superadmin@mediflow.org",
+      email: "superadmin@medisphere.tech",
       role: "superadmin",
       phone: "9000000001",
       password: "SuperAdmin@123",
@@ -173,7 +173,7 @@ const seed = async () => {
     const name = adminNames[i - 1];
     const admin = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "admin",
       phone: `900000010${i}`,
       createdBy: superadmin._id,
@@ -193,7 +193,7 @@ const seed = async () => {
     const name = subadminNames[i - 1];
     const subadmin = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "subadmin",
       phone: `900000020${i}`,
       createdBy: creator._id,
@@ -208,12 +208,12 @@ const seed = async () => {
   // Hospital settings
   await HospitalSettings.deleteMany({});
   await HospitalSettings.create({
-    hospitalName: "MediFlow Hospital",
-    email: "info@mediflow.care",
+    hospitalName: "Medisphere Hospital",
+    email: "info@medisphere.tech",
     phone: "9247 422727, 9550 422727",
     address: "Ambedkar Road, City Center",
     logo: "",
-    footerInfo: "MediFlow Healthcare",
+    footerInfo: "Medisphere Healthcare",
     publicInfo: "24x7 Emergency • Advanced Diagnostics",
     updatedBy: superadmin._id,
     isActive: true,
@@ -222,24 +222,24 @@ const seed = async () => {
   // Locations
   const locations = await HospitalLocation.insertMany([
     {
-      name: "MediFlow Central Hospital",
+      name: "Medisphere Central Hospital",
       address: "Ambedkar Road, City Center",
       city: "Karimnagar",
       state: "Telangana",
       pincode: "505001",
       phone: "9550422727",
-      email: "central@mediflow.care",
+      email: "central@medisphere.tech",
       locationType: "hospital",
       createdBy: superadmin._id,
     },
     {
-      name: "MediFlow East Clinic",
+      name: "Medisphere East Clinic",
       address: "Lakeview Avenue",
       city: "Karimnagar",
       state: "Telangana",
       pincode: "505002",
       phone: "9550422728",
-      email: "east@mediflow.care",
+      email: "east@medisphere.tech",
       locationType: "clinic",
       createdBy: admins[0]._id,
     },
@@ -336,7 +336,7 @@ const seed = async () => {
     const name = doctorNames[i - 1];
     const user = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "doctor",
       phone: `90000010${i}0`,
       createdBy: creator._id,
@@ -396,7 +396,7 @@ const seed = async () => {
     const name = nurseNames[i - 1];
     const user = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "nurse",
       phone: `90000020${i}0`,
       createdBy: creator._id,
@@ -436,7 +436,7 @@ const seed = async () => {
     const name = receptionistNames[i - 1];
     const user = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "receptionist",
       phone: `90000030${i}0`,
       createdBy: creator._id,
@@ -474,7 +474,7 @@ const seed = async () => {
     const name = pharmacistNames[i - 1];
     const user = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "pharmacist",
       phone: `90000040${i}0`,
       createdBy: creator._id,
@@ -520,7 +520,7 @@ const seed = async () => {
     const name = labTechNames[i - 1];
     const user = await createUser({
       name,
-      email: `${toEmailSafe(name)}@mediflow.org`,
+      email: `${toEmailSafe(name)}@medisphere.tech`,
       role: "labTechnician",
       phone: `90000050${i}0`,
       createdBy: creator._id,
@@ -862,3 +862,5 @@ seed().catch((err) => {
   console.error("Seed failed:", err);
   process.exit(1);
 });
+
+

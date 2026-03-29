@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
-const STORAGE_KEY = 'mediflow_theme';
+const STORAGE_KEY = 'Medisphere_theme';
 
 const getInitialTheme = () => {
   if (typeof window === 'undefined') return 'light';
@@ -35,3 +35,4 @@ export default function ThemeToggle({ className = '' }) {
     </button>
   );
 }
+

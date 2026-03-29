@@ -3,7 +3,7 @@ import { getSessionTypeForRole } from '../auth/constants.js';
 
 const loadAuthFromStorage = () => {
   try {
-    const stored = localStorage.getItem('mediflow_auth');
+    const stored = localStorage.getItem('Medisphere_auth');
     if (stored) {
       const { user, token, sessionType } = JSON.parse(stored);
       if (user && token) {
@@ -42,7 +42,7 @@ export const authSlice = createSlice({
         state.user = { ...state.user, ...action.payload };
         state.sessionType = getSessionTypeForRole(state.user.role);
         // Sync back to local storage manually to persist photo across reloads
-        localStorage.setItem('mediflow_auth', JSON.stringify({
+        localStorage.setItem('Medisphere_auth', JSON.stringify({
           user: state.user,
           token: state.token,
           sessionType: state.sessionType,
@@ -54,3 +54,4 @@ export const authSlice = createSlice({
 
 export const { loginSuccess, logout, updateUser } = authSlice.actions;
 export default authSlice.reducer;
+

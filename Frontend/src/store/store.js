@@ -22,8 +22,9 @@ store.subscribe(() => {
   const state = store.getState();
   const { user, token, sessionType, isAuthenticated } = state.auth;
   if (isAuthenticated && user && token) {
-    localStorage.setItem('mediflow_auth', JSON.stringify({ user, token, sessionType }));
+    localStorage.setItem('Medisphere_auth', JSON.stringify({ user, token, sessionType }));
   } else {
-    localStorage.removeItem('mediflow_auth');
+    localStorage.removeItem('Medisphere_auth');
   }
 });
+

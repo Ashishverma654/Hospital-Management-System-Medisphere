@@ -2,6 +2,7 @@ import LabOrder from "../models/LabOrder.js";
 import LabOrderItem from "../models/LabOrderItem.js";
 import LabReport from "../models/LabReport.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { buildLabReportReadyTemplate } from "../utils/emailTemplates.js";
 import { ensurePatientProfileForUser, resolvePatientContext } from "../utils/patientContext.js";
 import { getPublicReportVisibility } from "../utils/labWorkflow.js";
 import { formatOrder, orderPopulate, syncLabOrderPaymentState } from "./labOrderController.js";
@@ -105,11 +106,14 @@ export const uploadLabReport = async (req, res) => {
     });
 
     if (user?.email && req.user.role !== "patient") {
-      await sendEmail(
-        user.email,
-        "Lab Report Ready",
-        "Your diagnostic report is prepared internally. It will appear in the patient portal after release and payment confirmation."
-      );
+      const frontendBase = process.env.FRONTEND_URL || "https://medisphere.tech";
+      const reportUrl = `${frontendBase}/patient/lab-reports`;
+      const emailPayload = buildLabReportReadyTemplate({
+        name: user.name,
+        reportName: report.reportName,
+        reportUrl,
+      });
+      await sendEmail(user.email, emailPayload.subject, emailPayload.text, emailPayload.html);
     }
   } catch (error) {
     res.status(500).json({

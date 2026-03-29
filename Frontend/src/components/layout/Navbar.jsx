@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { FiMenu, FiBell, FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
-import logoImg from '../../assets/logo.png';
+import logoNameImg from '../../assets/logoName.png';
 import { notificationsApi } from '../../services/apiServices.js';
 import ThemeToggle from '../ThemeToggle.jsx';
 
@@ -25,7 +25,7 @@ export default function Navbar({ toggleSidebar }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = () => {
-    localStorage.removeItem('mediflow_auth');
+    localStorage.removeItem('Medisphere_auth');
     dispatch(logout());
     navigate('/login');
   };
@@ -60,11 +60,8 @@ export default function Navbar({ toggleSidebar }) {
           </Button>
         )}
         
-        <NavLink to="/" className="flex items-center gap-2">
-           <img src={logoImg} alt="logo" className="h-8 w-auto md:h-10" />
-           <span className="font-bold text-xl text-foreground">
-             MediFlow
-           </span>
+        <NavLink to="/" className="flex items-center">
+           <img src={logoNameImg} alt="Medisphere" className="h-6 w-auto md:h-7" />
         </NavLink>
       </div>
 
@@ -170,3 +167,4 @@ export default function Navbar({ toggleSidebar }) {
     </header>
   );
 }
+

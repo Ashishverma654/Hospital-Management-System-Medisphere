@@ -28,6 +28,7 @@ import { ID_PREFIXES } from "../constants/roles.js";
 import mongoose from "mongoose";
 import logger from "../utils/logger.js";
 import NotificationPreference from "../models/NotificationPreference.js";
+import { buildEmployeeCredentialsTemplate } from "../utils/emailTemplates.js";
 
 const MANAGEABLE_ROLE_OVERRIDES = {
   superadmin: ["admin", "subadmin", "doctor", "nurse", "receptionist", "labTechnician", "pharmacist", "patient"],
@@ -570,26 +571,16 @@ export const createStaffUser = async (req, res) => {
 
         logger.info(`[EMAIL] Attempting delivery to ${user.email} for role ${normalizedTargetRole}...`);
 
-        const emailSubject = `Welcome to Mediflow Hospital - Your ${getRoleLabel(normalizedTargetRole)} Account`;
-        const emailBody = `Dear ${user.name},
+        const emailPayload = buildEmployeeCredentialsTemplate({
+          name: user.name,
+          roleLabel: getRoleLabel(normalizedTargetRole),
+          email: user.email,
+          employeeId: user.employeeId,
+          temporaryPassword: tempPassword,
+          loginUrl: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/employee/login` : undefined,
+        });
 
-Your account has been successfully created in Mediflow Hospital Management System.
-
-Here are your login credentials:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Username: ${user.email}
-Password: ${tempPassword}
-Role: ${getRoleLabel(normalizedTargetRole)}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Important: Please change your password after your first login.
-
-To access your account, visit: ${process.env.FRONTEND_URL || "https://hospital-management-system-beryl-two.vercel.app"}/employee/login
-
-Best regards,
-Mediflow Hospital Management System`;
-
-        await sendEmail(user.email, emailSubject, emailBody);
+        await sendEmail(user.email, emailPayload.subject, emailPayload.text, emailPayload.html);
         logger.info(`[EMAIL] SUCCESS: Welcome email sent to: ${user.email}`);
       } catch (emailErr) {
         logger.error(`[EMAIL] FAILED for ${user.email}: ${emailErr.message}`);
@@ -867,7 +858,7 @@ export const getHospitalSettings = async (req, res) => {
 
     if (!settings) {
       settings = await HospitalSettings.create({
-        hospitalName: "MediFlow Hospital",
+        hospitalName: "Medisphere Hospital",
         updatedBy: req.user.id,
       });
     }
@@ -902,7 +893,7 @@ export const upsertHospitalSettings = async (req, res) => {
 
     if (!settings) {
       settings = new HospitalSettings({
-        hospitalName: updates.hospitalName || "MediFlow Hospital",
+        hospitalName: updates.hospitalName || "Medisphere Hospital",
       });
     }
 
@@ -915,7 +906,7 @@ export const upsertHospitalSettings = async (req, res) => {
       creatorRole: normalizeSystemRole(req.user.role),
       createdUserId: req.user.id,
       createdUserName: req.user.name || "System",
-      createdUserEmail: req.user.email || "system@mediflow.local",
+      createdUserEmail: req.user.email || "system@medisphere.tech",
       createdUserRole: normalizeSystemRole(req.user.role),
       action: "updated",
     });
@@ -928,3 +919,5 @@ export const upsertHospitalSettings = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+

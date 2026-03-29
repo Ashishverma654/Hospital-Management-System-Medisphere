@@ -1,10 +1,10 @@
-# MediFlow Hospital Management System (HMS)
+# Medisphere Hospital Management System (HMS)
 
 Enterprise‑grade MERN hospital management platform with role‑based workflows across clinical, operational, and governance teams.
 
 ## Overview
 
-MediFlow unifies patient care and hospital operations into a single system with:
+Medisphere unifies patient care and hospital operations into a single system with:
 - Patient onboarding, appointments, queue, and consultation lifecycle
 - Doctor dashboard, prescriptions, lab orders, and lab reports
 - Nursing tasks, vitals, notes, handovers
@@ -182,7 +182,7 @@ Generated PDFs:
 - Prescriptions
 
 Branding is pulled from **Hospital Settings** (logo URL + contact).  
-Fallback logo is `Backend/src/assets/mediflow-logo.png`.
+Fallback logo is `Backend/src/assets/Medisphere-logo.png`.
 
 ---
 
@@ -376,3 +376,4 @@ node src/scripts/export_credentials.js
 ## License
 
 Private / internal use.
+

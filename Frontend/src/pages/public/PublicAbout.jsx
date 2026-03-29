@@ -32,7 +32,7 @@ export default function PublicAbout() {
         <div className="relative mx-auto max-w-7xl">
           <motion.div {...fadeInUp} className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Sparkles className="h-3 w-3" /> About MediFlow
+              <Sparkles className="h-3 w-3" /> About Medisphere
             </span>
             <h1 className="mt-5 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
               A{' '}
@@ -42,7 +42,7 @@ export default function PublicAbout() {
               hospital experience
             </h1>
             <p className="mt-5 text-lg text-muted-foreground leading-relaxed max-w-2xl">
-              MediFlow connects trust signals, hospital branches, and doctor discovery content from
+              Medisphere connects trust signals, hospital branches, and doctor discovery content from
               the same governance system used by hospital administrators — delivered live to patients and visitors.
             </p>
           </motion.div>
@@ -65,7 +65,7 @@ export default function PublicAbout() {
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Our Mission</span>
             <h2 className="mt-2 text-3xl font-bold text-foreground">Transforming hospital operations</h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              MediFlow is an enterprise-grade hospital management platform that unifies patient care,
+              Medisphere is an enterprise-grade hospital management platform that unifies patient care,
               clinical workflows, and administrative operations into a single, intuitive system.
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -180,3 +180,4 @@ function ValueCard({ icon: Icon, title, description }) { // eslint-disable-line 
     </motion.article>
   );
 }
+

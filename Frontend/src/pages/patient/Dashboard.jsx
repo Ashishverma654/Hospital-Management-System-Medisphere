@@ -80,12 +80,13 @@ export default function PatientDashboard() {
   }, [loadBills, loadDashboard, user?.id, user?._id]);
 
   const upcomingAppointments = overview?.lists?.upcomingAppointments || [];
-  const recentAppointments = overview?.lists?.recentAppointments || [];
+  const recentAppointments = useMemo(
+    () => overview?.lists?.recentAppointments || [],
+    [overview?.lists?.recentAppointments]
+  );
   const activeVideoAppointment = useMemo(
     () =>
-      recentAppointments.find(
-        (appt) => appt.consultationMode === 'video' && appt.status === 'inConsultation'
-      ),
+      recentAppointments.find((appt) => appt.consultationMode === 'video' && appt.status === 'inConsultation'),
     [recentAppointments]
   );
   const recentPrescriptions = overview?.lists?.recentPrescriptions || [];
