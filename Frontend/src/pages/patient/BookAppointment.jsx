@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { appointmentApi, availabilityApi, doctorApi, getDepartments, slotApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -71,13 +71,6 @@ export default function PatientBookAppointment() {
     },
     [todayKey]
   );
-    if (!date || !slot) return false;
-    if (date !== todayKey) return false;
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const slotMinutes = toMinutes(slot);
-    return slotMinutes <= nowMinutes;
-  };
   const visibleWeekDates = useMemo(
     () => weekDates.filter((date) => date >= todayKey),
     [weekDates, todayKey]

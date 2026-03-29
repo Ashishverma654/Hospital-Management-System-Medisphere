@@ -43,15 +43,18 @@ export default function DoctorAppointments() {
     return hours * 60 + minutes;
   }, []);
 
-  const buildSlotDateTime = useCallback((date, slot) => {
-    if (!date || !slot) return null;
-    const minutes = slotToMinutes(slot);
-    if (minutes == null) return null;
-    const base = new Date(`${date}T00:00:00`);
-    if (Number.isNaN(base.getTime())) return null;
-    base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
-    return base;
-  };
+  const buildSlotDateTime = useCallback(
+    (date, slot) => {
+      if (!date || !slot) return null;
+      const minutes = slotToMinutes(slot);
+      if (minutes == null) return null;
+      const base = new Date(`${date}T00:00:00`);
+      if (Number.isNaN(base.getTime())) return null;
+      base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+      return base;
+    },
+    [slotToMinutes]
+  );
 
   const isSlotFuture = (appointment) => {
     const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
@@ -59,11 +62,14 @@ export default function DoctorAppointments() {
     return slotDateTime.getTime() > Date.now();
   };
 
-  const sortBySlotDateTime = useCallback((a, b) => {
-    const aTime = buildSlotDateTime(a.date, a.slot)?.getTime() ?? 0;
-    const bTime = buildSlotDateTime(b.date, b.slot)?.getTime() ?? 0;
-    return aTime - bTime;
-  }, [buildSlotDateTime]);
+  const sortBySlotDateTime = useCallback(
+    (a, b) => {
+      const aTime = buildSlotDateTime(a.date, a.slot)?.getTime() ?? 0;
+      const bTime = buildSlotDateTime(b.date, b.slot)?.getTime() ?? 0;
+      return aTime - bTime;
+    },
+    [buildSlotDateTime]
+  );
 
   const fetchAppointments = useCallback(async () => {
     try {

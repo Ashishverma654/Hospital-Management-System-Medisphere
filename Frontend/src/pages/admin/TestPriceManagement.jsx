@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -30,7 +30,6 @@ export default function TestPriceManagement() {
   const [prices, setPrices] = useState([]);
   const [catalogTests, setCatalogTests] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testSearch, setTestSearch] = useState('');
   const [testFilterType, setTestFilterType] = useState('');
@@ -40,23 +39,12 @@ export default function TestPriceManagement() {
   const [editingTest, setEditingTest] = useState(null);
   const [testForm, setTestForm] = useState(initialTestForm);
 
-  const departmentMap = useMemo(() => {
-    const map = new Map();
-    departments.forEach((dept) => {
-      map.set(String(dept._id), dept.name);
-    });
-    return map;
-  }, [departments]);
-
   const loadPrices = useCallback(async () => {
-    setLoading(true);
     try {
       const data = await testPriceApi.getAll();
       setPrices(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load test prices.');
-    } finally {
-      setLoading(false);
     }
   }, []);
 
