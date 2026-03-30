@@ -25,6 +25,9 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
   const offerSentRef = useRef(false);
   const localReadyRef = useRef(false);
   const canOfferRef = useRef(false);
+  const reconnectingRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef(null);
   const [status, setStatus] = useState('Connecting...');
   const [sessionKey, setSessionKey] = useState(0);
   const [participantRole, setParticipantRole] = useState(null);
@@ -86,6 +89,60 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       attachVideoStream(remoteVideoRef.current, stream);
     };
 
+    const clearReconnectTimer = () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
+    const scheduleIceRestart = () => {
+      if (role !== 'doctor') return;
+      if (reconnectingRef.current) return;
+      if (reconnectAttemptsRef.current >= 3) {
+        setStatus('Connection failed.');
+        return;
+      }
+      reconnectingRef.current = true;
+      reconnectAttemptsRef.current += 1;
+      setStatus('Reconnecting...');
+      clearReconnectTimer();
+      reconnectTimerRef.current = setTimeout(async () => {
+        try {
+          peer.restartIce();
+          await createOffer({ iceRestart: true, force: true });
+        } catch {
+          setStatus('Connection failed.');
+        } finally {
+          reconnectingRef.current = false;
+        }
+      }, 2500);
+    };
+
+    peer.oniceconnectionstatechange = () => {
+      const state = peer.iceConnectionState;
+      if (state === 'connected' || state === 'completed') {
+        clearReconnectTimer();
+        reconnectAttemptsRef.current = 0;
+        setStatus('Connected');
+      }
+      if (state === 'failed' || state === 'disconnected') {
+        scheduleIceRestart();
+      }
+    };
+
+    peer.onconnectionstatechange = () => {
+      const state = peer.connectionState;
+      if (state === 'connected') {
+        clearReconnectTimer();
+        reconnectAttemptsRef.current = 0;
+        setStatus('Connected');
+      }
+      if (state === 'failed') {
+        scheduleIceRestart();
+      }
+    };
+
     const attachLocalStream = async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
@@ -93,12 +150,12 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
     };
 
-    const createOffer = async () => {
+    const createOffer = async (options = {}) => {
       try {
-        if (offerSentRef.current) return;
+        if (offerSentRef.current && !options.force) return;
         if (!localReadyRef.current) return;
         if (!canOfferRef.current) return;
-        const offer = await peer.createOffer();
+        const offer = await peer.createOffer(options.iceRestart ? { iceRestart: true } : undefined);
         await peer.setLocalDescription(offer);
         socket.emit('offer', { appointmentId, offer });
         offerSentRef.current = true;
@@ -193,6 +250,11 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       socket.off('participant-left');
       socket.off('call-ended');
       socket.off('room-ready');
+
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
 
       if (peerRef.current) {
         peerRef.current.close();
