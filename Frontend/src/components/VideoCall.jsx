@@ -22,6 +22,7 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
   const localStreamRef = useRef(null);
   const socketRef = useRef(null);
   const endingRef = useRef(false);
+  const onEndRef = useRef(onEnd);
   const offerSentRef = useRef(false);
   const localReadyRef = useRef(false);
   const canOfferRef = useRef(false);
@@ -32,6 +33,10 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
   const [sessionKey, setSessionKey] = useState(0);
   const [participantRole, setParticipantRole] = useState(null);
   const [resolvedIceServers, setResolvedIceServers] = useState(null);
+
+  useEffect(() => {
+    onEndRef.current = onEnd;
+  }, [onEnd]);
 
   useEffect(() => {
     let mounted = true;
@@ -59,10 +64,9 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
   useEffect(() => {
     if (!appointmentId) return undefined;
 
+    if (!resolvedIceServers) return undefined;
     const socket = connectSocket();
     socketRef.current = socket;
-
-    if (!resolvedIceServers) return undefined;
     const peer = new RTCPeerConnection({ iceServers: resolvedIceServers });
     peerRef.current = peer;
     offerSentRef.current = false;
@@ -86,7 +90,12 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
 
     peer.ontrack = (event) => {
       const [stream] = event.streams;
-      attachVideoStream(remoteVideoRef.current, stream);
+      if (stream) {
+        attachVideoStream(remoteVideoRef.current, stream);
+      } else if (event.track) {
+        const fallbackStream = new MediaStream([event.track]);
+        attachVideoStream(remoteVideoRef.current, fallbackStream);
+      }
     };
 
     const clearReconnectTimer = () => {
@@ -234,9 +243,9 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
 
     socket.on('call-ended', ({ reason }) => {
       setStatus(reason || 'Call ended.');
-      if (typeof onEnd === 'function' && !endingRef.current) {
+      if (typeof onEndRef.current === 'function' && !endingRef.current) {
         endingRef.current = true;
-        onEnd();
+        onEndRef.current();
       }
     });
 
@@ -264,7 +273,7 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [appointmentId, role, sessionKey, resolvedIceServers, onEnd]);
+  }, [appointmentId, role, sessionKey, resolvedIceServers]);
 
   useEffect(() => {
     if (typeof onStatusChange === 'function') {
@@ -305,8 +314,8 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
           onClick={() => {
             endingRef.current = true;
             socketRef.current?.emit('end-call', { appointmentId, reason: `${role} ended the call.` });
-            if (typeof onEnd === 'function') {
-              onEnd();
+            if (typeof onEndRef.current === 'function') {
+              onEndRef.current();
             }
           }}
         >
