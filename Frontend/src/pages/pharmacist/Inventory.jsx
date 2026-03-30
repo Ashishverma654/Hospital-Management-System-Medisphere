@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { pharmacyApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -21,6 +21,8 @@ const initialForm = {
 };
 
 export default function PharmacistInventory() {
+  const formRef = useRef(null);
+  const ledgerRef = useRef(null);
   const [items, setItems] = useState([]);
   const [filters, setFilters] = useState({ search: '', stockState: '', status: '' });
   const [form, setForm] = useState(initialForm);
@@ -69,6 +71,18 @@ export default function PharmacistInventory() {
     setForm(initialForm);
   };
 
+  const scrollToForm = () => {
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const scrollToLedger = () => {
+    if (ledgerRef.current) {
+      ledgerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     try {
@@ -110,7 +124,7 @@ export default function PharmacistInventory() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">
-        <form onSubmit={submit} className="space-y-4 rounded-2xl bg-card p-6 shadow-sm">
+        <form ref={formRef} onSubmit={submit} className="space-y-4 rounded-2xl bg-card p-6 shadow-sm">
           <h3 className="text-xl font-semibold text-foreground">{editingId ? 'Edit medicine' : 'Add medicine'}</h3>
           {[
             ['name', 'Medicine Name'],
@@ -157,7 +171,7 @@ export default function PharmacistInventory() {
           </div>
         </form>
 
-        <section className="rounded-2xl bg-card p-6 shadow-sm">
+        <section ref={ledgerRef} className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <input value={filters.search} onChange={(e) => setFilters((current) => ({ ...current, search: e.target.value }))} placeholder="Search medicines" className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
             <select value={filters.stockState} onChange={(e) => setFilters((current) => ({ ...current, stockState: e.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary">
@@ -219,12 +233,14 @@ export default function PharmacistInventory() {
                       isActive: item.isActive,
                     });
                     loadLedger(item.id);
+                    scrollToForm();
                   }}>
                     Edit
                   </Button>
                   <Button variant="outline" onClick={() => {
                     setSelectedMedicine(item);
                     loadLedger(item.id);
+                    scrollToLedger();
                   }}>
                     View history
                   </Button>

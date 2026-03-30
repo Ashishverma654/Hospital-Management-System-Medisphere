@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createLabOrder,
+  createPatientLabOrder,
   getDoctorLabOrders,
   getLabOrderById,
   getPatientLabOrders,
@@ -13,7 +14,7 @@ import {
   authorizeRoles,
 } from "../middlewares/authMiddleware.js";
 import validate from "../middlewares/validate.js";
-import { createLabOrderSchema, updateLabOrderStatusSchema } from "../validations/labValidation.js";
+import { createLabOrderSchema, createPatientLabOrderSchema, updateLabOrderStatusSchema } from "../validations/labValidation.js";
 
 const router = express.Router();
 
@@ -24,6 +25,15 @@ router.post(
   authorizeRoles("doctor"),
   validate(createLabOrderSchema),
   createLabOrder
+);
+
+// Patient creates lab order
+router.post(
+  "/patient",
+  verifyAccessToken,
+  authorizeRoles("patient"),
+  validate(createPatientLabOrderSchema),
+  createPatientLabOrder
 );
 
 // Get doctor's lab orders

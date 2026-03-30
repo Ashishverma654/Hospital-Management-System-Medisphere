@@ -13,7 +13,7 @@ import {
 } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { LoadingSkeleton } from '../../components';
-import { labOrderApi, appointmentApi } from '../../services/apiServices';
+import { labOrderApi, labRecommendationApi, appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
 import { Plus, Trash2, Download, Send, AlertCircle } from 'lucide-react';
 
@@ -44,6 +44,7 @@ export default function LabOrderCreation() {
   const [loading, setLoading] = useState(false);
   const [appointment, setAppointment] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
   const [doctorPatients, setDoctorPatients] = useState([]);
   const [patientQuery, setPatientQuery] = useState('');
 
@@ -54,6 +55,7 @@ export default function LabOrderCreation() {
     notes: '',
     tests: [],
   });
+  const [recommendOnly, setRecommendOnly] = useState(false);
 
   const [selectedTest, setSelectedTest] = useState('');
 
@@ -118,6 +120,10 @@ export default function LabOrderCreation() {
 
   useEffect(() => {
     loadRecentOrders();
+    labRecommendationApi
+      .getDoctor()
+      .then((data) => setRecommendations(Array.isArray(data) ? data : data?.data || []))
+      .catch(() => setRecommendations([]));
   }, []);
 
   const handleAddTest = () => {
@@ -202,24 +208,36 @@ export default function LabOrderCreation() {
 
     try {
       setLoading(true);
-      const response = await labOrderApi.create({
-        patientId: formData.patientId,
-        appointmentId: formData.appointmentId || undefined,
-        tests: formData.tests,
-        urgency: formData.urgency,
-        notes: formData.notes,
-      });
-
-      toast.success('Lab order created successfully');
-
-      // Option to download PDF
-      const orderId = response?._id || response?.id;
-      setTimeout(() => {
-        if (orderId && confirm('Download lab order as PDF?')) {
-          handleDownloadOrderPdf(orderId);
-        }
+      if (recommendOnly) {
+        await labRecommendationApi.create({
+          patientId: formData.patientId,
+          appointmentId: formData.appointmentId || undefined,
+          tests: formData.tests,
+          urgency: formData.urgency,
+          notes: formData.notes,
+        });
+        toast.success('Lab tests recommended to patient.');
         navigate('/doctor/appointments');
-      }, 1000);
+      } else {
+        const response = await labOrderApi.create({
+          patientId: formData.patientId,
+          appointmentId: formData.appointmentId || undefined,
+          tests: formData.tests,
+          urgency: formData.urgency,
+          notes: formData.notes,
+        });
+
+        toast.success('Lab order created successfully');
+
+        // Option to download PDF
+        const orderId = response?._id || response?.id;
+        setTimeout(() => {
+          if (orderId && confirm('Download lab order as PDF?')) {
+            handleDownloadOrderPdf(orderId);
+          }
+          navigate('/doctor/appointments');
+        }, 1000);
+      }
     } catch (err) {
       toast.error(
         err.response?.data?.message || 'Failed to create lab order'
@@ -429,6 +447,18 @@ export default function LabOrderCreation() {
                 <CardTitle>Clinical Notes</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3">
+                  <input
+                    id="recommendOnly"
+                    type="checkbox"
+                    checked={recommendOnly}
+                    onChange={(e) => setRecommendOnly(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="recommendOnly" className="text-sm text-foreground">
+                    Recommend tests only (patient decides where to test)
+                  </label>
+                </div>
                 <div>
                   <Label htmlFor="urgency">Urgency *</Label>
                   <Select value={formData.urgency} onValueChange={(value) => setFormData({ ...formData, urgency: value })}>
@@ -485,7 +515,7 @@ export default function LabOrderCreation() {
                   className="w-full gap-2"
                 >
                   <Send className="h-4 w-4" />
-                  {loading ? 'Creating...' : 'Create Lab Order'}
+                  {loading ? 'Saving...' : recommendOnly ? 'Recommend Tests' : 'Create Lab Order'}
                 </Button>
                 <Button type="button" variant="outline" className="w-full" onClick={() => navigate(-1)}>
                   Cancel
@@ -542,6 +572,62 @@ export default function LabOrderCreation() {
                       >
                         <Download className="h-4 w-4 mr-1" /> PDF
                       </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50 bg-background/50 backdrop-blur-sm">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Recent recommendations</CardTitle>
+          <Button
+            variant="outline"
+            onClick={() =>
+              labRecommendationApi
+                .getDoctor()
+                .then((data) => setRecommendations(Array.isArray(data) ? data : data?.data || []))
+                .catch(() => setRecommendations([]))
+            }
+          >
+            Refresh
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {recommendations.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No lab recommendations created yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {recommendations.slice(0, 6).map((rec) => (
+                <div key={rec._id} className="rounded-xl border border-border p-4">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {rec.patientId?.userId?.name || 'Patient'} • Recommendation
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {rec.tests?.map((test) => test.testName).join(', ') || 'No tests listed'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {rec.createdAt ? new Date(rec.createdAt).toLocaleString() : 'Created recently'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={rec.status}>{rec.status}</StatusBadge>
+                      {rec.status === 'ordered' && rec.labOrderId && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/employee/lab-orders/${rec.labOrderId}`)}
+                        >
+                          View order
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

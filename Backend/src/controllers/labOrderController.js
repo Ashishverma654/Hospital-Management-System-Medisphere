@@ -70,6 +70,61 @@ const orderPopulate = [
   },
 ];
 
+const buildLabOrderAndItems = async ({
+  patient,
+  user,
+  doctorId = null,
+  appointmentId = null,
+  tests,
+  urgency = "routine",
+  notes,
+  orderSource = "doctor",
+  recommendationId = null,
+  createdBy,
+}) => {
+  const totalAmount = tests.reduce((sum, test) => sum + Number(test.price || 0), 0);
+
+  const labOrder = await LabOrder.create({
+    patientId: patient._id,
+    patientUserId: user._id,
+    doctorId,
+    appointmentId,
+    status: "ordered",
+    paymentStatus: "pending",
+    urgency,
+    totalAmount,
+    notes,
+    orderSource,
+    createdByRole: orderSource,
+    createdByUserId: createdBy,
+    recommendationId,
+  });
+
+  await Promise.all(
+    tests.map((test) =>
+      LabOrderItem.create({
+        labOrderId: labOrder._id,
+        testId: test.testId || undefined,
+        testType: test.testType || undefined,
+        testName: test.testName,
+        testCode: test.testCode,
+        price: test.price,
+        status: "ordered",
+      })
+    )
+  );
+
+  await upsertLabInvoice({
+    labOrder,
+    patient,
+    user,
+    tests,
+    createdBy,
+  });
+
+  return LabOrder.findById(labOrder._id).populate(orderPopulate);
+};
+
 const formatOrder = async (orderDoc, viewerRole = "internal") => {
   const order = orderDoc.toObject ? orderDoc.toObject() : orderDoc;
   const items = await LabOrderItem.find({ labOrderId: order._id }).sort({ createdAt: 1 });
@@ -296,69 +351,43 @@ export const createLabOrder = async (req, res) => {
       });
     }
 
-    const totalAmount = normalizedTests.reduce((sum, test) => sum + test.price, 0);
-
-    const labOrder = await LabOrder.create({
-      patientId: patient._id,
-      patientUserId: user._id,
-      doctorId: doctor._id,
-      appointmentId: appointment?._id || null,
-      status: "ordered",
-      paymentStatus: "pending",
-      urgency,
-      totalAmount,
-      notes,
-    });
-
-    await Promise.all(
-      normalizedTests.map((test) =>
-        LabOrderItem.create({
-          labOrderId: labOrder._id,
-          testId: test.testId || undefined,
-          testType: test.testType || undefined,
-          testName: test.testName,
-          testCode: test.testCode,
-          price: test.price,
-          status: "ordered",
-        })
-      )
-    );
-
-    await upsertLabInvoice({
-      labOrder,
+    const populatedOrder = await buildLabOrderAndItems({
       patient,
       user,
+      doctorId: doctor._id,
+      appointmentId: appointment?._id || null,
       tests: normalizedTests,
+      urgency,
+      notes,
+      orderSource: "doctor",
       createdBy: req.user.id,
     });
-
-    const populatedOrder = await LabOrder.findById(labOrder._id).populate(orderPopulate);
 
     const doctorUserId = doctor?.userId;
     if (doctorUserId) {
       await notifyEmployee({
         userId: doctorUserId,
-        key: `lab:${labOrder._id}:created:${doctorUserId}`,
+        key: `lab:${populatedOrder._id}:created:${doctorUserId}`,
         type: "lab",
         title: "Lab order created",
-        message: `Lab order ${labOrder.orderNumber || labOrder._id} created for ${user?.name || "patient"}.`,
+        message: `Lab order ${populatedOrder.orderNumber || populatedOrder._id} created for ${user?.name || "patient"}.`,
         sourceType: "labOrder",
-        sourceId: labOrder._id,
-        metadata: { urgency, totalAmount: labOrder.totalAmount },
+        sourceId: populatedOrder._id,
+        metadata: { urgency, totalAmount: populatedOrder.totalAmount },
       });
     }
 
     if (["urgent", "stat"].includes(urgency)) {
       await notifyRole({
         role: "labTechnician",
-        key: `lab:${labOrder._id}:urgent`,
+        key: `lab:${populatedOrder._id}:urgent`,
         type: "lab",
         title: "Urgent lab order",
-        message: `Urgent lab order ${labOrder.orderNumber || labOrder._id} requires attention.`,
+        message: `Urgent lab order ${populatedOrder.orderNumber || populatedOrder._id} requires attention.`,
         priority: "urgent",
         sourceType: "labOrder",
-        sourceId: labOrder._id,
-        metadata: { urgency, totalAmount: labOrder.totalAmount },
+        sourceId: populatedOrder._id,
+        metadata: { urgency, totalAmount: populatedOrder.totalAmount },
       });
     }
 
@@ -366,8 +395,8 @@ export const createLabOrder = async (req, res) => {
       actor: { id: req.user.id, name: req.user.name, role: req.user.role },
       action: "lab_order_created",
       entityType: "LabOrder",
-      entityId: labOrder._id,
-      details: { urgency, totalAmount, testCount: normalizedTests.length },
+      entityId: populatedOrder._id,
+      details: { urgency, totalAmount: populatedOrder.totalAmount, testCount: normalizedTests.length },
     });
 
     res.status(201).json({
@@ -378,6 +407,114 @@ export const createLabOrder = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+export const createPatientLabOrder = async (req, res) => {
+  try {
+    const { tests, notes, urgency = "routine" } = req.body;
+    const { patient, user } = await resolvePatientContext(req.user.id);
+
+    if (!Array.isArray(tests) || tests.length === 0) {
+      return res.status(400).json({ message: "At least one lab test must be selected." });
+    }
+
+    const seenKeys = new Set();
+    const normalizedTests = [];
+
+    for (const test of tests) {
+      const key = test.testId || test.testCode || test.testName;
+      if (key && seenKeys.has(String(key))) {
+        return res.status(400).json({ message: "Duplicate tests are not allowed in the same order." });
+      }
+      if (key) seenKeys.add(String(key));
+
+      if (test.testId) {
+        const labTest = await LabTest.findById(test.testId);
+        if (!labTest) {
+          return res.status(404).json({ message: "Lab test not found." });
+        }
+
+        const priceRecord = await TestPrice.findOne({
+          testId: labTest._id,
+          $or: [{ department: { $exists: false } }, { department: null }],
+        });
+
+        if (!priceRecord) {
+          return res.status(400).json({ message: `Price not set for ${labTest.name}.` });
+        }
+
+        normalizedTests.push({
+          testId: labTest._id,
+          testType: labTest.testType,
+          testName: labTest.name,
+          testCode: test.testCode || "",
+          price: Number(priceRecord.price || 0),
+        });
+        continue;
+      }
+
+      if (!test.testName) {
+        return res.status(400).json({ message: "Test name is required." });
+      }
+
+      normalizedTests.push({
+        testName: test.testName,
+        testCode: test.testCode || "",
+        price: Number(test.price || 0),
+      });
+    }
+
+    const populatedOrder = await buildLabOrderAndItems({
+      patient,
+      user,
+      tests: normalizedTests,
+      urgency,
+      notes,
+      orderSource: "patient",
+      createdBy: req.user.id,
+    });
+
+    await logAudit({
+      actor: { id: req.user.id, name: req.user.name, role: req.user.role },
+      action: "lab_order_created",
+      entityType: "LabOrder",
+      entityId: populatedOrder._id,
+      details: { urgency, totalAmount: populatedOrder.totalAmount, testCount: normalizedTests.length },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Lab order created successfully.",
+      data: await formatOrder(populatedOrder, "patient"),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const createLabOrderFromRecommendation = async ({ recommendation, patient, user, createdBy }) => {
+  const populatedOrder = await buildLabOrderAndItems({
+    patient,
+    user,
+    doctorId: recommendation.doctorId || null,
+    appointmentId: recommendation.appointmentId || null,
+    tests: recommendation.tests || [],
+    urgency: recommendation.urgency || "routine",
+    notes: recommendation.notes || "",
+    orderSource: "patient",
+    recommendationId: recommendation._id,
+    createdBy,
+  });
+
+  await logAudit({
+    actor: { id: createdBy, name: user.name, role: "patient" },
+    action: "lab_order_created_from_recommendation",
+    entityType: "LabOrder",
+    entityId: populatedOrder._id,
+    details: { recommendationId: recommendation._id },
+  });
+
+  return populatedOrder;
 };
 
 export const getDoctorLabOrders = async (req, res) => {

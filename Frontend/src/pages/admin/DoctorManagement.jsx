@@ -382,12 +382,9 @@ export default function DoctorManagement() {
                   <td className="px-4 py-3 text-xs capitalize text-muted-foreground">{doctor.onboardingStatus || 'created'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => { setSelectedDoctor(doctor); setShowDetail(true); }}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => navigate(`/employee/doctors/${doctor.id}`)}>
                         <Eye className="mr-1 h-3 w-3" />
                         View
-                      </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => navigate(`/employee/doctors/${doctor.id}`)}>
-                        Open Page
                       </Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => startEdit(doctor)}>Edit</Button>
                       <Button type="button" variant={doctor.isActive ? 'destructive' : 'outline'} size="sm" onClick={() => handleToggleActive(doctor)}>

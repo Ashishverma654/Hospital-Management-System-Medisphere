@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Calendar, FileText, Activity, CreditCard, ArrowRight, Bell, Pill, FlaskConical } from 'lucide-react';
-import { billingApi, notificationsApi, patientApi } from '../../services/apiServices.js';
+import { billingApi, labRecommendationApi, notificationsApi, patientApi } from '../../services/apiServices.js';
 import { connectSocket } from '../../services/socket.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { SkeletonCard, SkeletonList } from '../../components/ui/skeleton.jsx';
@@ -19,6 +19,7 @@ export default function PatientDashboard() {
   const [overview, setOverview] = useState(null);
   const [pendingAmount, setPendingAmount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [recommendationCount, setRecommendationCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadDashboard = useCallback(async () => {
@@ -37,6 +38,16 @@ export default function PatientDashboard() {
     }
   }, []);
 
+  const loadRecommendations = useCallback(async () => {
+    try {
+      const data = await labRecommendationApi.getMy();
+      const list = Array.isArray(data) ? data : data?.data || [];
+      setRecommendationCount(list.filter((item) => item.status === 'recommended').length);
+    } catch {
+      setRecommendationCount(0);
+    }
+  }, []);
+
   const loadBills = useCallback(async () => {
     try {
       const invoices = await billingApi.getMy({ paymentStatus: 'pending' });
@@ -50,12 +61,14 @@ export default function PatientDashboard() {
   useEffect(() => {
     loadDashboard();
     loadBills();
+    loadRecommendations();
     const interval = setInterval(() => {
       loadDashboard();
       loadBills();
+      loadRecommendations();
     }, 20000);
     return () => clearInterval(interval);
-  }, [loadBills, loadDashboard]);
+  }, [loadBills, loadDashboard, loadRecommendations]);
 
   useEffect(() => {
     const patientId = user?.id || user?._id;
@@ -64,6 +77,7 @@ export default function PatientDashboard() {
     const handleUpdate = () => {
       loadDashboard();
       loadBills();
+      loadRecommendations();
     };
 
     socket.on('queue:update', handleUpdate);
@@ -77,7 +91,7 @@ export default function PatientDashboard() {
       socket.off('consultation:started', handleUpdate);
       socket.off('consultation:completed', handleUpdate);
     };
-  }, [loadBills, loadDashboard, user?.id, user?._id]);
+  }, [loadBills, loadDashboard, loadRecommendations, user?.id, user?._id]);
 
   const upcomingAppointments = overview?.lists?.upcomingAppointments || [];
   const recentAppointments = useMemo(
@@ -96,11 +110,12 @@ export default function PatientDashboard() {
 
   const readyCards = useMemo(
     () => [
+      { label: 'Recommended tests', count: recommendationCount, action: '/patient/lab-tests', icon: FlaskConical, variant: 'info' },
       { label: 'Lab reports ready', count: overview?.highlights?.reportReadyCount || 0, action: '/patient/lab-tests', icon: FlaskConical, variant: 'info' },
       { label: 'Reports released', count: overview?.highlights?.reportReleasedCount || 0, action: '/patient/lab-reports', icon: FileText, variant: 'success' },
       { label: 'Medicines ready', count: overview?.highlights?.medicineReadyCount || 0, action: '/patient/medicine-orders', icon: Pill, variant: 'warning' },
     ],
-    [overview]
+    [overview, recommendationCount]
   );
 
   const hour = new Date().getHours();
@@ -179,7 +194,7 @@ export default function PatientDashboard() {
       )}
 
       {/* Ready highlight cards */}
-      <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid gap-4 md:grid-cols-3">
+      <motion.div variants={staggerContainer} initial="initial" animate="animate" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {readyCards.map((card) => (
           <motion.div key={card.label} variants={staggerItem}>
             <Card className="border-border hover:shadow-md transition-shadow rounded-2xl">

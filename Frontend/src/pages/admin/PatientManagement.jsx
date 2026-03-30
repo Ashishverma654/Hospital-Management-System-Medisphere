@@ -312,25 +312,12 @@ export default function PatientManagement() {
                     <td className="px-3 py-3 text-muted-foreground">{new Date(patient.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
-                          onClick={() => {
-                            if (!resolvedId) {
-                              toast.error('Unable to open patient details. Missing patient reference.');
-                              return;
-                            }
-                            loadPatientDetail(resolvedId);
-                          }}
-                        >
-                          <Eye className="mr-1 h-3 w-3" />
-                          View
-                        </button>
                         <Link
                           to={resolvedId ? `/employee/patients/${resolvedId}` : '#'}
                           className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
                         >
-                          Open Page
+                          <Eye className="mr-1 h-3 w-3" />
+                          View
                         </Link>
                       </div>
                     </td>

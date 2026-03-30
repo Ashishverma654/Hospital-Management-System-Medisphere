@@ -13,7 +13,7 @@ import {
 
 const router = express.Router();
 
-router.get("/", verifyAccessToken, authorizeRoles("admin", "superadmin", "subadmin", "doctor", "labTechnician"), getLabTests);
+router.get("/", verifyAccessToken, authorizeRoles("admin", "superadmin", "subadmin", "doctor", "labTechnician", "patient"), getLabTests);
 router.post("/", verifyAccessToken, authorizeRoles("admin", "superadmin"), validate(createLabTestSchema), createLabTest);
 router.put("/:id", verifyAccessToken, authorizeRoles("admin", "superadmin"), validate(updateLabTestSchema), updateLabTest);
 

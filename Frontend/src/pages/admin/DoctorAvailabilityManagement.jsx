@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { availabilityApi, doctorApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button.jsx';
@@ -50,6 +50,7 @@ const initialForm = {
 };
 
 export default function DoctorAvailabilityManagement() {
+  const formRef = useRef(null);
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [availabilities, setAvailabilities] = useState([]);
@@ -144,6 +145,10 @@ export default function DoctorAvailabilityManagement() {
       toast.error('Select at least one day.');
       return;
     }
+    if (editingId && selectedDays.length > 1) {
+      toast.error('Editing supports one day at a time. Select a single day.');
+      return;
+    }
     const startMinutes = toMinutes(form.startTime);
     const endMinutes = toMinutes(form.endTime);
     const breakStartMinutes = toMinutes(breakStart);
@@ -159,9 +164,6 @@ export default function DoctorAvailabilityManagement() {
     setLoading(true);
     try {
       const daysToSave = selectedDays;
-      if (editingId) {
-        await availabilityApi.remove(editingId);
-      }
       const payloads = breakEnabled
         ? [
             { ...form, endTime: breakStart },
@@ -169,13 +171,23 @@ export default function DoctorAvailabilityManagement() {
           ]
         : [form];
 
-      for (const day of daysToSave) {
-        for (const payload of payloads) {
-          await availabilityApi.create({
-            ...payload,
-            dayOfWeek: day,
-            doctorId: selectedDoctorId,
-          });
+      if (editingId && !breakEnabled) {
+        await availabilityApi.update(editingId, {
+          ...form,
+          dayOfWeek: daysToSave[0],
+        });
+      } else {
+        if (editingId) {
+          await availabilityApi.remove(editingId);
+        }
+        for (const day of daysToSave) {
+          for (const payload of payloads) {
+            await availabilityApi.create({
+              ...payload,
+              dayOfWeek: day,
+              doctorId: selectedDoctorId,
+            });
+          }
         }
       }
       toast.success(
@@ -209,6 +221,9 @@ export default function DoctorAvailabilityManagement() {
     });
     setSelectedDays([item.dayOfWeek]);
     setBreakEnabled(false);
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   const handleDelete = async (id) => {
@@ -236,7 +251,7 @@ export default function DoctorAvailabilityManagement() {
         </p>
       </div>
 
-      <Card className="border-border rounded-2xl">
+      <Card ref={formRef} className="border-border rounded-2xl">
         <CardHeader>
           <CardTitle className="text-lg">Select doctor</CardTitle>
         </CardHeader>

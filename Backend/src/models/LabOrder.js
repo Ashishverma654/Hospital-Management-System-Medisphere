@@ -36,6 +36,22 @@ const labOrderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Doctor",
     },
+    orderSource: {
+      type: String,
+      enum: ["doctor", "patient"],
+      default: "doctor",
+    },
+    createdByRole: {
+      type: String,
+    },
+    createdByUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    recommendationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "LabRecommendation",
+    },
     appointmentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Appointment",

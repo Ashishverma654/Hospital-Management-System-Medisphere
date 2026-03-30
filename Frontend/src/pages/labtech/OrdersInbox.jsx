@@ -253,6 +253,9 @@ export default function LabTechOrdersInbox({
                           {order.urgency}
                         </span>
                       )}
+                      <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {order.orderSource === 'patient' ? 'Patient order' : 'Doctor order'}
+                      </span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {order.orderNumber} • {order.patientIdentifier} • {order.doctorName}

@@ -15,6 +15,26 @@ export const createLabOrderSchema = Joi.object({
   urgency: Joi.string(),
 }).unknown(true);
 
+export const createPatientLabOrderSchema = Joi.object({
+  tests: Joi.array().items(testItemSchema).min(1).required(),
+  notes: Joi.string().allow(""),
+  urgency: Joi.string(),
+}).unknown(true);
+
+export const createLabRecommendationSchema = Joi.object({
+  patientId: Joi.string().required(),
+  appointmentId: Joi.string(),
+  tests: Joi.array().items(testItemSchema).min(1).required(),
+  notes: Joi.string().allow(""),
+  urgency: Joi.string(),
+}).unknown(true);
+
+export const markRecommendationExternalSchema = Joi.object({
+  notes: Joi.string().allow(""),
+}).unknown(true);
+
+export const placeRecommendationOrderSchema = Joi.object({}).unknown(true);
+
 export const updateLabOrderStatusSchema = Joi.object({
   status: Joi.string().required(),
 }).unknown(true);

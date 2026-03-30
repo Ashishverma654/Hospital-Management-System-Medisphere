@@ -174,11 +174,20 @@ export const testPriceApi = {
 
 export const labOrderApi = {
   create: (body) => api.post('/lab-orders', body),
+  createPatient: (body) => api.post('/lab-orders/patient', body),
   getByDoctor: (params) => api.get('/lab-orders/doctor', { params }),
   getMy: () => api.get('/lab-orders/my'),
   getById: (id) => api.get(`/lab-orders/${id}`),
   downloadPdf: (id) => api.get(`/lab-orders/${id}/pdf`, { responseType: 'blob' }),
   updateStatus: (id, body) => api.put(`/lab-orders/${id}/status`, body),
+};
+
+export const labRecommendationApi = {
+  create: (body) => api.post('/lab-recommendations', body),
+  getDoctor: () => api.get('/lab-recommendations/doctor'),
+  getMy: () => api.get('/lab-recommendations/my'),
+  markExternal: (id, body) => api.post(`/lab-recommendations/${id}/external`, body),
+  placeOrder: (id) => api.post(`/lab-recommendations/${id}/order`, {}),
 };
 
 export const labTechApi = {
