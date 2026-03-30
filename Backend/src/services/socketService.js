@@ -97,6 +97,15 @@ export const initSocket = (httpServer) => {
       socket.join(room);
       socket.emit("joined-room", { appointmentId, role: isDoctor ? "doctor" : "patient" });
       socket.to(room).emit("participant-joined", { appointmentId, role: isDoctor ? "doctor" : "patient" });
+
+      const roomSize = ioInstance?.sockets?.adapter?.rooms?.get(room)?.size || 0;
+      if (roomSize > 1) {
+        socket.emit("room-ready", {
+          appointmentId,
+          hasParticipant: true,
+          participantRole: isDoctor ? "patient" : "doctor",
+        });
+      }
     });
 
     socket.on("offer", ({ appointmentId, offer }) => {

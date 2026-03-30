@@ -23,6 +23,8 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
   const socketRef = useRef(null);
   const endingRef = useRef(false);
   const offerSentRef = useRef(false);
+  const localReadyRef = useRef(false);
+  const canOfferRef = useRef(false);
   const [status, setStatus] = useState('Connecting...');
   const [sessionKey, setSessionKey] = useState(0);
   const [participantRole, setParticipantRole] = useState(null);
@@ -61,6 +63,8 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     const peer = new RTCPeerConnection({ iceServers: resolvedIceServers });
     peerRef.current = peer;
     offerSentRef.current = false;
+    localReadyRef.current = false;
+    canOfferRef.current = false;
 
     peer.onicecandidate = (event) => {
       if (event.candidate) {
@@ -92,6 +96,8 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     const createOffer = async () => {
       try {
         if (offerSentRef.current) return;
+        if (!localReadyRef.current) return;
+        if (!canOfferRef.current) return;
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
         socket.emit('offer', { appointmentId, offer });
@@ -104,8 +110,9 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     const handleJoined = async () => {
       try {
         await attachLocalStream();
+        localReadyRef.current = true;
         setStatus(role === 'doctor' ? 'Waiting for patient to join...' : 'Waiting for doctor to join...');
-        if (role === 'doctor') {
+        if (role === 'doctor' && canOfferRef.current) {
           await createOffer();
         }
       } catch {
@@ -122,9 +129,17 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       setParticipantRole(joinedRole || 'participant');
       setStatus(joinedRole === 'doctor' ? 'Doctor joined. Connecting...' : 'Patient joined. Connecting...');
       if (role === 'doctor') {
-        if (!peer.localDescription || peer.signalingState === 'stable') {
-          await createOffer();
-        }
+        canOfferRef.current = true;
+        await createOffer();
+      }
+    });
+    socket.on('room-ready', async ({ hasParticipant, participantRole: joinedRole }) => {
+      if (!hasParticipant) return;
+      setParticipantRole(joinedRole || 'participant');
+      setStatus(joinedRole === 'doctor' ? 'Doctor joined. Connecting...' : 'Patient joined. Connecting...');
+      if (role === 'doctor') {
+        canOfferRef.current = true;
+        await createOffer();
       }
     });
     socket.on('offer', async ({ offer }) => {
@@ -177,6 +192,7 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       socket.off('ice-candidate');
       socket.off('participant-left');
       socket.off('call-ended');
+      socket.off('room-ready');
 
       if (peerRef.current) {
         peerRef.current.close();
