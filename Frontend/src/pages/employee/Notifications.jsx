@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { Button } from '../../components/ui/button';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { notificationsApi } from '../../services/apiServices.js';
@@ -8,6 +10,8 @@ import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 import { Activity, BellRing, CalendarDays, FlaskConical, Pill, ShieldAlert, ClipboardList } from 'lucide-react';
 
 export default function EmployeeNotifications() {
+  const navigate = useNavigate();
+  const role = useSelector((state) => state.auth.user?.role);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
@@ -125,6 +129,42 @@ export default function EmployeeNotifications() {
       );
     } catch (error) {
       toast.error(error.response?.data?.message || 'Unable to mark notification.');
+    }
+  };
+
+  const resolveNotificationRoute = (notification) => {
+    const sourceType = notification.sourceType || notification.type;
+    const sourceId = notification.sourceId;
+    if (!sourceType || !sourceId) return null;
+
+    if (sourceType === 'appointment') {
+      if (role === 'doctor') return `/doctor/appointments?appointmentId=${sourceId}`;
+      return `/employee/receptionist/queue?appointmentId=${sourceId}`;
+    }
+    if (sourceType === 'labOrder') {
+      if (role === 'labTechnician') return `/employee/lab-technician/orders?orderId=${sourceId}`;
+      if (role === 'doctor') return `/doctor/lab-orders?orderId=${sourceId}`;
+      return `/employee/lab-orders/${sourceId}`;
+    }
+    if (sourceType === 'pharmacyOrder') {
+      return `/employee/pharmacist/orders?orderId=${sourceId}`;
+    }
+    if (sourceType === 'invoice' || notification.type === 'billing') {
+      return `/employee/billing?invoiceId=${sourceId}`;
+    }
+    if (sourceType === 'admission') {
+      return `/employee/admissions?admissionId=${sourceId}`;
+    }
+    return null;
+  };
+
+  const openNotification = async (notification) => {
+    const route = resolveNotificationRoute(notification);
+    if (notification.status !== 'read') {
+      await markRead(notification.id);
+    }
+    if (route) {
+      navigate(route);
     }
   };
 
@@ -274,7 +314,19 @@ export default function EmployeeNotifications() {
           const meta = typeMeta(notification.type);
           const Icon = meta.icon;
           return (
-            <article key={notification.id} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <article
+              key={notification.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openNotification(notification)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openNotification(notification);
+                }
+              }}
+              className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:border-primary/40 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="flex gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-foreground">
@@ -300,11 +352,28 @@ export default function EmployeeNotifications() {
                   )}
                 </div>
               </div>
-              {notification.status !== 'read' && (
-                <Button variant="outline" className="mt-4" onClick={() => markRead(notification.id)}>
-                  Mark as read
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openNotification(notification);
+                  }}
+                >
+                  View details
                 </Button>
-              )}
+                {notification.status !== 'read' && (
+                  <Button
+                    variant="outline"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      markRead(notification.id);
+                    }}
+                  >
+                    Mark as read
+                  </Button>
+                )}
+              </div>
             </article>
           );
         })}

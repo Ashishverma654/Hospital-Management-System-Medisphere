@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { pharmacyOrderApi, prescriptionApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -6,6 +7,9 @@ import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function PatientPrescriptions() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const appointmentFilter = searchParams.get('appointmentId');
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [placingId, setPlacingId] = useState('');
@@ -25,6 +29,11 @@ export default function PatientPrescriptions() {
   useEffect(() => {
     loadPrescriptions();
   }, []);
+
+  const filteredPrescriptions = useMemo(() => {
+    if (!appointmentFilter) return prescriptions;
+    return prescriptions.filter((item) => String(item.appointmentId?._id || item.appointmentId) === String(appointmentFilter));
+  }, [appointmentFilter, prescriptions]);
 
   const handleDownloadPdf = async (id) => {
     try {
@@ -68,8 +77,21 @@ export default function PatientPrescriptions() {
         </p>
       </div>
 
+      {appointmentFilter && (
+        <div className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+          Showing prescriptions for appointment {appointmentFilter.slice(-8).toUpperCase()}.
+          <Button
+            variant="outline"
+            className="ml-3"
+            onClick={() => navigate('/patient/prescriptions')}
+          >
+            Clear filter
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {prescriptions.map((prescription) => (
+        {filteredPrescriptions.map((prescription) => (
           <article key={prescription._id} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
@@ -166,9 +188,9 @@ export default function PatientPrescriptions() {
           </article>
         ))}
 
-        {!loading && prescriptions.length === 0 && (
+        {!loading && filteredPrescriptions.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-muted-foreground">
-            No prescriptions are available for this patient account yet.
+            No prescriptions are available for this selection yet.
           </div>
         )}
       </div>

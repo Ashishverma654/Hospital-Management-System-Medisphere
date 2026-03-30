@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { admissionApi, appointmentApi, billingApi, receptionistApi, slotApi } from '../../services/apiServices.js';
@@ -63,9 +63,42 @@ const buildSlotDateTime = (date, slot) => {
   return base;
 };
 
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const groupSlotsByPeriod = (slots = []) => {
+  const sorted = [...slots]
+    .map((slot) => ({ slot, minutes: slotToMinutes(slot) }))
+    .filter((entry) => entry.minutes != null)
+    .sort((a, b) => a.minutes - b.minutes);
+
+  const groups = {
+    morning: [],
+    afternoon: [],
+    evening: [],
+  };
+
+  sorted.forEach(({ slot, minutes }) => {
+    if (minutes < 12 * 60) {
+      groups.morning.push(slot);
+    } else if (minutes < 16 * 60) {
+      groups.afternoon.push(slot);
+    } else {
+      groups.evening.push(slot);
+    }
+  });
+
+  return { groups, sortedSlots: sorted.map((entry) => entry.slot) };
+};
+
 export default function AppointmentDesk() {
   const [searchParams] = useSearchParams();
   const preselectedPatientId = searchParams.get('patientId') || '';
+  const preselectedAppointmentId = searchParams.get('appointmentId') || '';
   const [patients, setPatients] = useState([]);
   const [patientQuery, setPatientQuery] = useState('');
   const [booking, setBooking] = useState({ ...initialBooking, patientId: preselectedPatientId });
@@ -88,10 +121,13 @@ export default function AppointmentDesk() {
   const [walkInCredential, setWalkInCredential] = useState(null);
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
   const [rescheduleForm, setRescheduleForm] = useState({ date: '', slot: '' });
+  const [rescheduleSlots, setRescheduleSlots] = useState([]);
+  const [rescheduleSlotLoading, setRescheduleSlotLoading] = useState(false);
   const [queueDepartments, setQueueDepartments] = useState([]);
   const [admissionTarget, setAdmissionTarget] = useState(null);
   const [admissionForm, setAdmissionForm] = useState({ departmentId: '', doctorId: '', reason: '', notes: '' });
   const [admissionDoctors, setAdmissionDoctors] = useState([]);
+  const queueItemRefs = useRef(new Map());
 
   const loadPatients = async (query = '') => {
     try {
@@ -160,6 +196,14 @@ export default function AppointmentDesk() {
   useEffect(() => {
     loadQueue();
   }, [loadQueue]);
+
+  useEffect(() => {
+    if (!preselectedAppointmentId || queue.length === 0) return;
+    const target = queueItemRefs.current.get(preselectedAppointmentId);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [preselectedAppointmentId, queue]);
 
   useEffect(() => {
     const socket = connectSocket({ role: 'receptionist' });
@@ -232,10 +276,60 @@ export default function AppointmentDesk() {
     loadSlots();
   }, [booking.doctorId, booking.date]);
 
+  useEffect(() => {
+    const loadRescheduleSlots = async () => {
+      if (!rescheduleTarget?.doctorId || !rescheduleForm.date) {
+        setRescheduleSlots([]);
+        return;
+      }
+      const doctorId = typeof rescheduleTarget.doctorId === 'string' ? rescheduleTarget.doctorId : rescheduleTarget.doctorId?._id;
+      if (!doctorId) {
+        setRescheduleSlots([]);
+        return;
+      }
+      setRescheduleSlotLoading(true);
+      try {
+        const response = await slotApi.getByDoctor(doctorId, rescheduleForm.date);
+        setRescheduleSlots(response?.availableSlots || []);
+      } catch {
+        setRescheduleSlots([]);
+      } finally {
+        setRescheduleSlotLoading(false);
+      }
+    };
+
+    if (rescheduleTarget) {
+      loadRescheduleSlots();
+    }
+  }, [rescheduleTarget, rescheduleForm.date]);
+
   const selectedPatient = useMemo(
     () => patients.find((patient) => patient.id === booking.patientId),
     [patients, booking.patientId]
   );
+
+  const rescheduleSlotOptions = useMemo(() => {
+    const options = [...rescheduleSlots];
+    const currentSlot = rescheduleTarget?.slot;
+    if (currentSlot && !options.includes(currentSlot)) {
+      options.unshift(currentSlot);
+    }
+    return options;
+  }, [rescheduleSlots, rescheduleTarget?.slot]);
+
+  const rescheduleSlotData = useMemo(() => {
+    const isToday = rescheduleForm.date === getLocalDateString();
+    const nowMinutes = isToday ? new Date().getHours() * 60 + new Date().getMinutes() : null;
+    const filtered = rescheduleSlotOptions.filter((slot) => {
+      if (!isToday || nowMinutes == null) return true;
+      const minutes = slotToMinutes(slot);
+      if (minutes == null) return true;
+      return minutes > nowMinutes;
+    });
+    return groupSlotsByPeriod(filtered);
+  }, [rescheduleForm.date, rescheduleSlotOptions]);
+
+  const rescheduleNextAvailable = rescheduleSlotData.sortedSlots[0];
 
   const handleBookAppointment = async (event) => {
     event.preventDefault();
@@ -716,7 +810,17 @@ export default function AppointmentDesk() {
 
           <div className="mt-6 space-y-3">
             {visibleQueue.map((appointment) => (
-              <article key={appointment._id} className="rounded-xl border border-border p-4">
+              <article
+                key={appointment._id}
+                ref={(node) => {
+                  if (node) {
+                    queueItemRefs.current.set(appointment._id, node);
+                  } else {
+                    queueItemRefs.current.delete(appointment._id);
+                  }
+                }}
+                className={`rounded-xl border p-4 ${preselectedAppointmentId === appointment._id ? 'border-primary/60 bg-primary/5' : 'border-border'}`}
+              >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <p className="font-semibold text-foreground">{appointment.patientId?.name}</p>
@@ -791,15 +895,112 @@ export default function AppointmentDesk() {
             </div>
             <div className="mt-5 grid gap-4">
               <Field label="New date">
-                <input type="date" value={rescheduleForm.date} onChange={(event) => setRescheduleForm((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" required />
+              <input
+                type="date"
+                value={rescheduleForm.date}
+                onChange={(event) =>
+                  setRescheduleForm((current) => ({ ...current, date: event.target.value, slot: '' }))
+                }
+                className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary"
+                required
+              />
               </Field>
-              <Field label="New slot">
-                <input type="text" value={rescheduleForm.slot} onChange={(event) => setRescheduleForm((current) => ({ ...current, slot: event.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" placeholder="Enter exact slot e.g. 10:00 AM" required />
-              </Field>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">Available slots</p>
+                  {rescheduleNextAvailable && (
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      Next available: {rescheduleNextAvailable}
+                    </span>
+                  )}
+                </div>
+                {rescheduleSlotLoading && <p className="text-sm text-muted-foreground">Loading slots...</p>}
+                {!rescheduleSlotLoading && rescheduleSlotOptions.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No slots available for the selected date.</p>
+                )}
+                {!rescheduleSlotLoading && rescheduleSlotOptions.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Morning | Till 12 PM ({rescheduleSlotData.groups.morning.length} slots)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {rescheduleSlotData.groups.morning.map((slot) => {
+                          const isSelected = rescheduleForm.slot === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setRescheduleForm((current) => ({ ...current, slot }))}
+                              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground shadow-sm'
+                                  : 'border border-primary/30 text-foreground hover:border-primary hover:bg-primary/10'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Afternoon | 12 PM - 4 PM ({rescheduleSlotData.groups.afternoon.length} slots)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {rescheduleSlotData.groups.afternoon.map((slot) => {
+                          const isSelected = rescheduleForm.slot === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setRescheduleForm((current) => ({ ...current, slot }))}
+                              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground shadow-sm'
+                                  : 'border border-primary/30 text-foreground hover:border-primary hover:bg-primary/10'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        Evening | After 4 PM ({rescheduleSlotData.groups.evening.length} slots)
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {rescheduleSlotData.groups.evening.map((slot) => {
+                          const isSelected = rescheduleForm.slot === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setRescheduleForm((current) => ({ ...current, slot }))}
+                              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground shadow-sm'
+                                  : 'border border-primary/30 text-foreground hover:border-primary hover:bg-primary/10'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="mt-6 flex gap-3">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setRescheduleTarget(null)}>Cancel</Button>
-              <Button type="submit" className="flex-1">Save Reschedule</Button>
+              <Button type="submit" className="flex-1" disabled={!rescheduleForm.slot || rescheduleSlotLoading}>
+                Save Reschedule
+              </Button>
             </div>
           </form>
         </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { appointmentApi } from '../../services/apiServices.js';
@@ -36,6 +36,7 @@ export default function PatientAppointments() {
   const [videoAppointment, setVideoAppointment] = useState(null);
   const [videoStatus, setVideoStatus] = useState('');
   const [waitingCountdown, setWaitingCountdown] = useState(null);
+  const detailRef = useRef(null);
   const graceMinutes = Number(import.meta.env.VITE_VIDEO_CALL_GRACE_MINUTES ?? import.meta.env.VITE_NO_SHOW_GRACE_MINUTES ?? 5);
 
   const loadAppointments = useCallback(async () => {
@@ -99,6 +100,18 @@ export default function PatientAppointments() {
   const selected = appointments.find((item) => (item._id || item.id) === selectedId);
   const canJoinVideo = selected?.consultationMode === 'video' && ['arrived', 'checked-in', 'inConsultation'].includes(selected?.status);
   const waitingRoomVisible = videoOpen && videoStatus === 'Waiting for participant...';
+
+  const scrollToDetail = () => {
+    if (detailRef.current) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  useEffect(() => {
+    if (selected) {
+      scrollToDetail();
+    }
+  }, [selectedId, selected]);
 
   useEffect(() => {
     if (!autoJoin || !selected || !canJoinVideo) return;
@@ -191,8 +204,11 @@ export default function PatientAppointments() {
               <button
                 key={appointment._id}
                 type="button"
-                onClick={() => setSelectedId(appointment._id)}
-                className={`w-full rounded-xl border p-4 text-left ${selectedId === appointment._id ? 'border-slate-900 bg-muted/50' : 'border-border hover:border-border'}`}
+                onClick={() => {
+                  setSelectedId(appointment._id);
+                  setTimeout(scrollToDetail, 50);
+                }}
+                className={`w-full rounded-xl border p-4 text-left ${selectedId === appointment._id ? 'border-primary/40 bg-muted/50' : 'border-border hover:border-primary/30'}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -216,6 +232,17 @@ export default function PatientAppointments() {
                         Join now
                       </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedId(appointment._id);
+                        setTimeout(scrollToDetail, 50);
+                      }}
+                      className="rounded-full border border-primary/30 px-3 py-1 text-xs font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+                    >
+                      View details
+                    </button>
                     <StatusBadge status={appointment.status}>{appointment.status}</StatusBadge>
                   </div>
                 </div>
@@ -240,8 +267,11 @@ export default function PatientAppointments() {
               <button
                 key={appointment._id}
                 type="button"
-                onClick={() => setSelectedId(appointment._id)}
-                className={`w-full rounded-xl border p-4 text-left ${selectedId === appointment._id ? 'border-slate-900 bg-muted/50' : 'border-border hover:border-border'}`}
+                onClick={() => {
+                  setSelectedId(appointment._id);
+                  setTimeout(scrollToDetail, 50);
+                }}
+                className={`w-full rounded-xl border p-4 text-left ${selectedId === appointment._id ? 'border-primary/40 bg-muted/50' : 'border-border hover:border-primary/30'}`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -250,7 +280,20 @@ export default function PatientAppointments() {
                       {appointment.doctorId?.departmentId?.name || 'Department'} • {appointment.date} • {appointment.slot}
                     </p>
                   </div>
-                  <StatusBadge status={appointment.status}>{appointment.status}</StatusBadge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedId(appointment._id);
+                        setTimeout(scrollToDetail, 50);
+                      }}
+                      className="rounded-full border border-primary/30 px-3 py-1 text-xs font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+                    >
+                      View details
+                    </button>
+                    <StatusBadge status={appointment.status}>{appointment.status}</StatusBadge>
+                  </div>
                 </div>
               </button>
             ))}
@@ -262,7 +305,7 @@ export default function PatientAppointments() {
           </div>
         </section>
 
-        <section className="rounded-2xl bg-card p-6 shadow-sm">
+        <section ref={detailRef} className="rounded-2xl bg-card p-6 shadow-sm">
           {!selected && (
             <div className="py-24 text-center text-muted-foreground">Select an appointment to view details.</div>
           )}
@@ -279,6 +322,14 @@ export default function PatientAppointments() {
                     <StatusBadge status="queue">Queue #{selected.queuePosition}</StatusBadge>
                   ) : null}
                 </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to={`/patient/prescriptions?appointmentId=${selected._id || selected.id}`}
+                  className="rounded-full border border-primary/30 px-4 py-2 text-xs font-semibold text-primary transition hover:border-primary hover:bg-primary/10"
+                >
+                  View prescriptions
+                </Link>
               </div>
 
               <article className="rounded-xl border border-border p-4 text-sm text-muted-foreground">

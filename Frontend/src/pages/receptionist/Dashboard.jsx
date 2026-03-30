@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
@@ -12,6 +12,7 @@ import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 export default function ReceptionistDashboard() {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const queueSectionRef = useRef(null);
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -68,10 +69,12 @@ export default function ReceptionistDashboard() {
               Book Appointment
             </Link>
           </Button>
-          <Button variant="outline" asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">
-            <Link to="/employee/receptionist/queue" className="inline-flex items-center gap-2">
-              Open Today&apos;s Queue
-            </Link>
+          <Button
+            variant="outline"
+            className="h-11 min-w-[180px] justify-center whitespace-nowrap"
+            onClick={() => queueSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
+            Open Today&apos;s Queue
           </Button>
           <Button variant="outline" asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">
             <Link to="/employee/receptionist/patients" className="inline-flex items-center gap-2">
@@ -97,7 +100,7 @@ export default function ReceptionistDashboard() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-        <section className="rounded-2xl bg-card p-6 shadow-sm">
+        <section ref={queueSectionRef} className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Today&apos;s Queue</p>

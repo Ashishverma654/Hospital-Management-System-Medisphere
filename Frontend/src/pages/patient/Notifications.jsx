@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { notificationsApi } from '../../services/apiServices.js';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
@@ -7,6 +8,7 @@ import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
 export default function PatientNotifications() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,6 +53,35 @@ export default function PatientNotifications() {
     }
   };
 
+  const resolveNotificationRoute = (notification) => {
+    const sourceType = notification.sourceType || notification.type;
+    const sourceId = notification.sourceId;
+    if (!sourceType || !sourceId) return null;
+    if (sourceType === 'appointment') {
+      return `/patient/appointments?appointmentId=${sourceId}`;
+    }
+    if (sourceType === 'labOrder') {
+      return `/patient/lab-tests?orderId=${sourceId}`;
+    }
+    if (sourceType === 'pharmacyOrder') {
+      return `/patient/medicine-orders?orderId=${sourceId}`;
+    }
+    if (sourceType === 'invoice' || notification.type === 'billing') {
+      return `/patient/bills?invoiceId=${sourceId}`;
+    }
+    return null;
+  };
+
+  const openNotification = async (notification) => {
+    const route = resolveNotificationRoute(notification);
+    if (notification.status !== 'read') {
+      await markRead(notification.id);
+    }
+    if (route) {
+      navigate(route);
+    }
+  };
+
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
@@ -72,7 +103,19 @@ export default function PatientNotifications() {
 
       <div className="space-y-4">
         {notifications.map((notification) => (
-          <article key={notification.id} className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          <article
+            key={notification.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => openNotification(notification)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openNotification(notification);
+              }
+            }}
+            className="rounded-2xl border border-border bg-card p-6 shadow-sm transition hover:border-primary/40 hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="font-semibold text-foreground">{notification.title}</p>
@@ -87,11 +130,28 @@ export default function PatientNotifications() {
               </div>
             </div>
 
-            {notification.status !== 'read' && (
-              <Button variant="outline" className="mt-4" onClick={() => markRead(notification.id)}>
-                Mark as read
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openNotification(notification);
+                }}
+              >
+                View details
               </Button>
-            )}
+              {notification.status !== 'read' && (
+                <Button
+                  variant="outline"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    markRead(notification.id);
+                  }}
+                >
+                  Mark as read
+                </Button>
+              )}
+            </div>
           </article>
         ))}
 
