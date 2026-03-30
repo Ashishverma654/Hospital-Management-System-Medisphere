@@ -1058,9 +1058,11 @@ export const startConsultation = async (req, res) => {
     }
 
     const slotDateTime = buildSlotDateTimeInHospitalTZ(appointment.date, appointment.slot);
+    const earlyStartGraceMinutes = Number(process.env.APPOINTMENT_EARLY_START_GRACE_MINUTES || 5);
+    const earlyStartGraceMs = Math.max(0, earlyStartGraceMinutes) * 60000;
     if (
       slotDateTime &&
-      slotDateTime.getTime() > Date.now() &&
+      slotDateTime.getTime() - Date.now() > earlyStartGraceMs &&
       !appointment.earlyCheckInBy
     ) {
       return res.status(400).json({
