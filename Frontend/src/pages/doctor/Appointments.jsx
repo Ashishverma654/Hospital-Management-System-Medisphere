@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog.jsx';
-import VideoCall from '../../components/VideoCall.jsx';
 import { StatusBadge, DataTable, LoadingSkeleton, ErrorState } from '../../components';
 import { appointmentApi } from '../../services/apiServices';
 import { toast } from 'sonner';
-import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText, Video, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, Play, Eye, Stethoscope, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
+import { useDoctorVideoCall } from '../../context/DoctorVideoCallContext.jsx';
 
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 
@@ -21,9 +21,7 @@ export default function DoctorAppointments() {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickViewData, setQuickViewData] = useState(null);
   const [quickViewLoading, setQuickViewLoading] = useState(false);
-  const [videoOpen, setVideoOpen] = useState(false);
-  const [videoAppointment, setVideoAppointment] = useState(null);
-  const [endingCall, setEndingCall] = useState(false);
+  const { openVideoCall } = useDoctorVideoCall();
   const [viewMode, setViewMode] = useState('today');
 
   const slotToMinutes = useCallback((slot = '') => {
@@ -111,10 +109,14 @@ export default function DoctorAppointments() {
     fetchAppointments();
   }, [fetchAppointments]);
 
-  const handleStartConsultation = async (appointmentId) => {
+  const handleStartConsultation = async (appointment) => {
     try {
+      const appointmentId = appointment?._id || appointment;
       setStartingConsultation(appointmentId);
       await appointmentApi.startConsultation(appointmentId);
+      if (appointment?.consultationMode === 'video') {
+        openVideoCall(appointment);
+      }
       toast.success('Consultation started');
       fetchAppointments();
       // Redirect to patient summary
@@ -126,35 +128,6 @@ export default function DoctorAppointments() {
     }
   };
 
-  const handleStartVideo = async (appointment) => {
-    if (!appointment) return;
-    try {
-      if (appointment.status !== 'inConsultation') {
-        await appointmentApi.startConsultation(appointment._id);
-      }
-      setVideoAppointment(appointment);
-      setVideoOpen(true);
-      fetchAppointments();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to start video call');
-    }
-  };
-
-  const handleEndCall = async () => {
-    if (!videoAppointment) return;
-    try {
-      setEndingCall(true);
-      await appointmentApi.complete(videoAppointment._id);
-      toast.success('Consultation completed');
-      setVideoOpen(false);
-      setVideoAppointment(null);
-      fetchAppointments();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to complete consultation');
-    } finally {
-      setEndingCall(false);
-    }
-  };
 
   const openQuickView = async (appointment) => {
     try {
@@ -251,7 +224,7 @@ export default function DoctorAppointments() {
             <Button
               size="sm"
               variant="default"
-              onClick={() => handleStartConsultation(row._id)}
+              onClick={() => handleStartConsultation(row)}
               disabled={startingConsultation === row._id || (!row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && isSlotFuture(row))}
               className="text-xs"
               title={
@@ -264,22 +237,6 @@ export default function DoctorAppointments() {
               {startingConsultation === row._id ? 'Starting...' : 'Start'}
             </Button>
           )}
-          {row.consultationMode === 'video' && row.status !== 'completed' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleStartVideo(row)}
-              className="text-xs"
-              disabled={!row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && row.status !== 'inConsultation' && isSlotFuture(row)}
-              title={
-                !row.earlyCheckInBy && !row.earlyCheckInAt && !row.earlyCheckInReason && row.status !== 'inConsultation' && isSlotFuture(row)
-                  ? 'Video starts at the scheduled time.'
-                  : undefined
-              }
-            >
-              <Video className="h-3 w-3 mr-1" /> {row.status === 'inConsultation' ? 'Rejoin video' : 'Start video'}
-            </Button>
-          )}
           {row.status !== 'completed' && (
             <Button
               size="sm"
@@ -288,6 +245,16 @@ export default function DoctorAppointments() {
               className="text-xs"
             >
               <Stethoscope className="h-3 w-3 mr-1" /> Quick view
+            </Button>
+          )}
+          {row.consultationMode === 'video' && row.status === 'inConsultation' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openVideoCall(row)}
+              className="text-xs"
+            >
+              <Stethoscope className="h-3 w-3 mr-1" /> Join call
             </Button>
           )}
           <Button
@@ -602,40 +569,6 @@ export default function DoctorAppointments() {
         </DialogContent>
       </Dialog>
 
-      {videoOpen && videoAppointment && (
-        <div className="fixed bottom-6 right-6 z-50 w-[340px] max-w-[90vw] rounded-2xl border border-border/60 bg-card shadow-2xl md:w-[420px]">
-          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold">Video Consultation</p>
-              <p className="text-xs text-muted-foreground">
-                Appointment {videoAppointment?._id?.slice(-6)} • {videoAppointment?.patientId?.name || 'Patient'}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => setVideoOpen(false)}
-            >
-              Close
-            </button>
-          </div>
-          <div className="p-4">
-            <VideoCall appointmentId={videoAppointment._id} role="doctor" onEnd={handleEndCall} />
-          </div>
-          <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/doctor/prescriptions?appointmentId=${videoAppointment._id}`)}
-            >
-              Write prescription
-            </Button>
-            <Button variant="destructive" size="sm" onClick={handleEndCall} disabled={endingCall}>
-              {endingCall ? 'Ending...' : 'End consultation'}
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

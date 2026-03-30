@@ -88,7 +88,6 @@ export default function PharmacistOrders({
             <option value="">All statuses</option>
             <option value="orderPlaced">Order placed</option>
             <option value="orderAccepted">Order accepted</option>
-            <option value="verified">Verified</option>
             <option value="awaitingPayment">Awaiting payment</option>
             <option value="paid">Paid</option>
             <option value="preparing">Preparing</option>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { Link } from 'react-router-dom';
 import { labTechApi } from '../../services/apiServices.js';
@@ -35,6 +35,7 @@ export default function LabTechOrdersInbox({
   const [rejection, setRejection] = useState({ reason: '', notes: '' });
   const [criticalItems, setCriticalItems] = useState([]);
   const [criticalNotes, setCriticalNotes] = useState('');
+  const detailRef = useRef(null);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -176,6 +177,55 @@ export default function LabTechOrdersInbox({
     }));
   };
 
+  const handleSelectOrder = (orderId) => {
+    if (!orderId) return;
+    setSelectedOrderId(orderId);
+    requestAnimationFrame(() => {
+      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const canAccession =
+    !!selectedOrder &&
+    ['sampleCollected', 'accessioned', 'inProcessing', 'reportReady', 'reportAvailableForPickup', 'reportReleasedToPortal', 'completed'].includes(selectedOrder.status);
+  const canProcess =
+    !!selectedOrder &&
+    ['accessioned', 'inProcessing', 'reportReady', 'reportAvailableForPickup', 'reportReleasedToPortal', 'completed'].includes(selectedOrder.status);
+  const canReady =
+    !!selectedOrder &&
+    ['inProcessing', 'reportReady', 'reportAvailableForPickup', 'reportReleasedToPortal', 'completed'].includes(selectedOrder.status);
+  const canMarkCollected =
+    !!selectedOrder &&
+    !['sampleCollected', 'accessioned', 'inProcessing', 'reportReady', 'reportAvailableForPickup', 'reportReleasedToPortal', 'completed'].includes(selectedOrder.status);
+  const canSchedulePickup =
+    !!selectedOrder &&
+    ['reportReady', 'reportAvailableForPickup', 'reportReleasedToPortal', 'completed'].includes(selectedOrder.status);
+
+  const statusOrder = [
+    { key: 'ordered', label: 'Ordered', timeKey: 'createdAt' },
+    { key: 'sampleScheduled', label: 'Sample scheduled', timeKey: 'sampleCollectionAt' },
+    { key: 'sampleCollected', label: 'Sample collected', timeKey: 'sampleCollectedAt' },
+    { key: 'accessioned', label: 'Accessioned', timeKey: 'accessionedAt' },
+    { key: 'inProcessing', label: 'Processing', timeKey: 'processingStartedAt' },
+    { key: 'reportReady', label: 'Report ready', timeKey: 'reportReadyAt' },
+    { key: 'reportAvailableForPickup', label: 'Pickup scheduled', timeKey: 'reportPickupAt' },
+    { key: 'reportReleasedToPortal', label: 'Released to portal', timeKey: 'reportReleasedAt' },
+    { key: 'completed', label: 'Completed', timeKey: 'completedAt' },
+  ];
+
+  const formatStepTime = (value) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+  };
+
+  const getStatusIndex = (status) => statusOrder.findIndex((step) => step.key === status);
+  const isStepDone = (status, stepKey) => {
+    const current = getStatusIndex(status);
+    const target = getStatusIndex(stepKey);
+    return current >= target && target !== -1;
+  };
+
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
@@ -238,12 +288,12 @@ export default function LabTechOrdersInbox({
 
           <div className="mt-5 space-y-3">
             {filteredOrders.map((order) => (
-              <button
-                key={order._id}
-                type="button"
-                onClick={() => setSelectedOrderId(order._id)}
-                className={`w-full rounded-xl border p-4 text-left transition ${selectedOrderId === order._id ? 'border-slate-900 bg-muted/50' : 'border-border bg-card hover:border-border'}`}
-              >
+                <button
+                  key={order._id}
+                  type="button"
+                  onClick={() => handleSelectOrder(order._id)}
+                  className={`w-full rounded-xl border p-4 text-left transition ${selectedOrderId === order._id ? 'border-slate-900 bg-muted/50' : 'border-border bg-card hover:border-border'}`}
+                >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -302,7 +352,7 @@ export default function LabTechOrdersInbox({
                 <button
                   key={order._id}
                   type="button"
-                  onClick={() => setSelectedOrderId(order._id)}
+                  onClick={() => handleSelectOrder(order._id)}
                   className="flex w-full items-center justify-between rounded-xl border border-border bg-muted/40 px-3 py-2 text-left transition hover:border-primary/40"
                 >
                   <div>
@@ -329,7 +379,7 @@ export default function LabTechOrdersInbox({
           )}
 
           {selectedOrder && (
-            <div className="mt-6 space-y-5">
+            <div className="mt-6 space-y-5" ref={detailRef}>
               <div>
                 <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Order Detail</p>
                 <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedOrder.patientName}</h3>
@@ -349,6 +399,34 @@ export default function LabTechOrdersInbox({
                   </p>
                 )}
               </div>
+              <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Workflow timeline</p>
+                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                  {statusOrder.map((step) => {
+                    const active = selectedOrder.status === step.key;
+                    const completed = isStepDone(selectedOrder.status, step.key);
+                    const timestamp = formatStepTime(selectedOrder?.[step.timeKey]);
+                    return (
+                      <div
+                        key={step.key}
+                        className={`flex items-center justify-between rounded-xl border px-3 py-2 text-xs font-semibold ${
+                          active
+                            ? 'border-primary/50 bg-primary/10 text-primary'
+                            : completed
+                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700'
+                              : 'border-border bg-card text-muted-foreground'
+                        }`}
+                      >
+                        <div className="flex flex-col">
+                          <span>{step.label}</span>
+                          <span className="text-[10px] font-normal text-muted-foreground">{timestamp}</span>
+                        </div>
+                        {completed && <span className="text-[10px] uppercase tracking-[0.18em]">done</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               <article className="rounded-xl border border-border p-4">
                 <p className="font-semibold text-foreground">Ordered tests</p>
@@ -366,93 +444,99 @@ export default function LabTechOrdersInbox({
               </article>
 
               <div className="grid gap-4">
-              <article className="rounded-xl border border-border p-4">
-                <p className="font-semibold text-foreground">Accessioning & specimen QC</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Confirm sample integrity before processing. Use reject if specimen is unsuitable.
-                </p>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <Button
-                    variant="outline"
-                    disabled={savingAction === 'accession'}
-                    onClick={() =>
-                      runAction('accession', async () => {
-                        await labTechApi.markAccessioned(selectedOrder._id);
-                        toast.success('Order accessioned.');
-                      })
-                    }
-                  >
-                    {savingAction === 'accession' ? 'Working...' : 'Mark accessioned'}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={savingAction === 'reject'}
-                    onClick={() =>
-                      runAction('reject', async () => {
-                        await labTechApi.rejectOrder(selectedOrder._id, rejection);
-                        toast.success('Order marked as rejected.');
-                      })
-                    }
-                  >
-                    {savingAction === 'reject' ? 'Working...' : 'Reject specimen'}
-                  </Button>
-                </div>
-                <div className="mt-3 grid gap-3">
-                  <input
-                    value={rejection.reason}
-                    onChange={(event) => setRejection((current) => ({ ...current, reason: event.target.value }))}
-                    placeholder="Rejection reason (e.g., hemolyzed, insufficient sample)"
-                    className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
-                  />
-                  <textarea
-                    value={rejection.notes}
-                    onChange={(event) => setRejection((current) => ({ ...current, notes: event.target.value }))}
-                    placeholder="Optional rejection notes"
-                    className="min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
-                  />
-                </div>
-                {selectedOrder.rejectionReason && (
-                  <p className="mt-3 text-xs text-amber-700">
-                    Rejected: {selectedOrder.rejectionReason}
+                <article className="rounded-xl border border-border p-4">
+                  <p className="font-semibold text-foreground">Sample collection</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Schedule collection or mark it collected immediately when the patient is onsite.
                   </p>
-                )}
-              </article>
-
-              <article className="rounded-xl border border-border p-4">
-                <p className="font-semibold text-foreground">Sample collection schedule</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
                     <input type="date" value={sampleSchedule.date} onChange={(event) => setSampleSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                     <input type="time" value={sampleSchedule.time} onChange={(event) => setSampleSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
                   </div>
                   <textarea value={sampleSchedule.notes} onChange={(event) => setSampleSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional collection instructions" className="mt-3 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-                  <Button className="mt-3 w-full" disabled={savingAction === 'schedule sample'} onClick={() => runAction('schedule sample', async () => {
-                    await labTechApi.scheduleSampleCollection(selectedOrder._id, sampleSchedule);
-                    toast.success('Sample collection scheduled.');
-                  })}>
-                    {savingAction === 'schedule sample' ? 'Saving...' : 'Save sample collection schedule'}
-                  </Button>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <Button className="w-full" disabled={savingAction === 'schedule sample' || !sampleSchedule.date} onClick={() => runAction('schedule sample', async () => {
+                      await labTechApi.scheduleSampleCollection(selectedOrder._id, sampleSchedule);
+                      toast.success('Sample collection scheduled.');
+                    })}>
+                      {savingAction === 'schedule sample' ? 'Saving...' : 'Save sample collection schedule'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={savingAction === 'mark collected' || !canMarkCollected}
+                      onClick={() =>
+                        runAction('mark collected', async () => {
+                          await labTechApi.markSampleCollected(selectedOrder._id);
+                          toast.success('Sample marked as collected.');
+                        })
+                      }
+                    >
+                      {savingAction === 'mark collected' ? 'Working...' : 'Mark sample collected'}
+                    </Button>
+                  </div>
+                  {!canMarkCollected && (
+                    <p className="mt-2 text-xs text-muted-foreground">Sample already collected for this order.</p>
+                  )}
                 </article>
 
                 <article className="rounded-xl border border-border p-4">
-                  <p className="font-semibold text-foreground">Report pickup / ready schedule</p>
+                  <p className="font-semibold text-foreground">Accessioning & specimen QC</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Confirm sample integrity before processing. Use reject if specimen is unsuitable.
+                  </p>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    <input type="date" value={pickupSchedule.date} onChange={(event) => setPickupSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-                    <input type="time" value={pickupSchedule.time} onChange={(event) => setPickupSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                    <Button
+                      variant="outline"
+                      disabled={savingAction === 'accession' || !canAccession}
+                      onClick={() =>
+                        runAction('accession', async () => {
+                          await labTechApi.markAccessioned(selectedOrder._id);
+                          toast.success('Order accessioned.');
+                        })
+                      }
+                    >
+                      {savingAction === 'accession' ? 'Working...' : 'Mark accessioned'}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={savingAction === 'reject'}
+                      onClick={() =>
+                        runAction('reject', async () => {
+                          await labTechApi.rejectOrder(selectedOrder._id, rejection);
+                          toast.success('Order marked as rejected.');
+                        })
+                      }
+                    >
+                      {savingAction === 'reject' ? 'Working...' : 'Reject specimen'}
+                    </Button>
                   </div>
-                  <textarea value={pickupSchedule.notes} onChange={(event) => setPickupSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional pickup notes" className="mt-3 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
-                  <Button className="mt-3 w-full" variant="outline" disabled={savingAction === 'schedule pickup'} onClick={() => runAction('schedule pickup', async () => {
-                    await labTechApi.scheduleReportPickup(selectedOrder._id, pickupSchedule);
-                    toast.success('Report pickup timing saved.');
-                  })}>
-                    {savingAction === 'schedule pickup' ? 'Saving...' : 'Save pickup / ready timing'}
-                  </Button>
+                  <div className="mt-3 grid gap-3">
+                    <input
+                      value={rejection.reason}
+                      onChange={(event) => setRejection((current) => ({ ...current, reason: event.target.value }))}
+                      placeholder="Rejection reason (e.g., hemolyzed, insufficient sample)"
+                      className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                    />
+                    <textarea
+                      value={rejection.notes}
+                      onChange={(event) => setRejection((current) => ({ ...current, notes: event.target.value }))}
+                      placeholder="Optional rejection notes"
+                      className="min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  {selectedOrder.rejectionReason && (
+                    <p className="mt-3 text-xs text-amber-700">
+                      Rejected: {selectedOrder.rejectionReason}
+                    </p>
+                  )}
                 </article>
+
               </div>
 
               <article className="rounded-xl border border-border p-4">
                 <p className="font-semibold text-foreground">Results entry</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Enter measured values for each test. The system will generate the final PDF report on release.
+                  Enter measured values for each test. The system will generate the final Medisphere PDF report on release.
                 </p>
                 <div className="mt-4 space-y-4">
                   {(selectedOrder.items || []).map((item) => (
@@ -496,21 +580,33 @@ export default function LabTechOrdersInbox({
               </article>
 
               <article className="rounded-xl border border-border p-4">
+                <p className="font-semibold text-foreground">Report pickup / ready schedule</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <input type="date" value={pickupSchedule.date} onChange={(event) => setPickupSchedule((current) => ({ ...current, date: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                  <input type="time" value={pickupSchedule.time} onChange={(event) => setPickupSchedule((current) => ({ ...current, time: event.target.value }))} className="rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                </div>
+                <textarea value={pickupSchedule.notes} onChange={(event) => setPickupSchedule((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional pickup notes" className="mt-3 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary" />
+                  <Button className="mt-3 w-full" variant="outline" disabled={savingAction === 'schedule pickup'} onClick={() => runAction('schedule pickup', async () => {
+                    await labTechApi.scheduleReportPickup(selectedOrder._id, pickupSchedule);
+                    toast.success('Report pickup timing saved.');
+                  })}>
+                    {savingAction === 'schedule pickup' ? 'Saving...' : 'Save pickup / ready timing'}
+                  </Button>
+                  {!canSchedulePickup && (
+                    <p className="mt-2 text-xs text-muted-foreground">Pickup scheduling opens after report is marked ready.</p>
+                  )}
+                </article>
+
+              <article className="rounded-xl border border-border p-4">
                 <p className="font-semibold text-foreground">Workflow actions</p>
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  <Button variant="outline" disabled={savingAction === 'mark collected'} onClick={() => runAction('mark collected', async () => {
-                    await labTechApi.markSampleCollected(selectedOrder._id);
-                    toast.success('Sample marked as collected.');
-                  })}>
-                    {savingAction === 'mark collected' ? 'Working...' : 'Mark sample collected'}
-                  </Button>
-                  <Button variant="outline" disabled={savingAction === 'start processing'} onClick={() => runAction('start processing', async () => {
+                  <Button variant="outline" disabled={savingAction === 'start processing' || !canProcess} onClick={() => runAction('start processing', async () => {
                     await labTechApi.markInProcessing(selectedOrder._id);
                     toast.success('Order moved to processing.');
                   })}>
                     {savingAction === 'start processing' ? 'Working...' : 'Move to processing'}
                   </Button>
-                  <Button variant="outline" disabled={savingAction === 'mark ready'} onClick={() => runAction('mark ready', async () => {
+                  <Button variant="outline" disabled={savingAction === 'mark ready' || !canReady} onClick={() => runAction('mark ready', async () => {
                     await labTechApi.markReportReady(selectedOrder._id, {
                       reportName: reportMeta.reportName || `${selectedOrder.patientName} Report`,
                       reportType: reportMeta.reportType || 'Diagnostic Report',

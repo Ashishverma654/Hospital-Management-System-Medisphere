@@ -11,7 +11,6 @@ export default function PharmacyOrderDetail() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState('');
-  const [verificationNotes, setVerificationNotes] = useState('');
   const [counselingCompleted, setCounselingCompleted] = useState(false);
   const [itemInputs, setItemInputs] = useState({});
   const [substitutions, setSubstitutions] = useState({});
@@ -41,7 +40,6 @@ export default function PharmacyOrderDetail() {
           ])
         )
       );
-      setVerificationNotes(data.verificationNotes || '');
       setCounselingCompleted(Boolean(data.counselingCompleted));
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to load pharmacy order.');
@@ -96,8 +94,7 @@ export default function PharmacyOrderDetail() {
   };
 
   const canAccept = order.status === 'orderPlaced';
-  const canVerify = order.status === 'orderAccepted';
-  const canPrepare = order.status === 'verified';
+  const canPrepare = order.status === 'orderAccepted';
   const canReady = order.status === 'preparing';
   const canComplete = order.status === 'readyForPickup' && order.paymentStatus === 'paid';
   const canCancel = !['completed', 'cancelled'].includes(order.status);
@@ -112,6 +109,20 @@ export default function PharmacyOrderDetail() {
             <p className="mt-2 text-sm text-muted-foreground">
               {order.patient?.name} • {order.patient?.patientId} • {order.doctor?.name || 'Doctor'}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              {['orderPlaced', 'orderAccepted', 'preparing', 'readyForPickup', 'completed'].map((step) => (
+                <span
+                  key={step}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    order.status === step
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-muted/60 text-muted-foreground'
+                  }`}
+                >
+                  {step}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={order.status}>{order.status}</StatusBadge>
@@ -222,16 +233,8 @@ export default function PharmacyOrderDetail() {
               </Button>
               <Button
                 variant="outline"
-                disabled={saving === 'verify' || !canVerify}
-                title={!canVerify ? 'Verify after the order is accepted.' : undefined}
-                onClick={() => runAction('verify', () => pharmacyOrderApi.verify(order.id, { items: itemPayload(), verificationNotes }))}
-              >
-                {saving === 'verify' ? 'Working...' : 'Verify order'}
-              </Button>
-              <Button
-                variant="outline"
                 disabled={saving === 'prepare' || !canPrepare}
-                title={!canPrepare ? 'Move to preparing after verification.' : undefined}
+                title={!canPrepare ? 'Move to preparing after order acceptance.' : undefined}
                 onClick={() => runAction('prepare', () => pharmacyOrderApi.markPreparing(order.id, { items: itemPayload() }))}
               >
                 {saving === 'prepare' ? 'Working...' : 'Move to preparing'}
@@ -261,12 +264,6 @@ export default function PharmacyOrderDetail() {
               </Button>
             </div>
             <div className="mt-4 grid gap-3">
-              <textarea
-                value={verificationNotes}
-                onChange={(event) => setVerificationNotes(event.target.value)}
-                placeholder="Verification notes (interaction check, substitutions, warnings)"
-                className="min-h-[80px] w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none focus:border-primary"
-              />
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
