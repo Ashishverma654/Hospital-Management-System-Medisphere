@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Calendar, Clock, Activity, FileText, AlertCircle, ClipboardList, Stethoscope } from 'lucide-react';
+import { Calendar, Clock, Activity, FileText, AlertCircle, ClipboardList, Stethoscope, Video } from 'lucide-react';
 import { LoadingSkeleton, ErrorState } from '../../components';
+import VideoCall from '../../components/VideoCall.jsx';
 import StaffDutyWidget from '../../components/StaffDutyWidget.jsx';
 import StaffDutyCalendar from '../../components/StaffDutyCalendar.jsx';
 import { admissionApi, appointmentApi, doctorApi, pharmacyApi, prescriptionApi } from '../../services/apiServices';
@@ -43,6 +44,8 @@ export default function DoctorDashboard() {
   const [pharmacyMedicines, setPharmacyMedicines] = useState([]);
   const [savingPrescription, setSavingPrescription] = useState(false);
   const [draftPrescriptions, setDraftPrescriptions] = useState([]);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const [videoAppointment, setVideoAppointment] = useState(null);
 
   const [prescriptionForm, setPrescriptionForm] = useState(INITIAL_PRESCRIPTION_FORM);
   const [medicineInput, setMedicineInput] = useState({
@@ -152,6 +155,46 @@ export default function DoctorDashboard() {
       : 'bg-primary/10 text-primary'
   );
 
+  const slotToMinutes = (slot = '') => {
+    const trimmed = `${slot}`.trim();
+    const match = trimmed.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (match) {
+      let hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const meridiem = match[3].toUpperCase();
+      if (meridiem === 'PM' && hours !== 12) hours += 12;
+      if (meridiem === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    }
+    const [rawHours, rawMinutes] = trimmed.split(':');
+    const hours = Number(rawHours);
+    const minutes = Number(rawMinutes);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    return hours * 60 + minutes;
+  };
+
+  const buildSlotDateTime = (date, slot) => {
+    if (!date || !slot) return null;
+    const minutes = slotToMinutes(slot);
+    if (minutes == null) return null;
+    const base = new Date(`${date}T00:00:00`);
+    if (Number.isNaN(base.getTime())) return null;
+    base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+    return base;
+  };
+
+  const canStartAppointment = (appointment) => {
+    if (!appointment) return false;
+    const allowedStatuses = appointment.consultationMode === 'video'
+      ? ['booked', 'confirmed', 'arrived', 'checked-in']
+      : ['arrived', 'checked-in'];
+    if (!allowedStatuses.includes(appointment.status)) return false;
+    const graceMinutes = Number(import.meta.env.VITE_VIDEO_CALL_GRACE_MINUTES ?? 5);
+    const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+    if (!slotDateTime) return true;
+    return slotDateTime.getTime() - Date.now() <= graceMinutes * 60000;
+  };
+
   useEffect(() => {
     if (!todayQueue.length) {
       setSelectedAppointmentId(null);
@@ -178,11 +221,44 @@ export default function DoctorDashboard() {
     }
   };
 
+  const handleStartVideoCall = async (appointment) => {
+    if (!appointment) return;
+    try {
+      setStartingConsultation(appointment._id);
+      if (appointment.status !== 'inConsultation') {
+        await appointmentApi.startConsultation(appointment._id);
+      }
+      setVideoAppointment(appointment);
+      setVideoOpen(true);
+      fetchDashboard();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to start video call');
+    } finally {
+      setStartingConsultation(null);
+    }
+  };
+
   const handleCompleteConsultation = async (appointmentId) => {
     try {
       setCompletingConsultation(appointmentId);
       await appointmentApi.complete(appointmentId);
       toast.success('Consultation completed');
+      fetchDashboard();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to complete consultation');
+    } finally {
+      setCompletingConsultation(null);
+    }
+  };
+
+  const handleEndVideoCall = async () => {
+    if (!videoAppointment) return;
+    try {
+      setCompletingConsultation(videoAppointment._id);
+      await appointmentApi.complete(videoAppointment._id);
+      toast.success('Consultation completed');
+      setVideoOpen(false);
+      setVideoAppointment(null);
       fetchDashboard();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to complete consultation');
@@ -477,14 +553,27 @@ export default function DoctorDashboard() {
             </div>
           </div>
           <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 flex flex-col gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => currentPatient && handleStartConsultation(currentPatient._id)}
-              disabled={!currentPatient || !['arrived', 'checked-in'].includes(currentPatient.status)}
-            >
-              Start Consultation
-            </Button>
+            {currentPatient?.consultationMode === 'video' ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => handleStartVideoCall(currentPatient)}
+                disabled={!canStartAppointment(currentPatient)}
+                className="flex items-center gap-2"
+              >
+                <Video className="h-4 w-4" />
+                Start Video Call
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => currentPatient && handleStartConsultation(currentPatient._id)}
+                disabled={!canStartAppointment(currentPatient)}
+              >
+                Start Consultation
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -609,15 +698,27 @@ export default function DoctorDashboard() {
                         {apt.status} {apt.queuePosition ? `• #${apt.queuePosition}` : ''} {apt.priority === 'Emergency' ? '• Emergency' : ''}
                       </span>
                       {['booked', 'confirmed', 'arrived', 'checked-in'].includes(apt.status) && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleStartConsultation(apt._id)}
-                          disabled={startingConsultation === apt._id}
-                          className="text-xs"
-                        >
-                          {startingConsultation === apt._id ? 'Starting...' : 'Start'}
-                        </Button>
+                        apt.consultationMode === 'video' ? (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleStartVideoCall(apt)}
+                            disabled={startingConsultation === apt._id || !canStartAppointment(apt)}
+                            className="text-xs"
+                          >
+                            {startingConsultation === apt._id ? 'Starting...' : 'Start video'}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleStartConsultation(apt._id)}
+                            disabled={startingConsultation === apt._id || !canStartAppointment(apt)}
+                            className="text-xs"
+                          >
+                            {startingConsultation === apt._id ? 'Starting...' : 'Start'}
+                          </Button>
+                        )
                       )}
                       {apt.status === 'inConsultation' && (
                         <Button
@@ -1103,6 +1204,26 @@ export default function DoctorDashboard() {
           </CardContent>
         </Card>
       </div>
+      {videoOpen && videoAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-5xl rounded-2xl bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Video consultation</p>
+                <h3 className="mt-2 text-2xl font-semibold text-foreground">{videoAppointment.patientId?.name || 'Patient'}</h3>
+              </div>
+              <button type="button" onClick={() => setVideoOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="mt-4">
+              <VideoCall
+                appointmentId={videoAppointment._id}
+                role="doctor"
+                onEnd={handleEndVideoCall}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

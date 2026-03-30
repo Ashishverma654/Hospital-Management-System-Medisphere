@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { connectSocket } from '../services/socket.js';
+import { rtcApi } from '../services/apiServices.js';
 import { Button } from './ui/button.jsx';
 
 const ICE_SERVERS = [
@@ -7,15 +8,48 @@ const ICE_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
-export default function VideoCall({ appointmentId, role = 'patient', onEnd, onStatusChange }) {
+const TURN_URL = import.meta.env.VITE_TURN_URL;
+const TURN_USERNAME = import.meta.env.VITE_TURN_USERNAME;
+const TURN_CREDENTIAL = import.meta.env.VITE_TURN_CREDENTIAL;
+if (TURN_URL && TURN_USERNAME && TURN_CREDENTIAL) {
+  ICE_SERVERS.push({ urls: TURN_URL, username: TURN_USERNAME, credential: TURN_CREDENTIAL });
+}
+
+export default function VideoCall({ appointmentId, role = 'patient', onEnd, onStatusChange, iceServers }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const peerRef = useRef(null);
   const localStreamRef = useRef(null);
   const socketRef = useRef(null);
+  const endingRef = useRef(false);
+  const offerSentRef = useRef(false);
   const [status, setStatus] = useState('Connecting...');
   const [sessionKey, setSessionKey] = useState(0);
   const [participantRole, setParticipantRole] = useState(null);
+  const [resolvedIceServers, setResolvedIceServers] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const resolveIceServers = async () => {
+      if (iceServers?.length) {
+        if (mounted) setResolvedIceServers(iceServers);
+        return;
+      }
+      try {
+        const data = await rtcApi.getIce();
+        const servers = data?.iceServers || data?.data?.iceServers || data?.v?.iceServers || [];
+        if (mounted) {
+          setResolvedIceServers(servers.length ? servers : ICE_SERVERS);
+        }
+      } catch {
+        if (mounted) setResolvedIceServers(ICE_SERVERS);
+      }
+    };
+    resolveIceServers();
+    return () => {
+      mounted = false;
+    };
+  }, [iceServers, appointmentId, sessionKey]);
 
   useEffect(() => {
     if (!appointmentId) return undefined;
@@ -23,8 +57,10 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
     const socket = connectSocket();
     socketRef.current = socket;
 
-    const peer = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    if (!resolvedIceServers) return undefined;
+    const peer = new RTCPeerConnection({ iceServers: resolvedIceServers });
     peerRef.current = peer;
+    offerSentRef.current = false;
 
     peer.onicecandidate = (event) => {
       if (event.candidate) {
@@ -32,27 +68,34 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       }
     };
 
+    const attachVideoStream = (videoEl, stream) => {
+      if (!videoEl) return;
+      videoEl.srcObject = stream;
+      const playPromise = videoEl.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(() => {});
+      }
+    };
+
     peer.ontrack = (event) => {
       const [stream] = event.streams;
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = stream;
-      }
+      attachVideoStream(remoteVideoRef.current, stream);
     };
 
     const attachLocalStream = async () => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
+      attachVideoStream(localVideoRef.current, stream);
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
     };
 
     const createOffer = async () => {
       try {
+        if (offerSentRef.current) return;
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
         socket.emit('offer', { appointmentId, offer });
+        offerSentRef.current = true;
       } catch {
         setStatus('Unable to start call.');
       }
@@ -79,7 +122,9 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       setParticipantRole(joinedRole || 'participant');
       setStatus(joinedRole === 'doctor' ? 'Doctor joined. Connecting...' : 'Patient joined. Connecting...');
       if (role === 'doctor') {
-        await createOffer();
+        if (!peer.localDescription || peer.signalingState === 'stable') {
+          await createOffer();
+        }
       }
     });
     socket.on('offer', async ({ offer }) => {
@@ -115,6 +160,14 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       }
     });
 
+    socket.on('call-ended', ({ reason }) => {
+      setStatus(reason || 'Call ended.');
+      if (typeof onEnd === 'function' && !endingRef.current) {
+        endingRef.current = true;
+        onEnd();
+      }
+    });
+
     return () => {
       socket.off('joined-room', handleJoined);
       socket.off('join-error');
@@ -123,6 +176,7 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
       socket.off('answer');
       socket.off('ice-candidate');
       socket.off('participant-left');
+      socket.off('call-ended');
 
       if (peerRef.current) {
         peerRef.current.close();
@@ -132,7 +186,7 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [appointmentId, role, sessionKey]);
+  }, [appointmentId, role, sessionKey, resolvedIceServers, onEnd]);
 
   useEffect(() => {
     if (typeof onStatusChange === 'function') {
@@ -168,7 +222,18 @@ export default function VideoCall({ appointmentId, role = 'patient', onEnd, onSt
             Rejoin call
           </Button>
         )}
-        <Button variant="destructive" onClick={onEnd}>End call</Button>
+        <Button
+          variant="destructive"
+          onClick={() => {
+            endingRef.current = true;
+            socketRef.current?.emit('end-call', { appointmentId, reason: `${role} ended the call.` });
+            if (typeof onEnd === 'function') {
+              onEnd();
+            }
+          }}
+        >
+          End call
+        </Button>
       </div>
     </div>
   );

@@ -114,6 +114,14 @@ export const initSocket = (httpServer) => {
       socket.to(`appointment_${appointmentId}`).emit("ice-candidate", { candidate });
     });
 
+    socket.on("end-call", ({ appointmentId, reason }) => {
+      if (!appointmentId) return;
+      socket.to(`appointment_${appointmentId}`).emit("call-ended", {
+        appointmentId,
+        reason: reason || "Call ended",
+      });
+    });
+
     socket.on("disconnect", () => {
       if (!socket.user?.id) return;
       socket.rooms.forEach((room) => {

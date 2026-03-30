@@ -42,6 +42,7 @@ import staffDutyRoutes from "./routes/staffDutyRoutes.js";
 import staffAvailabilityRoutes from "./routes/staffAvailabilityRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
+import rtcRoutes from "./routes/rtcRoutes.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import limiter from "./middlewares/rateLimiter.js";
 
@@ -186,6 +187,7 @@ app.use("/api/staff-duty", staffDutyRoutes);
 app.use("/api/staff-availability", staffAvailabilityRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/rtc", rtcRoutes);
 app.use(errorHandler);
 
 export default app;

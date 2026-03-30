@@ -160,6 +160,10 @@ export const labReportApi = {
   upload: (formData) => api.post('/lab-reports/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
+export const rtcApi = {
+  getIce: () => api.get('/rtc/ice'),
+};
+
 export const labTestApi = {
   getAll: (params) => api.get('/tests', { params }),
   create: (body) => api.post('/tests', body),

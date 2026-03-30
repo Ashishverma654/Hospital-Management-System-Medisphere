@@ -71,7 +71,12 @@ export default function PatientAppointments() {
     const patientId = user?.id || user?._id;
     if (!patientId) return undefined;
     const socket = connectSocket({ patientId });
-    const handleUpdate = () => loadAppointments();
+    const handleUpdate = (payload) => {
+      loadAppointments();
+      if (payload?.appointmentId && videoAppointment?._id === payload.appointmentId) {
+        setVideoOpen(false);
+      }
+    };
     const handleConsultationStarted = (payload) => {
       loadAppointments();
       const appointmentId = payload?.appointmentId;
@@ -92,7 +97,7 @@ export default function PatientAppointments() {
       socket.off('consultation:started', handleConsultationStarted);
       socket.off('consultation:completed', handleUpdate);
     };
-  }, [appointments, loadAppointments, user?.id, user?._id]);
+  }, [appointments, loadAppointments, user?.id, user?._id, videoAppointment?._id]);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
   const upcoming = appointments.filter((item) => isUpcoming(item, today));
