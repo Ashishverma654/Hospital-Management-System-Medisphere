@@ -11,6 +11,7 @@ import { staggerContainer, staggerItem } from '../../lib/animation-variants.js';
 export default function DoctorPatients() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [patientHistory, setPatientHistory] = useState([]);
@@ -30,6 +31,7 @@ export default function DoctorPatients() {
       toast.error('Failed to load patients');
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   };
 
@@ -80,7 +82,7 @@ export default function DoctorPatients() {
     },
   ];
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !hasLoaded) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-6">

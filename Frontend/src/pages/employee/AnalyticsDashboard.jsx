@@ -19,6 +19,7 @@ const formatNumber = (value) => {
 
 export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [revenue, setRevenue] = useState({ totalRevenue: 0, breakdown: [] });
   const [flow, setFlow] = useState([]);
@@ -74,6 +75,7 @@ export default function AnalyticsDashboard() {
       setError(err.response?.data?.message || 'Failed to load analytics.');
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   };
 
@@ -89,7 +91,7 @@ export default function AnalyticsDashboard() {
     return lookup;
   }, [flow]);
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !hasLoaded) return <LoadingSkeleton />;
 
   return (
     <section className="space-y-6">

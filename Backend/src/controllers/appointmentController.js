@@ -54,6 +54,19 @@ const buildSlotDateTime = (date, slot) => {
   return base;
 };
 
+const HOSPITAL_TZ_OFFSET_MINUTES = Number(process.env.HOSPITAL_TZ_OFFSET_MINUTES ?? 330);
+
+const buildSlotDateTimeInHospitalTZ = (date, slot) => {
+  if (!date) return null;
+  const minutes = parseSlotToMinutes(slot);
+  if (minutes == null) return null;
+  const [year, month, day] = `${date}`.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  const utcMillis =
+    Date.UTC(year, month - 1, day, 0, 0, 0) + minutes * 60000 - HOSPITAL_TZ_OFFSET_MINUTES * 60000;
+  return new Date(utcMillis);
+};
+
 const getQueueSortKey = (appointment) => {
   const priorityRank = appointment.priority === "Emergency" ? 0 : 1;
   const arrivalTime = appointment.arrivalTime || appointment.checkInAt || appointment.createdAt || new Date(0);
@@ -223,7 +236,7 @@ export const bookAppointment = async (req, res) => {
     }
 
     if (req.user.role === "patient") {
-      const slotDateTime = buildSlotDateTime(date, slot);
+      const slotDateTime = buildSlotDateTimeInHospitalTZ(date, slot);
       if (slotDateTime && slotDateTime.getTime() <= Date.now()) {
         return res.status(400).json({ message: "This slot has already passed. Please choose a future time." });
       }
@@ -1044,7 +1057,7 @@ export const startConsultation = async (req, res) => {
       });
     }
 
-    const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+    const slotDateTime = buildSlotDateTimeInHospitalTZ(appointment.date, appointment.slot);
     if (
       slotDateTime &&
       slotDateTime.getTime() > Date.now() &&
@@ -1110,7 +1123,7 @@ export const startConsultationEarly = async (req, res) => {
       return res.status(400).json({ message: "Mark the patient as arrived before starting early." });
     }
 
-    const slotDateTime = buildSlotDateTime(appointment.date, appointment.slot);
+    const slotDateTime = buildSlotDateTimeInHospitalTZ(appointment.date, appointment.slot);
     if (slotDateTime && slotDateTime.getTime() <= Date.now()) {
       return res.status(400).json({ message: "The scheduled time has started. Ask the doctor to start the consultation." });
     }

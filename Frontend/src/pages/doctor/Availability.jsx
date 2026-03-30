@@ -35,6 +35,7 @@ export default function DoctorAvailability() {
 
   const [availabilities, setAvailabilities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -49,6 +50,7 @@ export default function DoctorAvailability() {
       setError(err.response?.data?.message || 'Failed to fetch availability');
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, [user?.id]);
 
@@ -109,7 +111,7 @@ export default function DoctorAvailability() {
     },
   ];
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !hasLoaded) return <LoadingSkeleton />;
   if (error) return <ErrorState error={error} />;
 
   return (

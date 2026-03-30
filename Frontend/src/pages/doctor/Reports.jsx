@@ -8,6 +8,7 @@ import { FileText, RefreshCw } from 'lucide-react';
 
 export default function DoctorReports() {
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [patients, setPatients] = useState([]);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [patientQuery, setPatientQuery] = useState('');
@@ -59,11 +60,15 @@ export default function DoctorReports() {
       setReports([]);
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   };
 
   useEffect(() => {
-    loadPatients().finally(() => setLoading(false));
+    loadPatients().finally(() => {
+      setLoading(false);
+      setHasLoaded(true);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -111,7 +116,7 @@ export default function DoctorReports() {
     []
   );
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !hasLoaded) return <LoadingSkeleton />;
 
   return (
     <div className="space-y-6">

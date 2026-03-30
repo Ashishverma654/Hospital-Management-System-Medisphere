@@ -56,9 +56,12 @@ export default function DoctorDashboard() {
     instructions: '',
   });
 
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (options = {}) => {
+    const { background = false } = options;
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       setError(null);
       const [data, todayAppointments, prescriptions] = await Promise.all([
         doctorApi.getDashboard(),
@@ -72,16 +75,20 @@ export default function DoctorDashboard() {
         : [];
       setDraftPrescriptions(draftList);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load dashboard');
+      if (!background) {
+        setError(err.response?.data?.message || 'Failed to load dashboard');
+      }
       toast.error('Failed to load dashboard data');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     fetchDashboard();
-    const interval = setInterval(fetchDashboard, 20000);
+    const interval = setInterval(() => fetchDashboard({ background: true }), 20000);
     return () => clearInterval(interval);
   }, [fetchDashboard]);
 
@@ -102,7 +109,7 @@ export default function DoctorDashboard() {
     if (!doctorId) return undefined;
 
     const socket = connectSocket({ doctorId });
-    const handleQueueUpdate = () => fetchDashboard();
+    const handleQueueUpdate = () => fetchDashboard({ background: true });
 
     socket.on('queue:update', handleQueueUpdate);
     socket.on('token:generated', handleQueueUpdate);
@@ -333,7 +340,7 @@ export default function DoctorDashboard() {
     }
   };
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !dashboardData) return <LoadingSkeleton />;
 
   if (error) return <ErrorState error={error} onRetry={fetchDashboard} />;
 

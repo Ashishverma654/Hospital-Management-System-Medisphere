@@ -15,6 +15,7 @@ export default function DoctorAppointments() {
   const navigate = useNavigate();
   const [todayAppointments, setTodayAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [startingConsultation, setStartingConsultation] = useState(null);
   const [quickViewOpen, setQuickViewOpen] = useState(false);
@@ -94,6 +95,7 @@ export default function DoctorAppointments() {
       toast.error('Failed to load appointments');
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   }, [viewMode, buildSlotDateTime, sortBySlotDateTime]);
 
@@ -301,7 +303,7 @@ export default function DoctorAppointments() {
     },
   ];
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !hasLoaded) return <LoadingSkeleton />;
 
   const _completed = todayAppointments.filter((a) => a.status === 'completed').length;
   const _pending = todayAppointments.filter((a) =>

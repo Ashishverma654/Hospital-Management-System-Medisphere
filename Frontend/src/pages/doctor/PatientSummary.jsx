@@ -27,6 +27,7 @@ export default function PatientSummary() {
   const navigate = useNavigate();
   const [summaryData, setSummaryData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [completing, setCompleting] = useState(false);
   const [startingConsultation, setStartingConsultation] = useState(false);
@@ -56,6 +57,7 @@ export default function PatientSummary() {
         toast.error('Failed to load patient data');
       } finally {
         setLoading(false);
+        setHasLoaded(true);
       }
     };
     
@@ -88,10 +90,11 @@ export default function PatientSummary() {
       toast.error('Failed to load patient data');
     } finally {
       setLoading(false);
+      setHasLoaded(true);
     }
   };
 
-  if (loading) return <LoadingSkeleton />;
+  if (loading && !hasLoaded) return <LoadingSkeleton />;
 
   if (error) return <ErrorState error={error} onRetry={fetchPatientSummary} />;
 
