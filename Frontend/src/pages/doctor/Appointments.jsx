@@ -63,6 +63,14 @@ export default function DoctorAppointments() {
     return slotDateTime.getTime() > Date.now();
   };
 
+  const isPrescriptionWindowClosed = useCallback((appointment) => {
+    if (!appointment) return false;
+    if (appointment.status !== 'completed') return false;
+    const completedAt = appointment.updatedAt ? new Date(appointment.updatedAt).getTime() : null;
+    if (!completedAt || Number.isNaN(completedAt)) return false;
+    return Date.now() - completedAt > 10 * 60 * 1000;
+  }, []);
+
   const sortBySlotDateTime = useCallback(
     (a, b) => {
       const aTime = buildSlotDateTime(a.date, a.slot)?.getTime() ?? 0;
@@ -295,6 +303,8 @@ export default function DoctorAppointments() {
             variant="outline"
             onClick={() => navigate(`/doctor/prescriptions?appointmentId=${row._id}`)}
             className="text-xs"
+            disabled={isPrescriptionWindowClosed(row)}
+            title={isPrescriptionWindowClosed(row) ? 'Prescription window closed (10 minutes after completion).' : undefined}
           >
             <FileText className="h-3 w-3 mr-1" /> Prescription
           </Button>
@@ -313,7 +323,7 @@ export default function DoctorAppointments() {
     .filter(
       (appointment) =>
         !['completed', 'cancelled', 'no-show'].includes(appointment.status) &&
-        (appointment.status === 'inConsultation' || isSlotFuture(appointment))
+        ['booked', 'confirmed', 'arrived', 'checked-in', 'inConsultation'].includes(appointment.status)
     )
     .sort(sortBySlotDateTime);
   const completedAppointments = todayAppointments
@@ -592,31 +602,40 @@ export default function DoctorAppointments() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={videoOpen} onOpenChange={setVideoOpen}>
-        <DialogContent className="max-w-5xl">
-          <DialogHeader>
-            <DialogTitle>Video Consultation</DialogTitle>
-            <DialogDescription>
-              Appointment {videoAppointment?._id?.slice(-6)} • {videoAppointment?.patientId?.name || 'Patient'}
-            </DialogDescription>
-          </DialogHeader>
-          {videoAppointment && (
-            <VideoCall
-              appointmentId={videoAppointment._id}
-              role="doctor"
-              onEnd={handleEndCall}
-            />
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setVideoOpen(false)} disabled={endingCall}>
+      {videoOpen && videoAppointment && (
+        <div className="fixed bottom-6 right-6 z-50 w-[340px] max-w-[90vw] rounded-2xl border border-border/60 bg-card shadow-2xl md:w-[420px]">
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Video Consultation</p>
+              <p className="text-xs text-muted-foreground">
+                Appointment {videoAppointment?._id?.slice(-6)} • {videoAppointment?.patientId?.name || 'Patient'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setVideoOpen(false)}
+            >
               Close
+            </button>
+          </div>
+          <div className="p-4">
+            <VideoCall appointmentId={videoAppointment._id} role="doctor" onEnd={handleEndCall} />
+          </div>
+          <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/doctor/prescriptions?appointmentId=${videoAppointment._id}`)}
+            >
+              Write prescription
             </Button>
-            <Button variant="destructive" onClick={handleEndCall} disabled={endingCall}>
+            <Button variant="destructive" size="sm" onClick={handleEndCall} disabled={endingCall}>
               {endingCall ? 'Ending...' : 'End consultation'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

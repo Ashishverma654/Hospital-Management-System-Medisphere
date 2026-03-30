@@ -1205,22 +1205,36 @@ export default function DoctorDashboard() {
         </Card>
       </div>
       {videoOpen && videoAppointment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-5xl rounded-2xl bg-card p-6 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Video consultation</p>
-                <h3 className="mt-2 text-2xl font-semibold text-foreground">{videoAppointment.patientId?.name || 'Patient'}</h3>
-              </div>
-              <button type="button" onClick={() => setVideoOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+        <div className="fixed bottom-6 right-6 z-50 w-[340px] max-w-[90vw] rounded-2xl border border-border/60 bg-card shadow-2xl md:w-[420px]">
+          <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Video Consultation</p>
+              <p className="text-xs text-muted-foreground">
+                Appointment {videoAppointment?._id?.slice(-6)} • {videoAppointment?.patientId?.name || 'Patient'}
+              </p>
             </div>
-            <div className="mt-4">
-              <VideoCall
-                appointmentId={videoAppointment._id}
-                role="doctor"
-                onEnd={handleEndVideoCall}
-              />
-            </div>
+            <button
+              type="button"
+              onClick={() => setVideoOpen(false)}
+              className="rounded-full border border-border bg-background px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Close
+            </button>
+          </div>
+          <div className="p-4">
+            <VideoCall appointmentId={videoAppointment._id} role="doctor" onEnd={handleEndVideoCall} />
+          </div>
+          <div className="flex items-center justify-between border-t border-border/60 px-4 py-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/doctor/prescriptions?appointmentId=${videoAppointment._id}`)}
+            >
+              Write prescription
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleEndVideoCall}>
+              End consultation
+            </Button>
           </div>
         </div>
       )}

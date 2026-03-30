@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { Toaster } from 'sonner';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Toaster, toast } from 'sonner';
 import PublicPatientLayout from './components/layout/PublicPatientLayout.jsx';
 import PatientPortalLayout from './components/layout/PatientPortalLayout.jsx';
 import EmployeeAppLayout from './components/layout/EmployeeAppLayout.jsx';
@@ -85,6 +86,7 @@ import NurseVitals from './pages/nurse/Vitals.jsx';
 import NurseNotes from './pages/nurse/Notes.jsx';
 import NurseHandover from './pages/nurse/Handover.jsx';
 import { EMPLOYEE_ROLE_PATHS, EMPLOYEE_ROLES, STAFF_MANAGEMENT_ROLES, getEmployeeHomeRoute } from './auth/constants.js';
+import { logout } from './store/authSlice.js';
 
 function Unauthorized() {
   return (
@@ -110,6 +112,40 @@ function LegacyRoleRedirect({ role }) {
 }
 
 function App() {
+  const dispatch = useDispatch();
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const INACTIVE_TAB_TIMEOUT_MS = Number(import.meta.env.VITE_INACTIVE_TAB_TIMEOUT_MS) || 30 * 60 * 1000;
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let timeoutId = null;
+
+    const clearTimer = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    const scheduleLogoutIfHidden = () => {
+      clearTimer();
+      if (document.hidden) {
+        timeoutId = setTimeout(() => {
+          dispatch(logout());
+          toast.info('You were logged out after being away from the tab.');
+        }, INACTIVE_TAB_TIMEOUT_MS);
+      }
+    };
+
+    scheduleLogoutIfHidden();
+    document.addEventListener('visibilitychange', scheduleLogoutIfHidden);
+
+    return () => {
+      clearTimer();
+      document.removeEventListener('visibilitychange', scheduleLogoutIfHidden);
+    };
+  }, [dispatch, isAuthenticated, INACTIVE_TAB_TIMEOUT_MS]);
+
   return (
     <Router>
       <Toaster position="top-right" richColors />

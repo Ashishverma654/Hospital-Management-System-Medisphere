@@ -113,6 +113,14 @@ export default function PatientSummary() {
   const recentVitals = summaryData.recentVitals || [];
   const nursingNotes = summaryData.nursingNotes || [];
   const triageFlags = [];
+  const prescriptionWindowClosed = (() => {
+    if (summaryData?.appointment?.status !== 'completed') return false;
+    const completedAt = summaryData?.appointment?.updatedAt
+      ? new Date(summaryData.appointment.updatedAt).getTime()
+      : null;
+    if (!completedAt || Number.isNaN(completedAt)) return false;
+    return Date.now() - completedAt > 10 * 60 * 1000;
+  })();
 
   if (patient?.allergies?.length) {
     triageFlags.push('Allergy risk');
@@ -172,9 +180,11 @@ export default function PatientSummary() {
           <Button
             className="gap-2"
             onClick={() => navigate(`/doctor/prescriptions?appointmentId=${appointmentId}`)}
+            disabled={prescriptionWindowClosed}
+            title={prescriptionWindowClosed ? 'Prescription window closed (10 minutes after completion).' : undefined}
           >
             <Stethoscope className="h-4 w-4" />
-            Start Prescription
+            Write Prescription
           </Button>
           <Button
             variant="outline"
@@ -570,9 +580,11 @@ export default function PatientSummary() {
         <Button
           variant="outline"
           onClick={() => navigate(`/doctor/prescriptions?appointmentId=${appointmentId}`)}
+          disabled={prescriptionWindowClosed}
+          title={prescriptionWindowClosed ? 'Prescription window closed (10 minutes after completion).' : undefined}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Create Prescription
+          Write Prescription
         </Button>
         <Button
           variant="outline"
