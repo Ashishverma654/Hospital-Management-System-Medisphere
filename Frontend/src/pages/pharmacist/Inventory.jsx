@@ -116,11 +116,7 @@ export default function PharmacistInventory() {
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Inventory Management</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Medicine inventory</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Maintain stock quantities, prices, activity state, and low-stock thresholds for pharmacist operations.
-        </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr,1.1fr]">

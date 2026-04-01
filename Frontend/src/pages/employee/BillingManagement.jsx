@@ -21,6 +21,7 @@ export default function BillingManagement() {
   const [filters, setFilters] = useState({ search: '', billType: '', paymentStatus: '', date: '' });
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -161,15 +162,94 @@ export default function BillingManagement() {
     }
   };
 
+  const openDetailModal = async (invoice) => {
+    const invoiceId = invoice?.id || invoice?._id;
+    if (!invoiceId) return;
+    setSelectedInvoiceId(invoiceId);
+    setSelectedInvoice(invoice || null);
+    await loadInvoiceDetail(invoiceId);
+    setDetailOpen(true);
+  };
+
+  const renderInvoiceDetail = (invoice) => (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Invoice Detail</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">{invoice.invoiceNumber}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{invoice.patient?.name || 'Patient'} • {invoice.patient?.patientId || 'No ID'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge status={invoice.billType}>{invoice.billType}</StatusBadge>
+          <StatusBadge status={invoice.paymentStatus}>{invoice.paymentStatus}</StatusBadge>
+        </div>
+      </div>
+
+      <article className="rounded-xl border border-border p-4">
+        <p className="font-semibold text-foreground">Linked context</p>
+        <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+          {invoice.context?.appointment && (
+            <p>
+              Appointment: {invoice.context.appointment.date} • {invoice.context.appointment.slot} • {invoice.context.appointment.doctorName || 'Doctor'}
+              {invoice.context.appointment.consultationMode ? ` • ${invoice.context.appointment.consultationMode}` : ''}
+              {invoice.context.appointment.locationName ? ` • ${invoice.context.appointment.locationName}` : ''}
+            </p>
+          )}
+          {invoice.context?.labOrder && <p>Lab Order: {invoice.context.labOrder.orderNumber} • {invoice.context.labOrder.status}</p>}
+          {invoice.context?.pharmacyOrder && <p>Pharmacy Order: {invoice.context.pharmacyOrder.id} • {invoice.context.pharmacyOrder.status}</p>}
+          {invoice.context?.ward && <p>Ward: {invoice.context.ward.name}</p>}
+          {!invoice.context?.appointment && !invoice.context?.labOrder && !invoice.context?.pharmacyOrder && !invoice.context?.ward && <p>No linked operational context.</p>}
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-border p-4">
+        <p className="font-semibold text-foreground">Itemized lines</p>
+        <div className="mt-3 space-y-3">
+          {(invoice.lineItems || []).map((item) => (
+            <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-muted/50 p-4">
+              <div>
+                <p className="font-medium text-foreground">{item.label}</p>
+                <p className="mt-1 text-sm text-muted-foreground capitalize">
+                  {item.category || 'charge'} • Qty {item.quantity} • Unit ₹{Number(item.unitPrice || 0).toLocaleString()}
+                </p>
+                {item.notes && <p className="mt-1 text-sm text-muted-foreground">{item.notes}</p>}
+              </div>
+              <p className="font-semibold text-foreground">₹{Number(item.lineTotal || 0).toLocaleString()}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-border p-4">
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <div className="flex items-center justify-between"><span>Subtotal</span><span>₹{Number(invoice.subtotal || 0).toLocaleString()}</span></div>
+          <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(invoice.totalAmount || 0).toLocaleString()}</span></div>
+          <div className="flex items-center justify-between"><span>Payment method</span><span>{invoice.paymentMethod || 'Not recorded'}</span></div>
+          <div className="flex items-center justify-between"><span>Paid at</span><span>{invoice.paidAt ? new Date(invoice.paidAt).toLocaleString() : 'Pending'}</span></div>
+          <div className="flex items-center justify-between"><span>Operator</span><span>{user?.name || 'Staff'}</span></div>
+        </div>
+      </article>
+
+      <div className="flex flex-wrap gap-3">
+        <Button variant="outline" onClick={() => downloadPdf(invoice.id)} disabled={downloadingId === invoice.id}>
+          {downloadingId === invoice.id ? 'Preparing PDF...' : 'Download PDF'}
+        </Button>
+        <Button variant="outline" onClick={() => emailInvoice(invoice.id)}>
+          Email Receipt
+        </Button>
+        {invoice.paymentStatus !== 'paid' && (
+          <Button onClick={() => markPaid(invoice.id)}>Mark Paid</Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="flex flex-col gap-4 rounded-2xl bg-card p-8 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Financial Operations</p>
           <h2 className="mt-2 text-3xl font-semibold text-foreground">Billing and payments</h2>
-          <p className="mt-2 max-w-3xl text-muted-foreground">
-            Manage consultation, lab, pharmacy, and future ward-ready invoices with payment state visibility across patient and staff workflows.
-          </p>
         </div>
         <Button onClick={() => setShowCreate(true)}>Create Invoice</Button>
       </div>
@@ -213,9 +293,20 @@ export default function BillingManagement() {
                     <p className="mt-1 text-sm text-muted-foreground">{invoice.patient?.name || 'Patient'} • {invoice.patient?.patientId || 'No ID'}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : '—'}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={invoice.billType}>{invoice.billType}</StatusBadge>
                     <StatusBadge status={invoice.paymentStatus}>{invoice.paymentStatus}</StatusBadge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openDetailModal(invoice);
+                      }}
+                    >
+                      View details
+                    </Button>
                   </div>
                 </div>
               </button>
@@ -226,78 +317,7 @@ export default function BillingManagement() {
 
         <section className="rounded-2xl bg-card p-6 shadow-sm">
           {!selectedInvoice && <div className="py-24 text-center text-muted-foreground">Select an invoice to review its itemized detail.</div>}
-          {selectedInvoice && (
-            <div className="space-y-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Invoice Detail</p>
-                  <h3 className="mt-2 text-2xl font-semibold text-foreground">{selectedInvoice.invoiceNumber}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{selectedInvoice.patient?.name || 'Patient'} • {selectedInvoice.patient?.patientId || 'No ID'}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <StatusBadge status={selectedInvoice.billType}>{selectedInvoice.billType}</StatusBadge>
-                  <StatusBadge status={selectedInvoice.paymentStatus}>{selectedInvoice.paymentStatus}</StatusBadge>
-                </div>
-              </div>
-
-              <article className="rounded-xl border border-border p-4">
-                <p className="font-semibold text-foreground">Linked context</p>
-                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  {selectedInvoice.context?.appointment && (
-                    <p>
-                      Appointment: {selectedInvoice.context.appointment.date} • {selectedInvoice.context.appointment.slot} • {selectedInvoice.context.appointment.doctorName || 'Doctor'}
-                      {selectedInvoice.context.appointment.consultationMode ? ` • ${selectedInvoice.context.appointment.consultationMode}` : ''}
-                      {selectedInvoice.context.appointment.locationName ? ` • ${selectedInvoice.context.appointment.locationName}` : ''}
-                    </p>
-                  )}
-                  {selectedInvoice.context?.labOrder && <p>Lab Order: {selectedInvoice.context.labOrder.orderNumber} • {selectedInvoice.context.labOrder.status}</p>}
-                  {selectedInvoice.context?.pharmacyOrder && <p>Pharmacy Order: {selectedInvoice.context.pharmacyOrder.id} • {selectedInvoice.context.pharmacyOrder.status}</p>}
-                  {selectedInvoice.context?.ward && <p>Ward: {selectedInvoice.context.ward.name}</p>}
-                  {!selectedInvoice.context?.appointment && !selectedInvoice.context?.labOrder && !selectedInvoice.context?.pharmacyOrder && !selectedInvoice.context?.ward && <p>No linked operational context.</p>}
-                </div>
-              </article>
-
-              <article className="rounded-xl border border-border p-4">
-                <p className="font-semibold text-foreground">Itemized lines</p>
-                <div className="mt-3 space-y-3">
-                  {(selectedInvoice.lineItems || []).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-muted/50 p-4">
-                      <div>
-                        <p className="font-medium text-foreground">{item.label}</p>
-                        <p className="mt-1 text-sm text-muted-foreground capitalize">
-                          {item.category || 'charge'} • Qty {item.quantity} • Unit ₹{Number(item.unitPrice || 0).toLocaleString()}
-                        </p>
-                        {item.notes && <p className="mt-1 text-sm text-muted-foreground">{item.notes}</p>}
-                      </div>
-                      <p className="font-semibold text-foreground">₹{Number(item.lineTotal || 0).toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="rounded-xl border border-border p-4">
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center justify-between"><span>Subtotal</span><span>₹{Number(selectedInvoice.subtotal || 0).toLocaleString()}</span></div>
-                  <div className="flex items-center justify-between font-semibold text-foreground"><span>Total</span><span>₹{Number(selectedInvoice.totalAmount || 0).toLocaleString()}</span></div>
-                  <div className="flex items-center justify-between"><span>Payment method</span><span>{selectedInvoice.paymentMethod || 'Not recorded'}</span></div>
-                  <div className="flex items-center justify-between"><span>Paid at</span><span>{selectedInvoice.paidAt ? new Date(selectedInvoice.paidAt).toLocaleString() : 'Pending'}</span></div>
-                  <div className="flex items-center justify-between"><span>Operator</span><span>{user?.name || 'Staff'}</span></div>
-                </div>
-              </article>
-
-              <div className="flex flex-wrap gap-3">
-                <Button variant="outline" onClick={() => downloadPdf(selectedInvoice.id)} disabled={downloadingId === selectedInvoice.id}>
-                  {downloadingId === selectedInvoice.id ? 'Preparing PDF...' : 'Download PDF'}
-                </Button>
-                <Button variant="outline" onClick={() => emailInvoice(selectedInvoice.id)}>
-                  Email Receipt
-                </Button>
-                {selectedInvoice.paymentStatus !== 'paid' && (
-                  <Button onClick={() => markPaid(selectedInvoice.id)}>Mark Paid</Button>
-                )}
-              </div>
-            </div>
-          )}
+          {selectedInvoice && renderInvoiceDetail(selectedInvoice)}
         </section>
       </div>
 
@@ -356,6 +376,40 @@ export default function BillingManagement() {
               <Button type="submit" className="flex-1" disabled={saving}>{saving ? 'Creating...' : 'Create Invoice'}</Button>
             </div>
           </form>
+        </div>
+      )}
+
+      {detailOpen && selectedInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-0 backdrop-blur-sm sm:p-4">
+          <div className="relative w-full h-full max-w-4xl max-h-none overflow-y-auto rounded-none bg-card p-6 shadow-2xl sm:h-auto sm:max-h-[85vh] sm:rounded-2xl">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-foreground">Invoice details</h3>
+              <button type="button" onClick={() => setDetailOpen(false)} className="text-muted-foreground hover:text-foreground">✕</button>
+            </div>
+            <div className="mt-4">{renderInvoiceDetail(selectedInvoice)}</div>
+            <div className="sticky bottom-0 left-0 right-0 mt-6 border-t border-border bg-card/95 p-4 backdrop-blur">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Balance / Status</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    ₹{Number(selectedInvoice.balance ?? selectedInvoice.totalAmount ?? 0).toLocaleString()} • {selectedInvoice.paymentStatus || 'pending'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => downloadPdf(selectedInvoice.id)} disabled={downloadingId === selectedInvoice.id}>
+                    {downloadingId === selectedInvoice.id ? 'Preparing PDF...' : 'Download PDF'}
+                  </Button>
+                  <Button variant="outline" onClick={() => emailInvoice(selectedInvoice.id)}>
+                    Email Receipt
+                  </Button>
+                  {selectedInvoice.paymentStatus !== 'paid' && (
+                    <Button onClick={() => markPaid(selectedInvoice.id)}>Mark Paid</Button>
+                  )}
+                  <Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </motion.section>

@@ -66,11 +66,7 @@ export default function LabTechProfile() {
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <motion.div variants={staggerItem} className="rounded-2xl bg-card p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Lab Technician Profile</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Your diagnostics workspace profile</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Keep your lab section and certification records accurate for internal workflow routing and compliance checks.
-        </p>
       </motion.div>
 
       <div className="grid gap-6 xl:grid-cols-[340px,minmax(0,1fr)]">

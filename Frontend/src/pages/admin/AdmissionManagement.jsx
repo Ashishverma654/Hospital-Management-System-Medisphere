@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { bedApi, wardApi, departmentApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ export default function AdmissionManagement() {
   const [departments, setDepartments] = useState([]);
   const [search, setSearch] = useState('');
   const [filterWard, setFilterWard] = useState('');
+  const admissionsRef = useRef(null);
   const [showAdmitForm, setShowAdmitForm] = useState(false);
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [candidates, setCandidates] = useState([]);
@@ -216,7 +217,17 @@ export default function AdmissionManagement() {
 
           <div className="mt-4 space-y-3">
             {wardRows.map((ward) => (
-              <div key={ward._id} className="rounded-xl border border-border p-4">
+              <button
+                key={ward._id}
+                type="button"
+                onClick={() => {
+                  setFilterWard(ward._id);
+                  requestAnimationFrame(() => {
+                    admissionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  });
+                }}
+                className="w-full rounded-xl border border-border p-4 text-left transition hover:border-primary/40 hover:bg-muted/40"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium text-foreground">{ward.name}</p>
@@ -235,13 +246,13 @@ export default function AdmissionManagement() {
                   <p>Maintenance: {ward.bedSummary?.maintenanceBeds || 0}</p>
                   <p>Reserved: {ward.bedSummary?.reservedBeds || 0}</p>
                 </div>
-              </div>
+              </button>
             ))}
             {wardRows.length === 0 && <p className="text-sm text-muted-foreground">No ward occupancy data available.</p>}
           </div>
         </article>
 
-        <article className="rounded-2xl bg-card p-6 shadow-sm">
+        <article ref={admissionsRef} className="rounded-2xl bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

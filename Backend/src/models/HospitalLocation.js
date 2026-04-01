@@ -35,6 +35,9 @@ const hospitalLocationSchema = mongoose.Schema(
     mapUrl: {
        type: String,
     },
+    image: {
+      type: String,
+    },
     locationType: {
       type: String,
       enum: ["hospital", "clinic", "lab", "pharmacy", "other"],

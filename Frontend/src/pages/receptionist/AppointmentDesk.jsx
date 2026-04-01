@@ -514,9 +514,6 @@ export default function AppointmentDesk() {
       <div className="rounded-2xl bg-card p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Reception Desk</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Appointment Desk</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Search existing patients, book new consultations or walk-ins, monitor today&apos;s queue, mark arrivals, reschedule visits, and initiate billing when needed.
-        </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">

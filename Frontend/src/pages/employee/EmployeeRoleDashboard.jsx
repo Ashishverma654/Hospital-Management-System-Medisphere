@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { RefreshCw } from 'lucide-react';
 import { staggerContainer, staggerItem } from '../../lib/animation-variants.js'; // eslint-disable-line no-unused-vars
 import {
   EMPLOYEE_DASHBOARD_META,
@@ -182,8 +183,14 @@ function SubadminDashboard({ loading, error, data, updatedAt, onRefresh }) {
           {updatedAt && (
             <span className="text-xs text-muted-foreground">Updated {updatedAt.toLocaleTimeString()}</span>
           )}
-          <button type="button" onClick={onRefresh} className="doccure-button-outline">
-            Refresh
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="doccure-button-outline group flex h-9 w-9 items-center justify-center p-0"
+            aria-label="Refresh dashboard"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4 transition-transform duration-200 group-hover:rotate-180" />
           </button>
         </div>
       </div>

@@ -54,7 +54,6 @@ export default function ReceptionistDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Front Desk Dashboard</h2>
-          <p className="text-muted-foreground">Operate today&apos;s queue, patient onboarding, and appointment flow from one receptionist workspace.</p>
         </div>
         <div className="flex w-full flex-wrap gap-3 md:w-auto">
           <Button asChild className="h-11 min-w-[180px] justify-center whitespace-nowrap">

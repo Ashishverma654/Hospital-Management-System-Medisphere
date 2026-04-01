@@ -492,13 +492,7 @@ export default function ShiftCalendar() {
       <div className="rounded-2xl border border-border bg-card p-8 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">Shift Calendar</p>
             <h2 className="mt-2 text-3xl font-semibold text-foreground">Staff scheduling</h2>
-            <p className="mt-2 max-w-3xl text-muted-foreground">
-              {isAdmin
-                ? 'Drag, resize, and assign shifts for hospital teams.'
-                : 'View your upcoming shift schedule.'}
-            </p>
           </div>
           {isAdmin && (
             <Button variant="outline" onClick={() => setHistoryOpen(true)}>

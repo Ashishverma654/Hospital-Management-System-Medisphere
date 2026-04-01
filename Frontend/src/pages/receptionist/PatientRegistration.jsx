@@ -98,9 +98,6 @@ export default function PatientRegistration() {
       <div className="rounded-2xl bg-card p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Receptionist Workflow</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Register Patient</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Search existing patients before creating a new record, then create the patient&apos;s auth identity and linked profile together from one front-desk workflow.
-        </p>
       </div>
 
       <article className="rounded-2xl bg-card p-6 shadow-sm">

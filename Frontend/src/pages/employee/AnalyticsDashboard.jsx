@@ -17,6 +17,254 @@ const formatNumber = (value) => {
   return new Intl.NumberFormat('en-IN').format(Number(value) || 0);
 };
 
+const asCurrency = (value) => `₹${formatNumber(value)}`;
+
+const buildSeries = (items, fallbackLabels) => {
+  const mapped = (items || []).map((item) => ({
+    label: item.label || item.billType || item.status || item.name || item.type || 'Unknown',
+    value: Number(item.total || item.count || item.value || 0),
+  }));
+  if (mapped.length) return mapped;
+  return fallbackLabels.map((label) => ({ label, value: 0 }));
+};
+
+const normalizeStatusKey = (value) => {
+  if (!value) return 'unknown';
+  return value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+};
+
+const flowLabelMap = {
+  booked: 'Booked',
+  confirmed: 'Confirmed',
+  arrived: 'Arrived',
+  'checked-in': 'Checked-in',
+  'in-consultation': 'In consultation',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  canceled: 'Cancelled',
+  'no-show': 'No-show',
+  noshow: 'No-show',
+  unknown: 'Unknown',
+};
+
+const buildFlowSeries = (items) => {
+  const order = [
+    'booked',
+    'confirmed',
+    'arrived',
+    'checked-in',
+    'in-consultation',
+    'completed',
+    'cancelled',
+    'no-show',
+  ];
+  const buckets = new Map();
+  (items || []).forEach((item) => {
+    const key = normalizeStatusKey(item.status || item.label || item.name || item.type);
+    const value = Number(item.total || item.count || item.value || 0);
+    buckets.set(key, (buckets.get(key) || 0) + value);
+  });
+
+  const ordered = order.map((key) => ({
+    label: flowLabelMap[key] || key,
+    value: buckets.get(key) || 0,
+  }));
+
+  const extras = Array.from(buckets.entries())
+    .filter(([key]) => !order.includes(key))
+    .map(([key, value]) => ({
+      label: flowLabelMap[key] || key,
+      value,
+    }));
+
+  return [...ordered, ...extras];
+};
+
+const chartPalette = [
+  'hsl(var(--primary))',
+  'hsl(var(--secondary))',
+  'hsl(var(--accent))',
+  'hsl(var(--muted-foreground))',
+];
+
+function Sparkline({ data = [] }) {
+  const points = data.length
+    ? data
+    : [5, 7, 6, 8, 10, 9, 12, 11];
+  const max = Math.max(...points, 1);
+  const min = Math.min(...points, 0);
+  const range = max - min || 1;
+  const height = 40;
+  const width = 140;
+  const step = width / (points.length - 1);
+  const path = points
+    .map((val, idx) => {
+      const x = idx * step;
+      const y = height - ((val - min) / range) * height;
+      return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg width="140" height="40" viewBox={`0 0 ${width} ${height}`} className="text-primary">
+      <path d={path} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BarChart({ data }) {
+  const max = Math.max(...data.map((d) => d.value), 1);
+  return (
+    <div className="space-y-3">
+      {data.map((item, index) => (
+        <div key={item.label} className="group space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="capitalize">{item.label}</span>
+            <span className="font-semibold text-foreground">{formatNumber(item.value)}</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.round((item.value / max) * 100)}%`,
+                backgroundImage: `linear-gradient(90deg, ${chartPalette[index % chartPalette.length]} 0%, hsl(var(--primary)) 100%)`,
+              }}
+            />
+            <div className="pointer-events-none relative">
+              <div className="absolute -top-10 right-0 hidden rounded-lg border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm group-hover:block">
+                {item.label}: {formatNumber(item.value)}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DonutChart({ value, total, label }) {
+  const safeTotal = total || 1;
+  const percent = Math.min(100, Math.round((value / safeTotal) * 100));
+  const circumference = 2 * Math.PI * 44;
+  const dash = (percent / 100) * circumference;
+  return (
+    <div className="flex items-center gap-4">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="44" stroke="hsl(var(--border))" strokeWidth="12" fill="none" />
+        <circle
+          cx="60"
+          cy="60"
+          r="44"
+          stroke="hsl(var(--primary))"
+          strokeWidth="12"
+          fill="none"
+          strokeDasharray={`${dash} ${circumference - dash}`}
+          strokeLinecap="round"
+          transform="rotate(-90 60 60)"
+        />
+        <text x="60" y="58" textAnchor="middle" className="fill-foreground text-lg font-semibold">
+          {percent}%
+        </text>
+        <text x="60" y="76" textAnchor="middle" className="fill-muted-foreground text-xs">
+          {label}
+        </text>
+      </svg>
+      <div className="space-y-2 text-sm">
+        <p className="text-muted-foreground">Occupied</p>
+        <p className="text-xl font-semibold text-foreground">{formatNumber(value)}</p>
+        <p className="text-xs text-muted-foreground">Total beds {formatNumber(total)}</p>
+      </div>
+    </div>
+  );
+}
+
+function PieChart({ data }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
+  let start = 0;
+  const radius = 58;
+  const center = 72;
+  const toRadians = (deg) => (Math.PI / 180) * deg;
+  const segments = data.map((item) => {
+    const value = (item.value / total) * 360;
+    const x1 = center + radius * Math.cos(toRadians(start));
+    const y1 = center + radius * Math.sin(toRadians(start));
+    const x2 = center + radius * Math.cos(toRadians(start + value));
+    const y2 = center + radius * Math.sin(toRadians(start + value));
+    const largeArc = value > 180 ? 1 : 0;
+    const path = `M${center},${center} L${x1},${y1} A${radius},${radius} 0 ${largeArc} 1 ${x2},${y2} Z`;
+    start += value;
+    return { path, label: item.label, value: item.value };
+  });
+
+  return (
+    <div className="flex flex-col gap-6 md:flex-row md:items-center">
+      <svg width="144" height="144" viewBox="0 0 144 144">
+        {segments.map((segment, index) => (
+          <path
+            key={segment.label}
+            d={segment.path}
+            fill={chartPalette[index % chartPalette.length]}
+            title={`${segment.label}: ${formatNumber(segment.value)}`}
+          />
+        ))}
+      </svg>
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
+        {data.map((item, index) => (
+          <div key={item.label} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/60 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
+              <span className="capitalize text-muted-foreground">{item.label}</span>
+            </div>
+            <span className="font-semibold text-foreground">{formatNumber(item.value)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StackedBar({ data }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
+  return (
+    <div className="space-y-4">
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
+        {data.map((item, index) => {
+          const width = Math.max(2, Math.round((item.value / total) * 100));
+          return (
+            <div
+              key={item.label}
+              className="group relative h-full"
+              style={{
+                width: `${width}%`,
+                backgroundImage: `linear-gradient(90deg, ${chartPalette[index % chartPalette.length]} 0%, hsl(var(--primary)) 100%)`,
+              }}
+            >
+              <div className="pointer-events-none absolute -top-9 left-0 hidden rounded-lg border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm group-hover:block">
+                {item.label}: {formatNumber(item.value)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="grid gap-3 text-sm sm:grid-cols-2">
+        {data.map((item, index) => (
+          <div key={item.label} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/60 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: chartPalette[index % chartPalette.length] }} />
+              <span className="capitalize text-muted-foreground">{item.label}</span>
+            </div>
+            <span className="font-semibold text-foreground">{formatNumber(item.value)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -91,123 +339,172 @@ export default function AnalyticsDashboard() {
     return lookup;
   }, [flow]);
 
+  const appointmentTotal = useMemo(() => Object.values(flowStats).reduce((a, b) => a + (b || 0), 0), [flowStats]);
+  const avgRevenuePerAppointment = appointmentTotal
+    ? Math.round((revenue.totalRevenue || 0) / appointmentTotal)
+    : 0;
+  const revenueSeries = useMemo(
+    () => buildSeries(revenue.breakdown, ['consultation', 'lab', 'pharmacy', 'ward']),
+    [revenue.breakdown]
+  );
+  const flowSeries = useMemo(() => buildFlowSeries(flow), [flow]);
+  const labSeries = useMemo(
+    () => buildSeries([
+      { label: 'completed', value: lab.completed },
+      { label: 'pending', value: lab.pending },
+    ], ['completed', 'pending']),
+    [lab.completed, lab.pending]
+  );
+  const pharmacySeries = useMemo(
+    () => buildSeries(pharmacy.topMedicines, ['top medicine A', 'top medicine B', 'top medicine C']),
+    [pharmacy.topMedicines]
+  );
+
   if (loading && !hasLoaded) return <LoadingSkeleton />;
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Analytics</p>
-          <h1 className="mt-2 text-2xl font-semibold text-foreground">Hospital performance overview</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-foreground">Hospital analytics command center</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Read-only summaries across billing, appointments, lab, pharmacy, and bed utilization.
+            Revenue, patient flow, lab throughput, pharmacy velocity, and bed utilization in one real-time view.
           </p>
         </div>
         <Button variant="outline" onClick={loadAnalytics}>
-          Refresh
+          Refresh insights
         </Button>
       </div>
 
       {error && <ErrorState error={error} onRetry={loadAnalytics} />}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-6">
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total revenue</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Total revenue</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">₹{formatNumber(revenue.totalRevenue)}</div>
-            <p className="mt-2 text-xs text-muted-foreground">Combined consultation, lab, pharmacy & bed.</p>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-foreground">{asCurrency(revenue.totalRevenue)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">All services combined.</p>
+            </div>
+            <Sparkline data={revenueSeries.map((item) => item.value)} />
           </CardContent>
         </Card>
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Appointments today</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Appointments</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">{formatNumber(Object.values(flowStats).reduce((a, b) => a + (b || 0), 0))}</div>
-            <p className="mt-2 text-xs text-muted-foreground">Across booked → completed.</p>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-foreground">{formatNumber(appointmentTotal)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">Booked through completed.</p>
+            </div>
+            <Sparkline data={flowSeries.map((item) => item.value)} />
           </CardContent>
         </Card>
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Beds occupied</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Revenue / visit</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">{formatNumber(bed.occupiedBeds)}</div>
-            <p className="mt-2 text-xs text-muted-foreground">{bed.occupancyPercentage}% occupancy</p>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-foreground">{asCurrency(avgRevenuePerAppointment)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">Average per appointment.</p>
+            </div>
+            <Sparkline data={[avgRevenuePerAppointment, revenue.totalRevenue, appointmentTotal]} />
           </CardContent>
         </Card>
         <Card className="bg-card">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Lab tests</CardTitle>
+            <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Lab tests</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold text-foreground">{formatNumber(lab.totalTests)}</div>
-            <p className="mt-2 text-xs text-muted-foreground">{formatNumber(lab.completed)} completed • {formatNumber(lab.pending)} pending</p>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-foreground">{formatNumber(lab.totalTests)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">{formatNumber(lab.completed)} completed • {formatNumber(lab.pending)} pending</p>
+            </div>
+            <Sparkline data={[lab.completed, lab.pending, lab.totalTests]} />
+          </CardContent>
+        </Card>
+        <Card className="bg-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Bed occupancy</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-foreground">{formatNumber(bed.occupiedBeds)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">{bed.occupancyPercentage}% occupancy</p>
+            </div>
+            <Sparkline data={[bed.availableBeds, bed.occupiedBeds, bed.totalBeds]} />
+          </CardContent>
+        </Card>
+        <Card className="bg-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pharmacy orders</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-2xl font-semibold text-foreground">{formatNumber(pharmacy.ordersCount)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">{asCurrency(pharmacy.revenue)} revenue</p>
+            </div>
+            <Sparkline data={[pharmacy.ordersCount, pharmacy.revenue]} />
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.3fr,0.7fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground">Revenue breakdown</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Revenue mix by service line</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            {revenue.breakdown.length === 0 && (
-              <p className="text-sm text-muted-foreground sm:col-span-2">No revenue data available yet.</p>
-            )}
-            {revenue.breakdown.map((entry) => (
-              <div key={entry.billType} className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-sm">
-                <span className="capitalize text-foreground">{entry.billType}</span>
-                <span className="font-semibold text-foreground">₹{formatNumber(entry.total)}</span>
-              </div>
-            ))}
+          <CardContent>
+            <BarChart data={revenueSeries} />
           </CardContent>
         </Card>
-
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground">Patient flow</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Patient flow split</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            {flow.length === 0 && <p className="text-sm text-muted-foreground sm:col-span-2">No appointments yet.</p>}
-            {flow.map((entry) => (
-              <div key={entry.status} className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3 text-sm">
-                <span className="capitalize text-foreground">{entry.status}</span>
-                <span className="font-semibold text-foreground">{formatNumber(entry.count)}</span>
-              </div>
-            ))}
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">Appointments segmented by status to show throughput.</p>
+            <StackedBar data={flowSeries} />
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground">Doctor performance</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Doctor performance snapshot</CardTitle>
           </CardHeader>
-          <CardContent>
-            {doctors.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No doctor activity yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {doctors.map((doctor) => (
-                  <div key={doctor.doctorId} className="flex flex-col gap-2 rounded-xl border border-border bg-background/60 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="font-semibold text-foreground">{doctor.doctorName || 'Doctor'}</p>
-                      <p className="text-xs text-muted-foreground">ID: {doctor.doctorId?.slice(-6) || '—'}</p>
-                    </div>
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span>Patients: <strong className="text-foreground">{formatNumber(doctor.totalPatients)}</strong></span>
-                      <span>Completed: <strong className="text-foreground">{formatNumber(doctor.completed)}</strong></span>
-                      <span>No-show: <strong className="text-foreground">{formatNumber(doctor.noShow)}</strong></span>
-                    </div>
+          <CardContent className="space-y-3">
+            {doctors.length === 0 && <p className="text-sm text-muted-foreground">No doctor activity yet.</p>}
+            {doctors.map((doctor) => (
+              <div key={doctor.doctorId} className="rounded-xl border border-border bg-background/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-foreground">{doctor.doctorName || 'Doctor'}</p>
+                    <p className="text-xs text-muted-foreground">ID: {doctor.doctorId?.slice(-6) || '—'}</p>
                   </div>
-                ))}
+                  <div className="text-xs text-muted-foreground">
+                    Patients <span className="font-semibold text-foreground">{formatNumber(doctor.totalPatients)}</span>
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-3 text-xs text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-background/60 px-3 py-2">
+                    Completed <span className="font-semibold text-foreground">{formatNumber(doctor.completed)}</span>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background/60 px-3 py-2">
+                    No-show <span className="font-semibold text-foreground">{formatNumber(doctor.noShow)}</span>
+                  </div>
+                  <div className="rounded-lg border border-border bg-background/60 px-3 py-2">
+                    Active <span className="font-semibold text-foreground">{formatNumber(doctor.totalPatients - doctor.noShow)}</span>
+                  </div>
+                </div>
               </div>
-            )}
+            ))}
           </CardContent>
         </Card>
 
@@ -215,77 +512,53 @@ export default function AnalyticsDashboard() {
           <CardHeader>
             <CardTitle className="text-base font-semibold text-foreground">Bed utilization</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Total beds</span>
-              <span className="font-semibold text-foreground">{formatNumber(bed.totalBeds)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Occupied beds</span>
-              <span className="font-semibold text-foreground">{formatNumber(bed.occupiedBeds)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Available beds</span>
-              <span className="font-semibold text-foreground">{formatNumber(bed.availableBeds)}</span>
-            </div>
-            <div className="rounded-xl border border-border bg-background/60 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Occupancy</p>
-              <p className="mt-1 text-xl font-semibold text-foreground">{bed.occupancyPercentage}%</p>
+          <CardContent>
+            <DonutChart value={bed.occupiedBeds} total={bed.totalBeds} label="occupied" />
+            <div className="mt-4 grid gap-3 sm:grid-cols-3 text-xs text-muted-foreground">
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Total beds <span className="font-semibold text-foreground">{formatNumber(bed.totalBeds)}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Available <span className="font-semibold text-foreground">{formatNumber(bed.availableBeds)}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Occupancy <span className="font-semibold text-foreground">{bed.occupancyPercentage}%</span>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-[1fr,1fr]">
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground">Lab analytics</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Lab throughput</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Tests total</span>
-              <span className="font-semibold text-foreground">{formatNumber(lab.totalTests)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Completed</span>
-              <span className="font-semibold text-foreground">{formatNumber(lab.completed)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Pending</span>
-              <span className="font-semibold text-foreground">{formatNumber(lab.pending)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Revenue</span>
-              <span className="font-semibold text-foreground">₹{formatNumber(lab.revenue)}</span>
+          <CardContent className="space-y-4">
+            <BarChart data={labSeries} />
+            <div className="grid gap-3 sm:grid-cols-2 text-xs text-muted-foreground">
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Revenue <span className="font-semibold text-foreground">{asCurrency(lab.revenue)}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Total tests <span className="font-semibold text-foreground">{formatNumber(lab.totalTests)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground">Pharmacy analytics</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">Pharmacy velocity</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Orders</span>
-              <span className="font-semibold text-foreground">{formatNumber(pharmacy.ordersCount)}</span>
-            </div>
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background/60 px-4 py-3">
-              <span>Revenue</span>
-              <span className="font-semibold text-foreground">₹{formatNumber(pharmacy.revenue)}</span>
-            </div>
-            <div className="rounded-xl border border-border bg-background/60 px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Top medicines</p>
-              <div className="mt-2 space-y-2">
-                {pharmacy.topMedicines.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No dispensing data yet.</p>
-                )}
-                {pharmacy.topMedicines.map((medicine) => (
-                  <div key={medicine.name} className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="text-foreground">{medicine.name || 'Medicine'}</span>
-                    <span>{formatNumber(medicine.quantity)} units</span>
-                  </div>
-                ))}
+          <CardContent className="space-y-4">
+            <BarChart data={pharmacySeries.slice(0, 4)} />
+            <div className="grid gap-3 sm:grid-cols-2 text-xs text-muted-foreground">
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Orders <span className="font-semibold text-foreground">{formatNumber(pharmacy.ordersCount)}</span>
+              </div>
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-2">
+                Revenue <span className="font-semibold text-foreground">{asCurrency(pharmacy.revenue)}</span>
               </div>
             </div>
           </CardContent>

@@ -237,29 +237,7 @@ export default function BedManagement() {
         },
       ];
 
-  const layoutPresets = [
-    { label: '2 x 6', cols: 6 },
-    { label: '3 x 4', cols: 4 },
-    { label: '4 x 4', cols: 4 },
-    { label: '3 x 6', cols: 6 },
-    { label: '4 x 6', cols: 6 },
-    { label: 'Auto', cols: 0 },
-  ];
-
-  const [wardLayouts, setWardLayouts] = useState({});
-
-  const getDefaultCols = (count) => {
-    if (count <= 8) return 4;
-    if (count <= 12) return 4;
-    if (count <= 18) return 6;
-    return 8;
-  };
-
-  const getColsForWard = (wardId, count) => {
-    const override = wardLayouts[wardId];
-    if (override && override > 0) return override;
-    return getDefaultCols(count);
-  };
+  const getColsForWard = () => 4;
 
   const rowLabel = (index) => String.fromCharCode(65 + index);
 
@@ -352,24 +330,6 @@ export default function BedManagement() {
                       {group.ward.departmentId.name}
                     </span>
                   )}
-                  {group.ward && (
-                    <select
-                      value={wardLayouts[group.ward._id] || 0}
-                      onChange={(event) =>
-                        setWardLayouts((current) => ({
-                          ...current,
-                          [group.ward._id]: Number(event.target.value),
-                        }))
-                      }
-                      className="h-8 rounded-full border border-border bg-card px-3 text-xs font-semibold text-foreground"
-                    >
-                      {layoutPresets.map((preset) => (
-                        <option key={preset.label} value={preset.cols}>
-                          {preset.label}
-                        </option>
-                      ))}
-                    </select>
-                  )}
                 </div>
               </div>
 
@@ -380,7 +340,7 @@ export default function BedManagement() {
               ) : (
                 <div className="overflow-x-auto rounded-2xl border border-border bg-card/40 p-4">
                   {(() => {
-                    const cols = getColsForWard(group.ward?._id || 'all', group.beds.length);
+                    const cols = getColsForWard();
                     const rows = Math.ceil(group.beds.length / cols);
                     return (
                       <div

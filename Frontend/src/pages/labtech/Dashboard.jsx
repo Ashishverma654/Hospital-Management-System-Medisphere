@@ -55,15 +55,7 @@ export default function LabTechDashboard() {
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.15em] text-muted-foreground">Diagnostics Desk</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Lab technician workflow dashboard</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Track pending orders, urgent sample flow, internal report readiness, and patient-safe report release from one
-          technician workspace.
-        </p>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Lab section: <span className="font-semibold text-foreground">{dashboard?.labSection || 'Loading...'}</span>
-        </p>
       </div>
 
       <StaffDutyWidget />

@@ -113,11 +113,7 @@ export default function PatientHistory() {
   return (
     <motion.section variants={staggerContainer} initial="initial" animate="animate" className="space-y-6">
       <div className="rounded-2xl bg-card p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Receptionist Workflow</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Patient History</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Review appointments, admissions, prescriptions, lab activity, and pharmacy orders for a patient (read-only).
-        </p>
       </div>
 
       {showPicker && (

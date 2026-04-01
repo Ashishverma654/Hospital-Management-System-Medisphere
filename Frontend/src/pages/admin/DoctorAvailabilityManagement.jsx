@@ -246,9 +246,6 @@ export default function DoctorAvailabilityManagement() {
       <div className="rounded-2xl bg-card p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Doctor Availability</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Manage schedules and slot windows</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Configure weekly availability ranges for each doctor. Multiple ranges per day are supported. Existing appointments will remain intact.
-        </p>
       </div>
 
       <Card ref={formRef} className="border-border rounded-2xl">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/ui/button';
 import { locationApi, wardApi, departmentApi, doctorApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
@@ -171,6 +171,16 @@ export default function WardManagement() {
     }
   };
 
+  const handleSelectWard = (wardId, shouldScroll = true) => {
+    if (!wardId) return;
+    setSelectedWardId(wardId);
+    if (shouldScroll) {
+      requestAnimationFrame(() => {
+        detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  };
+
   const getDepartmentId = (ward) => ward.departmentId?._id || ward.departmentId || '';
   const wardOptions = filterDepartment
     ? wards.filter((ward) => getDepartmentId(ward) === filterDepartment)
@@ -194,6 +204,8 @@ export default function WardManagement() {
       setFilterWardId('');
     }
   }, [filterDepartment, wards]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const detailRef = useRef(null);
 
   useEffect(() => {
     if (selectedWardId && !filteredWards.some((ward) => ward._id === selectedWardId)) {
@@ -369,9 +381,20 @@ export default function WardManagement() {
                   </tr>
                 )}
                 {filteredWards.map((ward) => (
-                  <tr key={ward._id} className="border-b border-border last:border-b-0">
+                  <tr
+                    key={ward._id}
+                    className="border-b border-border last:border-b-0 hover:bg-muted/30 cursor-pointer"
+                    onClick={() => handleSelectWard(ward._id, true)}
+                  >
                     <td className="px-4 py-3">
-                      <button type="button" className="text-left" onClick={() => setSelectedWardId(ward._id)}>
+                      <button
+                        type="button"
+                        className="text-left"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectWard(ward._id, true);
+                        }}
+                      >
                         <p className="font-medium text-foreground">{ward.name}</p>
                         <p className="text-xs text-muted-foreground">{ward.wardCode || ward.wardNumber}</p>
                       </button>
@@ -392,7 +415,8 @@ export default function WardManagement() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setEditingItem(ward);
                             setForm({
                               name: ward.name || '',
@@ -422,7 +446,7 @@ export default function WardManagement() {
                         <Button type="button" variant="outline" size="sm" onClick={() => handleViewHistory(ward)}>
                           <History className="mr-1 h-3 w-3" /> History
                         </Button>
-                        <Button type="button" variant={ward.isActive ? 'destructive' : 'outline'} size="sm" onClick={() => toggleActive(ward)}>
+                        <Button type="button" variant={ward.isActive ? 'destructive' : 'outline'} size="sm" onClick={(e) => { e.stopPropagation(); toggleActive(ward); }}>
                           {ward.isActive ? <UserX className="mr-1 h-3 w-3" /> : <UserCheck className="mr-1 h-3 w-3" />}
                           {ward.isActive ? 'Deactivate' : 'Activate'}
                         </Button>
@@ -435,7 +459,7 @@ export default function WardManagement() {
           </div>
         </article>
 
-        <article className="rounded-2xl bg-card p-6 shadow-sm">
+        <article ref={detailRef} className="rounded-2xl bg-card p-6 shadow-sm">
           {!selectedWardDetail && <div className="py-24 text-center text-muted-foreground">Select a ward to review its occupancy and bed setup.</div>}
           {selectedWardDetail && (
             <div className="space-y-5">

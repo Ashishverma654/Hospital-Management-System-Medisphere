@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Toaster, toast } from 'sonner';
@@ -111,6 +111,16 @@ function LegacyRoleRedirect({ role }) {
   return <Navigate to={getEmployeeHomeRoute(role)} replace />;
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
@@ -148,6 +158,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Toaster position="top-right" richColors />
       <Routes>
         <Route element={<PublicPatientLayout />}>

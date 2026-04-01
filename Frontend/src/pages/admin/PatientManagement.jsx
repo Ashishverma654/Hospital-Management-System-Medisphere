@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button, buttonVariants } from '../../components/ui/button';
-import { cn } from '../../lib/utils.js';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '../../components/ui/button';
 import { patientApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
 import { CalendarDays, Eye, Pencil, RefreshCw, Search } from 'lucide-react';
@@ -43,6 +41,7 @@ export default function PatientManagement() {
   const [boardDate, setBoardDate] = useState(new Date().toISOString().split('T')[0]);
   const [showEditor, setShowEditor] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const detailRef = useRef(null);
 
   const loadPatients = async () => {
     setLoading(true);
@@ -184,10 +183,6 @@ export default function PatientManagement() {
       <div className="rounded-2xl bg-card p-8 shadow-sm">
         <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Patient Administration</p>
         <h2 className="mt-2 text-3xl font-semibold text-foreground">Patient Console</h2>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          Review registrations, search patient records, update demographic profiles, and inspect linked appointments,
-          prescriptions, lab reports, invoices, and timeline activity from one admin-facing workspace.
-        </p>
       </div>
 
       <article className="rounded-2xl bg-card p-6 shadow-sm">
@@ -302,23 +297,34 @@ export default function PatientManagement() {
                     <td className="px-3 py-3">
                       <div className="flex flex-col gap-2">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${patient.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-                          {patient.isActive ? 'Active' : 'Inactive'}
+                          {patient.isActive ? (patient.profileStatus || 'Active') : 'Inactive'}
                         </span>
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold capitalize text-foreground">
-                          {patient.profileStatus || 'active'}
-                        </span>
+                        {patient.isActive && patient.profileStatus && patient.profileStatus !== 'active' && (
+                          <span className="text-xs text-muted-foreground capitalize">
+                            Profile: {patient.profileStatus}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3 text-muted-foreground">{new Date(patient.createdAt).toLocaleDateString()}</td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Link
-                          to={resolvedId ? `/employee/patients/${resolvedId}` : '#'}
-                          className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (!resolvedId) return;
+                            loadPatientDetail(resolvedId);
+                            if (detailRef.current) {
+                              detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            } else {
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
                         >
                           <Eye className="mr-1 h-3 w-3" />
                           View
-                        </Link>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -329,7 +335,7 @@ export default function PatientManagement() {
           </div>
         </article>
 
-        <article className="rounded-2xl bg-card p-6 shadow-sm">
+        <article ref={detailRef} className="rounded-2xl bg-card p-6 shadow-sm">
           {!detail && !detailLoading && (
             <div className="flex min-h-[420px] items-center justify-center text-center text-muted-foreground">
               Select a patient to inspect demographics, related records, and timeline activity.

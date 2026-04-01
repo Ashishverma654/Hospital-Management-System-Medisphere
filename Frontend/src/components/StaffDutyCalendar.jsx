@@ -92,6 +92,7 @@ export default function StaffDutyCalendar() {
   };
 
   const resetMonth = () => setMonthDate(new Date());
+  const monthLabel = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
     <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -100,10 +101,13 @@ export default function StaffDutyCalendar() {
           <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Duty Calendar</p>
           <h3 className="mt-2 text-2xl font-semibold text-foreground">Monthly duty overview</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="icon-sm" onClick={() => changeMonth(-1)} aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </Button>
+          <span className="rounded-full border border-border bg-muted/40 px-4 py-2 text-sm font-semibold text-foreground">
+            {monthLabel}
+          </span>
           <Button variant="outline" onClick={resetMonth}>
             This month
           </Button>

@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Users, UserCog, Stethoscope, Calendar, CreditCard,
   BedDouble, Building2, MapPin, Award, Settings, ShieldCheck,
   LogOut, Menu, X, Bell, User, ChevronRight, Heart,
-  ClipboardList, FlaskConical, Pill, NotepadText, Activity,
+  ClipboardList, FlaskConical, Pill, NotepadText, Activity, KeyRound,
   FileBarChart, Clock, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { logout } from '../../store/authSlice.js';
@@ -200,6 +200,7 @@ export default function EmployeeAppLayout() {
   const homeRoute = getEmployeeHomeRoute(user?.role);
   const navSections = buildNavItems(user?.role, homeRoute);
   const profilePath = user?.role === 'labTechnician' ? '/employee/lab-technician/profile' : '/employee/profile';
+  const canResetPassword = ['nurse', 'labTechnician', 'pharmacist', 'receptionist'].includes(user?.role);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -368,6 +369,14 @@ export default function EmployeeAppLayout() {
                   <DropdownMenuItem className="cursor-pointer p-0">
                     <NavLink to={profilePath} className="w-full px-2 py-1.5">Profile</NavLink>
                   </DropdownMenuItem>
+                  {canResetPassword && (
+                    <DropdownMenuItem className="cursor-pointer p-0">
+                      <NavLink to="/employee/forgot-password" className="flex w-full items-center gap-2 px-2 py-1.5">
+                        <KeyRound className="h-4 w-4" />
+                        Reset password
+                      </NavLink>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
