@@ -67,7 +67,7 @@ export default function Home() {
       <section className="relative min-h-[100svh] px-4 py-16 sm:px-6 lg:py-24">
         <div
           className="absolute inset-0 bg-cover bg-center brightness-75 contrast-110"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2000&auto=format&fit=crop')" }}
+          style={{ backgroundImage: "url('/assets/homepage.jpg')" }}
         />
         <div className="absolute inset-0 bg-background/70" />
         {/* Decorative blobs */}
@@ -124,48 +124,48 @@ export default function Home() {
             >
               <div className="grid grid-cols-2 gap-4">
                 <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                  <Users className="h-5 w-5 text-primary" />
-                </div>
-                <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.featuredDoctors.length}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Featured Doctors</p>
-                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
-                  <div className="h-full w-2/3 rounded-full bg-primary/60" />
-                </div>
-              </motion.div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Users className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.featuredDoctors.length}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Featured Doctors</p>
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                    <div className="h-full w-2/3 rounded-full bg-primary/60" />
+                  </div>
+                </motion.div>
 
                 <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10">
-                  <Building2 className="h-5 w-5 text-secondary" />
-                </div>
-                <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.featuredDepartments.length}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Departments</p>
-                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
-                  <div className="h-full w-1/2 rounded-full bg-secondary/60" />
-                </div>
-              </motion.div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/10">
+                    <Building2 className="h-5 w-5 text-secondary" />
+                  </div>
+                  <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.featuredDepartments.length}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Departments</p>
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                    <div className="h-full w-1/2 rounded-full bg-secondary/60" />
+                  </div>
+                </motion.div>
 
                 <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10">
-                  <MapPin className="h-5 w-5 text-accent" />
-                </div>
-                <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.locations.length}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Locations</p>
-                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
-                  <div className="h-full w-5/6 rounded-full bg-accent/60" />
-                </div>
-              </motion.div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10">
+                    <MapPin className="h-5 w-5 text-accent" />
+                  </div>
+                  <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.locations.length}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Locations</p>
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                    <div className="h-full w-5/6 rounded-full bg-accent/60" />
+                  </div>
+                </motion.div>
 
                 <motion.div variants={staggerItem} className="rounded-2xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chart-5/10">
-                  <Award className="h-5 w-5 text-chart-5" />
-                </div>
-                <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.awards.length}</p>
-                <p className="mt-1 text-sm text-muted-foreground">Awards Won</p>
-                <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
-                  <div className="h-full w-1/3 rounded-full bg-chart-5/60" />
-                </div>
-              </motion.div>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chart-5/10">
+                    <Award className="h-5 w-5 text-chart-5" />
+                  </div>
+                  <p className="mt-3 text-3xl font-bold text-foreground">{loading ? '...' : content.awards.length}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Awards Won</p>
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-muted">
+                    <div className="h-full w-1/3 rounded-full bg-chart-5/60" />
+                  </div>
+                </motion.div>
               </div>
             </motion.div>
           </div>
@@ -344,10 +344,10 @@ export default function Home() {
                   <div className="flex gap-4">
                     {award.image && (
                       <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                        <img 
-                          src={award.image} 
-                          alt={award.title} 
-                          className="h-full w-full object-cover transition-transform group-hover:scale-110" 
+                        <img
+                          src={award.image}
+                          alt={award.title}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-110"
                         />
                       </div>
                     )}
@@ -370,9 +370,9 @@ export default function Home() {
                         <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{award.description}</p>
                       )}
                       {award.certificateUrl && (
-                        <a 
-                          href={award.certificateUrl} 
-                          target="_blank" 
+                        <a
+                          href={award.certificateUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="mt-2 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-bold text-chart-5 hover:underline"
                         >

@@ -29,6 +29,7 @@ export const createLocationSchema = Joi.object({
   phone: Joi.string().allow(""),
   email: Joi.string().email().allow(""),
   mapUrl: Joi.string().allow(""),
+  image: Joi.string().allow(""),
   locationType: Joi.string().allow(""),
 }).unknown(true);
 
@@ -41,6 +42,7 @@ export const updateLocationSchema = Joi.object({
   phone: Joi.string().allow(""),
   email: Joi.string().email().allow(""),
   mapUrl: Joi.string().allow(""),
+  image: Joi.string().allow(""),
   locationType: Joi.string().allow(""),
 }).unknown(true);
 

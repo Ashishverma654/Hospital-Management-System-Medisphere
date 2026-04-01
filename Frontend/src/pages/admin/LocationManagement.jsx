@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Button } from '../../components/ui/button';
-import { locationApi } from '../../services/apiServices.js';
+import { locationApi, fileApi } from '../../services/apiServices.js';
 import { toast } from 'sonner';
-import { Plus, RefreshCw, Search, UserCheck, UserX, History, Clock, User, Calendar, Shield } from 'lucide-react';
+import { Plus, RefreshCw, Search, UserCheck, UserX, History, Clock, User, Calendar, Shield, Camera, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { staggerContainer } from '../../lib/animation-variants.js'; 
 import { INDIAN_STATES, STATE_DISTRICTS } from '../../utils/locationData.js';
@@ -17,6 +17,7 @@ const initialForm = {
   phone: '',
   email: '',
   mapUrl: '',
+  image: '',
   locationType: 'hospital',
 };
 
@@ -32,6 +33,8 @@ export default function LocationManagement() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const fileInputRef = useRef(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Validation Logic
   useEffect(() => {
@@ -85,6 +88,34 @@ export default function LocationManagement() {
     setEditingItem(null);
     setShowForm(false);
     setSubmitAttempted(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      return toast.error('Please select an image file');
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error('Image size should be less than 5MB');
+    }
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fileApi.uploadImage(formData);
+      setForm((prev) => ({ ...prev, image: res.url || res.data?.url }));
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -193,7 +224,18 @@ export default function LocationManagement() {
               )}
               {locations.map((item) => (
                 <tr key={item._id} className="border-b border-slate-100 last:border-b-0">
-                  <td className="px-4 py-3 font-medium text-foreground">{item.name}</td>
+                  <td className="px-4 py-3 font-medium text-foreground">
+                    <div className="flex items-center gap-3">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="h-10 w-10 shrink-0 rounded-lg object-cover bg-muted" />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Plus className="h-5 w-5" />
+                        </div>
+                      )}
+                      <span>{item.name}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{item.city}{item.state ? `, ${item.state}` : ''}</td>
                   <td className="px-4 py-3 text-muted-foreground">{item.address}</td>
                   <td className="px-4 py-3 font-mono text-xs font-bold text-foreground">{item.pincode || '—'}</td>
@@ -221,6 +263,7 @@ export default function LocationManagement() {
                             phone: item.phone || '',
                             email: item.email || '',
                             mapUrl: item.mapUrl || '',
+                            image: item.image || '',
                             locationType: item.locationType || 'hospital',
                           });
                           setShowForm(true);
@@ -349,7 +392,7 @@ export default function LocationManagement() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl rounded-2xl bg-card p-6 shadow-2xl">
+          <form onSubmit={handleSubmit} className="w-full max-w-2xl overflow-y-auto max-h-[90vh] rounded-2xl bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-4">
               <h3 className="text-xl font-semibold text-foreground">{editingItem ? 'Edit Location' : 'Add Location'}</h3>
               <button type="button" onClick={resetForm} className="text-muted-foreground hover:text-foreground">✕</button>
@@ -410,6 +453,45 @@ export default function LocationManagement() {
                 <input type="text" value={form.mapUrl} onChange={(e) => setForm((c) => ({ ...c, mapUrl: e.target.value }))} className="w-full rounded-2xl border border-border px-4 py-3 outline-none focus:border-primary" />
               </Field>
             </div>
+            
+            <Field label="Location Image" className="mt-4">
+              <div className="flex items-center gap-4">
+                {form.image ? (
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-border bg-muted">
+                    <img src={form.image} alt="Location" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
+                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/50 text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                  >
+                    <Camera className="mb-1 h-6 w-6" />
+                    <span className="text-[10px] font-medium">{uploadingImage ? 'Uploading...' : 'Upload'}</span>
+                  </button>
+                )}
+                <div className="text-sm text-muted-foreground">
+                  <p>Recommended size: 800x600px</p>
+                  <p>Max file size: 5MB</p>
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+              </div>
+            </Field>
+
             <Field label="Address *" className="mt-4" error={submitAttempted ? errors.address : null}>
               <textarea value={form.address} onChange={(e) => setForm((c) => ({ ...c, address: e.target.value }))} className={`min-h-[110px] w-full rounded-2xl border bg-background/50 px-4 py-3 outline-none focus:border-primary transition-colors ${(submitAttempted && errors.address) ? 'border-red-500' : 'border-border'}`} required />
             </Field>
