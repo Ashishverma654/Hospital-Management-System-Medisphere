@@ -6,6 +6,7 @@ import { migrateLegacyRoles } from "./utils/migrateLegacyRoles.js";
 import { initSocket } from "./services/socketService.js";
 import { startNoShowScheduler } from "./services/noShowScheduler.js";
 import { startConsultationAutoCompleteScheduler } from "./services/consultationAutoCompleteScheduler.js";
+import keepAlive from "./utils/keepAlive.js";
 
 const PORT = process.env.PORT || 3500;
 
@@ -24,6 +25,7 @@ const bootstrap = async () => {
       await migrateLegacyRoles();
       startNoShowScheduler();
       startConsultationAutoCompleteScheduler();
+      keepAlive(process.env.BACKEND_URL);
     } catch (e) {
       console.error("Startup role setup failed:", e?.message || e);
     }
