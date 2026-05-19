@@ -6,27 +6,42 @@ import http from 'http';
  * @param {string} url - The public URL of the backend server.
  */
 const keepAlive = (url) => {
-  if (!url) {
-    console.warn("Keep-alive: BACKEND_URL not set in environment. Skipping self-ping.");
+  // Use provided url or fallback to Render's automatic RENDER_EXTERNAL_URL env variable
+  const targetUrl = url || process.env.RENDER_EXTERNAL_URL;
+
+  if (!targetUrl) {
+    console.warn("Keep-alive: BACKEND_URL or RENDER_EXTERNAL_URL not set in environment. Skipping self-ping.");
     return;
   }
 
-  const protocol = url.startsWith('https') ? https : http;
-  const interval = 14 * 60 * 1000; // 14 minutes
+  // Target the lightweight /api/health endpoint
+  const pingUrl = targetUrl.endsWith('/') 
+    ? `${targetUrl}api/health` 
+    : `${targetUrl}/api/health`;
 
-  console.log(`Keep-alive: Starting self-ping loop for ${url} every 14 minutes.`);
+  const protocol = pingUrl.startsWith('https') ? https : http;
+  // Ping every 5 minutes (Render's inactivity timeout is 15 minutes)
+  const interval = 5 * 60 * 1000; 
 
-  setInterval(() => {
+  console.log(`Keep-alive: Starting self-ping loop for ${pingUrl} every 5 minutes.`);
+
+  const doPing = () => {
     try {
-      protocol.get(url, (res) => {
-        console.log(`Keep-alive: Pinged ${url}. Status: ${res.statusCode}`);
+      protocol.get(pingUrl, (res) => {
+        console.log(`Keep-alive: Pinged ${pingUrl}. Status: ${res.statusCode}`);
       }).on('error', (err) => {
-        console.error(`Keep-alive: Ping failed for ${url}:`, err.message);
+        console.error(`Keep-alive: Ping failed for ${pingUrl}:`, err.message);
       });
     } catch (error) {
       console.error(`Keep-alive: Unexpected error during ping:`, error.message);
     }
-  }, interval);
+  };
+
+  // Ping once immediately on startup
+  doPing();
+
+  // Schedule periodic pings
+  setInterval(doPing, interval);
 };
 
 export default keepAlive;
